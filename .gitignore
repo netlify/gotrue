@@ -1,2 +1,3 @@
 config.json
 gorm.db
+vendor/

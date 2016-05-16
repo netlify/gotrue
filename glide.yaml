@@ -1,0 +1,16 @@
+package: github.com/netlify/authlify
+import:
+- package: github.com/dgrijalva/jwt-go
+- package: github.com/guregu/kami
+- package: github.com/jinzhu/gorm
+  subpackages:
+  - dialects/sqlite
+- package: github.com/pborman/uuid
+- package: github.com/rs/cors
+- package: golang.org/x/crypto
+  subpackages:
+  - bcrypt
+- package: golang.org/x/net
+  subpackages:
+  - context
+- package: gopkg.in/gomail.v2
