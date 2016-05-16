@@ -9,7 +9,6 @@ import (
 	"github.com/netlify/authlify/mailer"
 	"github.com/netlify/authlify/models"
 
-	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite" // Import SQLite
 )
 
@@ -19,12 +18,10 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	db, err := gorm.Open("sqlite3", "gorm.db")
+	db, err := models.Connect(config)
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)
 	}
-
-	db.AutoMigrate(&models.User{}, &models.RefreshToken{})
 
 	mailer := mailer.NewMailer(config)
 

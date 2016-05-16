@@ -3,6 +3,10 @@
     "secret": "CHANGE-THIS! VERY IMPORTANT!",
     "exp": 3600
   },
+  "db": {
+    "driver": "sqlite3",
+    "url": "gorm.db"
+  },
   "api": {
     "host": "localhost",
     "port": 9999

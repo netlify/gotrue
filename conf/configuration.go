@@ -11,6 +11,10 @@ type Configuration struct {
 		Secret string `json:"secret"`
 		Exp    int    `json:"exp"`
 	} `json:"jwt"`
+	DB struct {
+		Driver  string `json:"driver"`
+		ConnURL string `json:"url"`
+	}
 	API struct {
 		Host string `json:"host"`
 		Port int    `json:"port"`

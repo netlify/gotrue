@@ -98,8 +98,8 @@ It exposes the following endpoints:
 
 ## TODO
 
-* Support for postgres
 * Custom user data
+* Email validation on email updates
 
 ## License
 
