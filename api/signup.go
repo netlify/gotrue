@@ -15,10 +15,6 @@ type SignupParams struct {
 	Password string `json:"password"`
 }
 
-func validParams(params *SignupParams) {
-	return params.Email != "" && params.Password != ""
-}
-
 // Signup is the endpoint for registering a new user
 func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var user *models.User
@@ -30,27 +26,32 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if !validParams(params) {
+	if params.Email == "" || params.Password == "" {
 		UnprocessableEntity(w, fmt.Sprintf("Signup requires a valid email and password"))
 		return
 	}
 
 	existingUser := &models.User{}
 	a.db.First(existingUser, "email = ?", params.Email)
-	if existingUser.ID != 0 {
-		if existingUser.ConfirmationSentAt.IsZero() {
-			existingUser.GenerateConfirmationToken()
-			user = existingUser
-		} else {
-			UnprocessableEntity(w, fmt.Sprintf("A user with this email address has already been registered"))
-			return
-		}
-	} else {
-		user, err = models.CreateUser(params.Email, params.Password)
+	if a.db.RecordNotFound() {
+		user, err = models.CreateUser(a.db, params.Email, params.Password)
 		if err != nil {
 			InternalServerError(w, fmt.Sprintf("Error creating user: %v", err))
 			return
 		}
+	} else {
+		if a.db.Error != nil {
+			InternalServerError(w, fmt.Sprintf("Error during database query: %v", a.db.Error))
+			return
+		}
+
+		if !existingUser.ConfirmedAt.IsZero() {
+			UnprocessableEntity(w, fmt.Sprintf("A user with this email address has already been registered"))
+			return
+		}
+		existingUser.GenerateConfirmationToken()
+		a.db.Save(existingUser)
+		user = existingUser
 	}
 
 	if err := a.mailer.ConfirmationMail(user); err != nil {

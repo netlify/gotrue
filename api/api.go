@@ -4,14 +4,18 @@ import (
 	"net/http"
 
 	"github.com/guregu/kami"
-	"github.com/netlify/authlify/db"
+	"github.com/jinzhu/gorm"
+	"github.com/netlify/authlify/conf"
+	"github.com/netlify/authlify/mailer"
 	"github.com/rs/cors"
 )
 
 // API is the main REST API
 type API struct {
 	handler http.Handler
-	db      *db.DB
+	db      *gorm.DB
+	mailer  *mailer.Mailer
+	config  *conf.Configuration
 }
 
 // ListenAndServe starts the REST API
@@ -20,14 +24,14 @@ func (a *API) ListenAndServe(hostAndPort string) error {
 }
 
 // NewAPI instantiates a new REST API
-func NewAPI(db *db.DB) *API {
-	api := &API{db: db}
+func NewAPI(config *conf.Configuration, db *gorm.DB, mailer *mailer.Mailer) *API {
+	api := &API{config: config, db: db, mailer: mailer}
 	mux := kami.New()
 
 	mux.Get("/", api.Index)
 	mux.Post("/signup", api.Signup)
 	mux.Post("/verify", api.Verify)
-	mux.Post("/login", api.Login)
+	mux.Post("/token", api.Token)
 	mux.Post("/logout", api.Logout)
 
 	corsHandler := cors.New(cors.Options{

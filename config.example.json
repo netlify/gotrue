@@ -1,0 +1,23 @@
+{
+  "jwt": {
+    "secret": "CHANGE-THIS! VERY IMPORTANT!",
+    "exp": 3600
+  },
+  "api": {
+    "host": "localhost",
+    "port": 9999
+  },
+  "mailer": {
+    "host": "smtp.mandrillapp.com",
+    "port": 587,
+    "user": "test@example.com",
+    "pass": "super-secret-password",
+    "site_url": "https://my-jam-site.example.com",
+    "template_folder": "/mail_templates",
+    "member_folder": "/users",
+    "admin_email": "admin@example.com",
+    "mail_subjects": {
+      "confirmation": "Welcome to Authlify!"
+    }
+  }
+}

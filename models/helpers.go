@@ -1,12 +1,17 @@
 package models
 
-import "crypto/rand"
+import (
+	"encoding/base64"
+	"strings"
 
-func secureToken(length int) (string, error) {
-	bytes := make([]byte, length)
-	_, err := rand.Reader.Read(bytes)
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
+	"github.com/pborman/uuid"
+)
+
+func removePadding(token string) string {
+	return strings.TrimRight(token, "=")
+}
+
+func secureToken() string {
+	token := uuid.NewRandom()
+	return removePadding(base64.URLEncoding.EncodeToString([]byte(token)))
 }
