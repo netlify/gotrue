@@ -140,13 +140,13 @@ Auhlify exposes the following endpoints:
   }
   ```
 
-  * **POST /logout**
+* **POST /logout**
 
   Logout a user (Requires authentication).
 
   This will revoke all refresh tokens for the user. Remember that the JWT tokens
   will still be valid for stateless auth until they expires.
-  
+
 
 ## TODO
 
