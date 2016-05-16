@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// RecoverParams holds the parameters for a password recovery request
 type RecoverParams struct {
 	Email string `json:"email"`
 }

@@ -28,15 +28,13 @@ type User struct {
 
 // CreateUser creates a new user from an email and password
 func CreateUser(db *gorm.DB, email, password string) (*User, error) {
-	pw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
+	user := &User{
+		ID:    uuid.NewRandom().String(),
+		Email: email,
 	}
 
-	user := &User{
-		ID:                uuid.NewRandom().String(),
-		Email:             email,
-		EncryptedPassword: string(pw),
+	if err := user.UpdatePassword(password); err != nil {
+		return nil, err
 	}
 
 	if err := db.Create(user).Error; err != nil {
@@ -44,6 +42,16 @@ func CreateUser(db *gorm.DB, email, password string) (*User, error) {
 	}
 
 	return user, nil
+}
+
+// UpdatePassword sets the encrypted password from a plaintext string
+func (u *User) UpdatePassword(password string) error {
+	pw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.EncryptedPassword = string(pw)
+	return nil
 }
 
 // Authenticate a user from a password
