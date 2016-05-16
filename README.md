@@ -5,9 +5,11 @@ for handling user registration and authentication for JAM projects.
 
 It's based on OAuth2 and JWT and will handle user signup and authentication.
 
-It exposes the following endpoints:
+## Endpoints
 
-* POST /signup
+Auhlify exposes the following endpoints:
+
+* **POST /signup**
 
   Register a new user with an email and password.
 
@@ -30,7 +32,7 @@ It exposes the following endpoints:
   }
   ```
 
-* POST /verify
+* **POST /verify**
 
   Verify a registration or a password recovery. Type can be `signup` or `recover`
   and the `token` is a token returned from either `/signup` or `/recover`.
@@ -53,7 +55,7 @@ It exposes the following endpoints:
   }
   ```
 
-* POST /recover
+* **POST /recover**
 
   Password recovery. Will deliver a password recovery mail to the user based on
   email address.
@@ -70,7 +72,7 @@ It exposes the following endpoints:
   {}
   ```
 
-* POST /token
+* **POST /token**
 
   This is an OAuth2 endpoint that currently implements
   the password and refresh_token grant types
@@ -85,6 +87,9 @@ It exposes the following endpoints:
   grant_type=refresh_token&refresh_token=my-refresh-token
   ```
 
+  Once you have an access token, you can access the methods requiring authentication
+  by settings the `Authorization: Bearer YOUR_ACCESS_TOKEN_HERE` header.
+
   Returns:
 
   ```json
@@ -95,6 +100,53 @@ It exposes the following endpoints:
     "refresh_token": "a-refresh-token"
   }
   ```
+
+* **GET /user**
+
+  Get the JSON object for the logged in user (requires authentication)
+
+  Returns:
+
+  ```json
+  {
+    "id":1,
+    "email":"email@example.com",
+    "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
+    "created_at": "2016-05-15T19:53:12.368652374-07:00",
+    "updated_at": "2016-05-15T19:53:12.368652374-07:00"
+  }
+  ```
+
+* **PUT /user**
+
+  Update a user (Requires authentication).
+
+  ```json
+  {
+    "email": "new-email@example.com",
+    "password": "new-password"
+  }
+  ```
+
+  Returns:
+
+  ```json
+  {
+    "id":1,
+    "email":"email@example.com",
+    "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
+    "created_at": "2016-05-15T19:53:12.368652374-07:00",
+    "updated_at": "2016-05-15T19:53:12.368652374-07:00"
+  }
+  ```
+
+  * **POST /logout**
+
+  Logout a user (Requires authentication).
+
+  This will revoke all refresh tokens for the user. Remember that the JWT tokens
+  will still be valid for stateless auth until they expires.
+  
 
 ## TODO
 
