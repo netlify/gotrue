@@ -8,7 +8,7 @@ type RefreshToken struct {
 	Token string
 
 	User   User
-	UserID int
+	UserID string
 
 	Revoked bool
 }

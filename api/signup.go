@@ -32,19 +32,20 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	existingUser := &models.User{}
-	a.db.First(existingUser, "email = ?", params.Email)
-	if a.db.RecordNotFound() {
-		user, err = models.CreateUser(a.db, params.Email, params.Password)
-		if err != nil {
-			InternalServerError(w, fmt.Sprintf("Error creating user: %v", err))
-			return
-		}
-	} else {
-		if a.db.Error != nil {
+
+	if result := a.db.First(existingUser, "email = ?", params.Email); result.Error != nil {
+		if result.RecordNotFound() {
+			user, err = models.CreateUser(a.db, params.Email, params.Password)
+			if err != nil {
+				InternalServerError(w, fmt.Sprintf("Error creating user: %v", err))
+				return
+			}
+			fmt.Printf("Created new user: %v", user)
+		} else {
 			InternalServerError(w, fmt.Sprintf("Error during database query: %v", a.db.Error))
 			return
 		}
-
+	} else {
 		if !existingUser.ConfirmedAt.IsZero() {
 			UnprocessableEntity(w, fmt.Sprintf("A user with this email address has already been registered"))
 			return

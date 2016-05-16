@@ -12,9 +12,21 @@ import (
 
 // VerifyParams are the parameters the Verify endpoint accepts
 type VerifyParams struct {
-	ConfirmationToken string `json:"token"`
+	Type  string `json:"type"`
+	Token string `json:"token"`
 }
 
+func queryForParams(params *VerifyParams) string {
+	switch params.Type {
+	case "signup":
+		return "confirmation_token = ?"
+	case "recover":
+		return "recovery_token = ?"
+	}
+	return ""
+}
+
+// Verify exchanges a confirmation or recovery token to a refresh token
 func (a *API) Verify(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	params := &VerifyParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
@@ -24,23 +36,37 @@ func (a *API) Verify(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if params.ConfirmationToken == "" {
-		UnprocessableEntity(w, fmt.Sprintf("Verify requires a confirmation token"))
+	query := queryForParams(params)
+
+	if query == "" || params.Token == "" {
+		UnprocessableEntity(w, fmt.Sprintf("Verify requires a token and a type"))
 		return
 	}
 
 	user := &models.User{}
-	if result := a.db.First(user, "confirmation_token = ?", params.ConfirmationToken); result.Error != nil {
+
+	if result := a.db.First(user, query, params.Token); result.Error != nil {
 		if result.RecordNotFound() {
-			NotFoundError(w, "Confirmation token not found")
+			NotFoundError(w, "Invalid token")
 		} else {
 			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
 		}
 		return
 	}
 
-	user.Confirm()
-	a.db.Save(user)
+	switch params.Type {
+	case "signup":
+		user.Confirm()
+	case "recover":
+		user.Recover()
+	}
 
-	sendJSON(w, 200, user)
+	tx := a.db.Begin()
+	if err := a.db.Save(user).Error; err != nil {
+		tx.Rollback()
+		InternalServerError(w, fmt.Sprintf("Error confirming user: %v", err))
+		return
+	}
+
+	a.issueRefreshToken(tx, user, w)
 }

@@ -17,7 +17,8 @@
     "member_folder": "/users",
     "admin_email": "admin@example.com",
     "mail_subjects": {
-      "confirmation": "Welcome to Authlify!"
+      "confirmation": "Welcome to Authlify!",
+      "recovery": "Reset your Authlify password!"
     }
   }
 }

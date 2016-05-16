@@ -1,8 +1,6 @@
 package mailer
 
 import (
-	"log"
-
 	"gopkg.in/gomail.v2"
 
 	"github.com/netlify/authlify/conf"
@@ -25,6 +23,7 @@ type Mailer struct {
 // MailSubjects holds the subject lines for the emails
 type MailSubjects struct {
 	ConfirmationMail string
+	RecoveryMail     string
 }
 
 // NewMailer returns a new authlify mailer
@@ -41,6 +40,7 @@ func NewMailer(conf *conf.Configuration) *Mailer {
 		AdminEmail:     mailConf.AdminEmail,
 		MailSubjects: MailSubjects{
 			ConfirmationMail: mailConf.MailSubjects.ConfirmationMail,
+			RecoveryMail:     mailConf.MailSubjects.RecoveryMail,
 		},
 	}
 }
@@ -58,10 +58,22 @@ func (m *Mailer) ConfirmationMail(user *models.User) error {
 <p>Follow this link to complete the registration process:</p>
 <p><a href="`+confirmationURL+`">Complete Registration</a></p>"`)
 
-	log.Printf("Sending from %v", m.AdminEmail)
+	dial := gomail.NewDialer(m.Host, m.Port, m.User, m.Pass)
+	return dial.DialAndSend(mail)
+}
+
+func (m *Mailer) RecoveryMail(user *models.User) error {
+	confirmationURL := m.SiteURL + m.MemberFolder + "/recover/" + user.RecoveryToken
+
+	mail := gomail.NewMessage()
+	mail.SetHeader("From", m.AdminEmail)
+	mail.SetHeader("To", user.Email)
+	mail.SetHeader("Subject", m.MailSubjects.RecoveryMail)
+	mail.SetBody("text/html", `<h2>Recover your password</h2>
+
+<p>Follow this link to reset your password:</p>
+<p><a href="`+confirmationURL+`">Reset Password</a></p>"`)
 
 	dial := gomail.NewDialer(m.Host, m.Port, m.User, m.Pass)
-	log.Printf("Dialing to %v", dial)
-
 	return dial.DialAndSend(mail)
 }

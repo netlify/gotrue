@@ -26,6 +26,7 @@ type Configuration struct {
 		AdminEmail     string `json:"admin_email"`
 		MailSubjects   struct {
 			ConfirmationMail string `json:"confirmation"`
+			RecoveryMail     string `json:"recovery"`
 		} `json:"mail_subjects"`
 	} `json:"mailer"`
 }

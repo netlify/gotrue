@@ -7,11 +7,13 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/jinzhu/gorm"
 	"github.com/netlify/authlify/models"
 
 	"golang.org/x/net/context"
 )
 
+// AccessTokenResponse represents an OAuth2 success response
 type AccessTokenResponse struct {
 	Token        string `json:"access_token"`
 	TokenType    string `json:"token_type"` // Bearer
@@ -33,7 +35,7 @@ func (a *API) Token(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// ResourceOwnerPassword implements the password grant type flow
+// ResourceOwnerPasswordGrant implements the password grant type flow
 func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
@@ -54,34 +56,13 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		user.LastSignInAt = time.Now()
 		tx.Save(user)
 
-		refreshToken, err := models.CreateRefreshToken(tx, user)
-		if err != nil {
-			tx.Rollback()
-			InternalServerError(w, fmt.Sprintf("Error generating token: %v", err))
-			return
-		}
-
-		tokenString, err := a.generateAccessToken(user)
-
-		if err != nil {
-			tx.Rollback()
-			InternalServerError(w, fmt.Sprintf("Error generating jwt token: %v", err))
-			return
-		}
-
-		tx.Commit()
-
-		sendJSON(w, 200, &AccessTokenResponse{
-			Token:        tokenString,
-			TokenType:    "bearer",
-			ExpiresIn:    a.config.JWT.Exp,
-			RefreshToken: refreshToken.Token,
-		})
+		a.issueRefreshToken(tx, user, w)
 	} else {
 		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Password"})
 	}
 }
 
+// RefreshTokenGrant implements the refresh_token grant type flow
 func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	token := r.FormValue("refresh_token")
 
@@ -93,43 +74,28 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	tx := a.db.Begin()
 	refreshToken := &models.RefreshToken{}
 	if result := tx.First(refreshToken, "token = ?", token); result.Error != nil {
+		tx.Rollback()
 		if result.RecordNotFound() {
 			sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Refresh Token"})
-			return
+		} else {
+			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
 		}
-
-		InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
 		return
 	}
 
 	if refreshToken.Revoked {
 		log.Printf("Possible abuse attempt: %v", r)
 		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Refresh Token"})
+		tx.Rollback()
 		return
 	}
 
-	tokenString, err := a.generateAccessToken(&refreshToken.User)
-	if err != nil {
-		InternalServerError(w, fmt.Sprintf("Error generating jwt token: %v", err))
-		return
-	}
-
-	newToken, err := models.CreateRefreshToken(tx, &refreshToken.User)
-	if err != nil {
-		InternalServerError(w, fmt.Sprintf("Error generating token: %v", err))
-		return
-	}
-
+	// Make sure we revoke the current refreshtoken
+	// (will be undone by a tx.Rollback if anything fails)
 	refreshToken.Revoked = true
 	tx.Save(refreshToken)
 
-	tx.Commit()
-	sendJSON(w, 200, &AccessTokenResponse{
-		Token:        tokenString,
-		TokenType:    "bearer",
-		ExpiresIn:    a.config.JWT.Exp,
-		RefreshToken: newToken.Token,
-	})
+	a.issueRefreshToken(tx, &refreshToken.User, w)
 }
 
 func (a *API) generateAccessToken(user *models.User) (string, error) {
@@ -140,4 +106,30 @@ func (a *API) generateAccessToken(user *models.User) (string, error) {
 	token.Claims["exp"] = time.Now().Add(time.Second * time.Duration(a.config.JWT.Exp))
 
 	return token.SignedString([]byte(a.config.JWT.Secret))
+}
+
+func (a *API) issueRefreshToken(tx *gorm.DB, user *models.User, w http.ResponseWriter) {
+	refreshToken, err := models.CreateRefreshToken(tx, user)
+	if err != nil {
+		tx.Rollback()
+		InternalServerError(w, fmt.Sprintf("Error generating token: %v", err))
+		return
+	}
+
+	tokenString, err := a.generateAccessToken(user)
+
+	if err != nil {
+		tx.Rollback()
+		InternalServerError(w, fmt.Sprintf("Error generating jwt token: %v", err))
+		return
+	}
+
+	tx.Commit()
+
+	sendJSON(w, 200, &AccessTokenResponse{
+		Token:        tokenString,
+		TokenType:    "bearer",
+		ExpiresIn:    a.config.JWT.Exp,
+		RefreshToken: refreshToken.Token,
+	})
 }

@@ -3,6 +3,9 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/net/context"
 )
 
 // Error is an error with a message
@@ -22,6 +25,14 @@ func sendJSON(w http.ResponseWriter, status int, obj interface{}) {
 	w.WriteHeader(status)
 	encoder := json.NewEncoder(w)
 	encoder.Encode(obj)
+}
+
+func getToken(ctx context.Context) *jwt.Token {
+	obj := ctx.Value("jwt")
+	if obj == nil {
+		return nil
+	}
+	return obj.(*jwt.Token)
 }
 
 // BadRequestError is simple Error Wrapper

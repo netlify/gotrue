@@ -4,19 +4,22 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/pborman/uuid"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 // User respresents a registered user with email/password authentication
 type User struct {
-	ID int64 `json:"id"`
+	ID string `json:"id"`
 
 	Email              string    `json:"email"`
 	EncryptedPassword  string    `json:"-"`
 	ConfirmedAt        time.Time `json:"confirmed_at"`
 	ConfirmationToken  string    `json:"-"`
 	ConfirmationSentAt time.Time `json:"confirmation_sent_at,omitempty"`
+	RecoveryToken      string    `json:"-"`
+	RecoverySentAt     time.Time `json:"recovery_sent_at,omitempty"`
 	LastSignInAt       time.Time `json:"last_sign_in_at,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
@@ -31,6 +34,7 @@ func CreateUser(db *gorm.DB, email, password string) (*User, error) {
 	}
 
 	user := &User{
+		ID:                uuid.NewRandom().String(),
 		Email:             email,
 		EncryptedPassword: string(pw),
 	}
@@ -56,8 +60,20 @@ func (u *User) GenerateConfirmationToken() {
 	u.ConfirmationSentAt = time.Now()
 }
 
+// GenerateRecoveryToken generates a secure password recovery token
+func (u *User) GenerateRecoveryToken() {
+	token := secureToken()
+	u.RecoveryToken = token
+	u.RecoverySentAt = time.Now()
+}
+
 // Confirm resets the confimation token and the confirm timestamp
 func (u *User) Confirm() {
 	u.ConfirmationToken = ""
 	u.ConfirmedAt = time.Now()
+}
+
+// Recover resets the recovery token
+func (u *User) Recover() {
+	u.RecoveryToken = ""
 }
