@@ -50,6 +50,11 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return
 	}
 
+	if user.ConfirmedAt.IsZero() {
+		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Email not confirmed"})
+		return
+	}
+
 	if user.Authenticate(password) {
 		tx := a.db.Begin()
 
@@ -95,7 +100,18 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	refreshToken.Revoked = true
 	tx.Save(refreshToken)
 
-	a.issueRefreshToken(tx, &refreshToken.User, w)
+	user := &models.User{}
+	if result := tx.Model(refreshToken).Related(user); result.Error != nil {
+		tx.Rollback()
+		if result.RecordNotFound() {
+			sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Refresh Token"})
+		} else {
+			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
+		}
+		return
+	}
+
+	a.issueRefreshToken(tx, user, w)
 }
 
 func (a *API) generateAccessToken(user *models.User) (string, error) {
