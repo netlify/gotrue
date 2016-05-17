@@ -20,7 +20,7 @@ func queryForParams(params *VerifyParams) string {
 	switch params.Type {
 	case "signup":
 		return "confirmation_token = ?"
-	case "recover":
+	case "recovery":
 		return "recovery_token = ?"
 	}
 	return ""

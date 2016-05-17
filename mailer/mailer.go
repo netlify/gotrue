@@ -62,6 +62,7 @@ func (m *Mailer) ConfirmationMail(user *models.User) error {
 	return dial.DialAndSend(mail)
 }
 
+// RecoveryMail sends a password recovery mail
 func (m *Mailer) RecoveryMail(user *models.User) error {
 	confirmationURL := m.SiteURL + m.MemberFolder + "/recover/" + user.RecoveryToken
 

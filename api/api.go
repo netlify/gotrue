@@ -64,6 +64,7 @@ func NewAPI(config *conf.Configuration, db *gorm.DB, mailer *mailer.Mailer) *API
 
 	mux.Get("/", api.Index)
 	mux.Post("/signup", api.Signup)
+	mux.Post("/recover", api.Recover)
 	mux.Post("/verify", api.Verify)
 	mux.Get("/user", api.UserGet)
 	mux.Put("/user", api.UserUpdate)
