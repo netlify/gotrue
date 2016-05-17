@@ -56,7 +56,7 @@ func (m *Mailer) ConfirmationMail(user *models.User) error {
 	mail.SetBody("text/html", `<h2>Please verify your registration</h2>
 
 <p>Follow this link to complete the registration process:</p>
-<p><a href="`+confirmationURL+`">Complete Registration</a></p>"`)
+<p><a href="`+confirmationURL+`">Complete Registration</a></p>`)
 
 	dial := gomail.NewDialer(m.Host, m.Port, m.User, m.Pass)
 	return dial.DialAndSend(mail)
@@ -72,7 +72,7 @@ func (m *Mailer) RecoveryMail(user *models.User) error {
 	mail.SetBody("text/html", `<h2>Recover your password</h2>
 
 <p>Follow this link to reset your password:</p>
-<p><a href="`+confirmationURL+`">Reset Password</a></p>"`)
+<p><a href="`+confirmationURL+`">Reset Password</a></p>`)
 
 	dial := gomail.NewDialer(m.Host, m.Port, m.User, m.Pass)
 	return dial.DialAndSend(mail)

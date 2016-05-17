@@ -37,6 +37,8 @@ func CreateUser(db *gorm.DB, email, password string) (*User, error) {
 		return nil, err
 	}
 
+	user.GenerateConfirmationToken()
+
 	if err := db.Create(user).Error; err != nil {
 		return nil, err
 	}
