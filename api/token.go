@@ -119,7 +119,7 @@ func (a *API) generateAccessToken(user *models.User) (string, error) {
 
 	token.Claims["id"] = user.ID
 	token.Claims["email"] = user.Email
-	token.Claims["exp"] = time.Now().Add(time.Second * time.Duration(a.config.JWT.Exp))
+	token.Claims["exp"] = time.Now().Add(time.Second * time.Duration(a.config.JWT.Exp)).Unix()
 	for _, data := range user.Data {
 		token.Claims[data.Key] = data.Value()
 	}

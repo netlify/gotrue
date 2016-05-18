@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"golang.org/x/net/context"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/netlify/authlify/mailer"
 	"github.com/rs/cors"
 )
+
+var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 
 // API is the main REST API
 type API struct {
