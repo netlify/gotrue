@@ -120,6 +120,9 @@ func (a *API) generateAccessToken(user *models.User) (string, error) {
 	token.Claims["id"] = user.ID
 	token.Claims["email"] = user.Email
 	token.Claims["exp"] = time.Now().Add(time.Second * time.Duration(a.config.JWT.Exp))
+	for _, data := range user.Data {
+		token.Claims[data.Key] = data.Value()
+	}
 
 	return token.SignedString([]byte(a.config.JWT.Secret))
 }
@@ -131,6 +134,9 @@ func (a *API) issueRefreshToken(tx *gorm.DB, user *models.User, w http.ResponseW
 		InternalServerError(w, fmt.Sprintf("Error generating token: %v", err))
 		return
 	}
+
+	user.Data = []models.Data{}
+	tx.Model(user).Related(&user.Data)
 
 	tokenString, err := a.generateAccessToken(user)
 

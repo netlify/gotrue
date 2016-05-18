@@ -11,8 +11,9 @@ import (
 
 // SignupParams are the parameters the Signup endpoint accepts
 type SignupParams struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string                 `json:"email"`
+	Password string                 `json:"password"`
+	Data     map[string]interface{} `json:"data"`
 }
 
 // Signup is the endpoint for registering a new user
@@ -33,16 +34,17 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	existingUser := &models.User{}
 
-	if result := a.db.First(existingUser, "email = ?", params.Email); result.Error != nil {
+	tx := a.db.Begin()
+	if result := tx.First(existingUser, "email = ?", params.Email); result.Error != nil {
 		if result.RecordNotFound() {
-			user, err = models.CreateUser(a.db, params.Email, params.Password)
+			user, err = models.CreateUser(tx, params.Email, params.Password)
 			if err != nil {
 				InternalServerError(w, fmt.Sprintf("Error creating user: %v", err))
 				return
 			}
 			fmt.Printf("Created new user: %v", user)
 		} else {
-			InternalServerError(w, fmt.Sprintf("Error during database query: %v", a.db.Error))
+			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
 			return
 		}
 	} else {
@@ -51,8 +53,12 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return
 		}
 		existingUser.GenerateConfirmationToken()
-		a.db.Save(existingUser)
+		tx.Save(existingUser)
 		user = existingUser
+	}
+
+	if params.Data != nil {
+		user.UpdateUserData(tx, &params.Data)
 	}
 
 	if err := a.mailer.ConfirmationMail(user); err != nil {
@@ -60,5 +66,6 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	tx.Commit()
 	sendJSON(w, 200, user)
 }

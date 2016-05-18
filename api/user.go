@@ -12,8 +12,9 @@ import (
 
 // UserUpdateParams parameters for updating a user
 type UserUpdateParams struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string                 `json:"email"`
+	Password string                 `json:"password"`
+	Data     map[string]interface{} `json:"data"`
 }
 
 // UserGet returns a user
@@ -29,6 +30,8 @@ func (a *API) UserGet(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 		return
 	}
+	user.Data = []models.Data{}
+	a.db.Model(user).Related(&user.Data)
 
 	sendJSON(w, 200, user)
 }
@@ -42,11 +45,6 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 	err := jsonDecoder.Decode(params)
 	if err != nil {
 		BadRequestError(w, fmt.Sprintf("Could not read User Update params: %v", err))
-		return
-	}
-
-	if params.Email == "" && params.Password == "" {
-		UnprocessableEntity(w, fmt.Sprintf("Update requires either an email or a password"))
 		return
 	}
 
@@ -80,11 +78,27 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	if params.Password != "" {
-		if err := user.UpdatePassword(params.Password); err != nil {
+		if err = user.EncryptPassword(params.Password); err != nil {
 			tx.Rollback()
 			InternalServerError(w, fmt.Sprintf("Error during password encryption: %v", err))
 		}
 	}
+
+	if params.Data != nil {
+		if err = user.UpdateUserData(tx, &params.Data); err != nil {
+			tx.Rollback()
+			switch v := err.(type) {
+			case *models.InvalidDataType:
+				BadRequestError(w, v.Error())
+			default:
+				InternalServerError(w, err.Error())
+			}
+			return
+		}
+	}
+
+	user.Data = []models.Data{}
+	tx.Model(user).Related(&user.Data)
 
 	tx.Save(user)
 	tx.Commit()
