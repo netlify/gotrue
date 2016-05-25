@@ -1,9 +1,10 @@
 # Authlify - User mangament for APIs
 
-Authlify is a small open-source API that can act as a self-standing API service
-for handling user registration and authentication for JAM projects.
+Authlify is a small open-source API written in golang, that can act as a self-standing
+API service for handling user registration and authentication for JAM projects.
 
-It's based on OAuth2 and JWT and will handle user signup and authentication.
+It's based on OAuth2 and JWT and will handle user signup, authentication and custom
+user data.
 
 ## Endpoints
 
@@ -119,12 +120,18 @@ Auhlify exposes the following endpoints:
 
 * **PUT /user**
 
-  Update a user (Requires authentication).
+  Update a user (Requires authentication). Apart from changing email/password, this
+  method can be used to set custom user data.
 
   ```json
   {
     "email": "new-email@example.com",
-    "password": "new-password"
+    "password": "new-password",
+    "data": {
+      "key": "value",
+      "number": 10,
+      "admin": false
+    }
   }
   ```
 
@@ -150,7 +157,8 @@ Auhlify exposes the following endpoints:
 
 ## TODO
 
-* Custom user data
+* Schema for custom user data in config file
+* Better logging
 * Email validation on email updates
 
 ## License

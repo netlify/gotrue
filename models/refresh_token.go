@@ -1,6 +1,10 @@
 package models
 
-import "github.com/jinzhu/gorm"
+import (
+	"time"
+
+	"github.com/jinzhu/gorm"
+)
 
 type RefreshToken struct {
 	ID int64
@@ -10,7 +14,8 @@ type RefreshToken struct {
 	User   User
 	UserID string
 
-	Revoked bool
+	Revoked   bool
+	CreatedAt time.Time
 }
 
 func CreateRefreshToken(db *gorm.DB, user *User) (*RefreshToken, error) {
