@@ -62,7 +62,7 @@ func (a *API) Verify(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	tx := a.db.Begin()
-	if err := a.db.Save(user).Error; err != nil {
+	if err := tx.Save(user).Error; err != nil {
 		tx.Rollback()
 		InternalServerError(w, fmt.Sprintf("Error confirming user: %v", err))
 		return
