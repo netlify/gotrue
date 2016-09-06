@@ -2,7 +2,12 @@ package conf
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // Configuration holds all the confiruation for authlify
@@ -33,6 +38,42 @@ type Configuration struct {
 			RecoveryMail     string `json:"recovery"`
 		} `json:"mail_subjects"`
 	} `json:"mailer"`
+}
+
+type onlyFirstLevel struct {
+	Port int `json:"port"`
+}
+
+func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
+	err := viper.BindPFlags(cmd.Flags())
+	if err != nil {
+		return nil, err
+	}
+
+	viper.SetEnvPrefix("NETLIFY")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
+
+	if configFile, _ := cmd.Flags().GetString("config"); configFile != "" {
+		viper.SetConfigFile(configFile)
+	} else {
+		viper.SetConfigName("config")
+		viper.AddConfigPath("./")
+		viper.AddConfigPath("$HOME/.netlify/authlify/")
+	}
+
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, err
+	}
+
+	config := new(onlyFirstLevel)
+	if err := viper.Unmarshal(config); err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("%+v\n", config)
+
+	return nil, nil
 }
 
 // Load will construct the config from the file `config.json`
