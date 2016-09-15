@@ -1,0 +1,8 @@
+---
+language: go
+
+go:
+  - 1.7
+
+install: make deps
+script: make all
