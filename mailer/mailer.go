@@ -58,7 +58,7 @@ func (m *Mailer) ConfirmationMail(user *models.User) error {
 <p>Follow this link to complete the registration process:</p>
 <p><a href="`+confirmationURL+`">Complete Registration</a></p>`)
 
-	dial := gomail.NewDialer(m.Host, m.Port, m.User, m.Pass)
+	dial := gomail.NewPlainDialer(m.Host, m.Port, m.User, m.Pass)
 	return dial.DialAndSend(mail)
 }
 
@@ -75,6 +75,6 @@ func (m *Mailer) RecoveryMail(user *models.User) error {
 <p>Follow this link to reset your password:</p>
 <p><a href="`+confirmationURL+`">Reset Password</a></p>`)
 
-	dial := gomail.NewDialer(m.Host, m.Port, m.User, m.Pass)
+	dial := gomail.NewPlainDialer(m.Host, m.Port, m.User, m.Pass)
 	return dial.DialAndSend(mail)
 }
