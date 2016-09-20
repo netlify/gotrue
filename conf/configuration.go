@@ -1,11 +1,11 @@
 package conf
 
 import (
-	"encoding/json"
-	"fmt"
+	"bufio"
 	"os"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -38,10 +38,10 @@ type Configuration struct {
 			RecoveryMail     string `json:"recovery"`
 		} `json:"mail_subjects"`
 	} `json:"mailer"`
-}
-
-type onlyFirstLevel struct {
-	Port int `json:"port"`
+	Logging struct {
+		Level string `json:"level"`
+		File  string `json:"file"`
+	} `json:"logging"`
 }
 
 func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
@@ -66,34 +66,42 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 		return nil, err
 	}
 
-	config := new(onlyFirstLevel)
+	config := new(Configuration)
 	if err := viper.Unmarshal(config); err != nil {
 		return nil, err
 	}
 
-	fmt.Printf("%+v\n", config)
+	if err := populateConfig(config); err != nil {
+		return nil, err
+	}
+
+	if err := configureLogging(config); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
 
-// Load will construct the config from the file `config.json`
-func Load() (*Configuration, error) {
-	return LoadWithFile("config.json")
-}
+func configureLogging(config *Configuration) error {
+	logConfig := config.Logging
 
-// LoadWithFile constructs the config from the specified file
-func LoadWithFile(filePath string) (*Configuration, error) {
-	file, err := os.Open(filePath)
+	if logConfig.File != "" {
+		f, errOpen := os.OpenFile(logConfig.File, os.O_RDWR|os.O_APPEND, 0660)
+		if errOpen != nil {
+			return errOpen
+		}
+		logrus.SetOutput(bufio.NewWriter(f))
+	}
+
+	level, err := logrus.ParseLevel(strings.ToUpper(logConfig.Level))
 	if err != nil {
-		return nil, err
+		return err
 	}
+	logrus.SetLevel(level)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:    true,
+		DisableTimestamp: false,
+	})
 
-	decoder := json.NewDecoder(file)
-
-	var conf Configuration
-	if err := decoder.Decode(&conf); err != nil {
-		return nil, err
-	}
-
-	return &conf, nil
+	return nil
 }
