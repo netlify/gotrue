@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/netlify/authlify/models"
+	"github.com/netlify/netlify-auth/models"
 )
 
 // UserUpdateParams parameters for updating a user
