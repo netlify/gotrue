@@ -1,3 +1,5 @@
 config.json
 gorm.db
 vendor/
+authlify
+netlify-auth

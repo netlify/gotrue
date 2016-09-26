@@ -1,11 +1,10 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"regexp"
-
-	"golang.org/x/net/context"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/guregu/kami"

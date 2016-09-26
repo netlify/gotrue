@@ -1,8 +1,13 @@
 package conf
 
 import (
-	"encoding/json"
+	"bufio"
 	"os"
+	"strings"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // Configuration holds all the confiruation for authlify
@@ -33,26 +38,70 @@ type Configuration struct {
 			RecoveryMail     string `json:"recovery"`
 		} `json:"mail_subjects"`
 	} `json:"mailer"`
+	Logging struct {
+		Level string `json:"level"`
+		File  string `json:"file"`
+	} `json:"logging"`
 }
 
-// Load will construct the config from the file `config.json`
-func Load() (*Configuration, error) {
-	return LoadWithFile("config.json")
-}
-
-// LoadWithFile constructs the config from the specified file
-func LoadWithFile(filePath string) (*Configuration, error) {
-	file, err := os.Open(filePath)
+func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
+	err := viper.BindPFlags(cmd.Flags())
 	if err != nil {
 		return nil, err
 	}
 
-	decoder := json.NewDecoder(file)
+	viper.SetEnvPrefix("NETLIFY")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
 
-	var conf Configuration
-	if err := decoder.Decode(&conf); err != nil {
+	if configFile, _ := cmd.Flags().GetString("config"); configFile != "" {
+		viper.SetConfigFile(configFile)
+	} else {
+		viper.SetConfigName("config")
+		viper.AddConfigPath("./")
+		viper.AddConfigPath("$HOME/.netlify/authlify/")
+	}
+
+	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
 
-	return &conf, nil
+	config := new(Configuration)
+	if err := viper.Unmarshal(config); err != nil {
+		return nil, err
+	}
+
+	if err := populateConfig(config); err != nil {
+		return nil, err
+	}
+
+	if err := configureLogging(config); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func configureLogging(config *Configuration) error {
+	logConfig := config.Logging
+
+	if logConfig.File != "" {
+		f, errOpen := os.OpenFile(logConfig.File, os.O_RDWR|os.O_APPEND, 0660)
+		if errOpen != nil {
+			return errOpen
+		}
+		logrus.SetOutput(bufio.NewWriter(f))
+	}
+
+	level, err := logrus.ParseLevel(strings.ToUpper(logConfig.Level))
+	if err != nil {
+		return err
+	}
+	logrus.SetLevel(level)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:    true,
+		DisableTimestamp: false,
+	})
+
+	return nil
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,8 +10,6 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
 	"github.com/netlify/authlify/models"
-
-	"golang.org/x/net/context"
 )
 
 // AccessTokenResponse represents an OAuth2 success response

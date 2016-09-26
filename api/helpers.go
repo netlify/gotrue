@@ -1,11 +1,11 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
-	"golang.org/x/net/context"
 )
 
 // Error is an error with a message

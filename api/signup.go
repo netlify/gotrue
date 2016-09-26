@@ -1,12 +1,12 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/netlify/authlify/models"
-	"golang.org/x/net/context"
 )
 
 // SignupParams are the parameters the Signup endpoint accepts
