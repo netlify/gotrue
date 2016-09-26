@@ -5,7 +5,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/netlify/authlify/conf"
+	"github.com/netlify/netlify-auth/conf"
 
 	"github.com/jinzhu/gorm"
 )

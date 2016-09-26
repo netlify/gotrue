@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Configuration holds all the confiruation for authlify
+// Configuration holds all the confiruation for netlify-auth
 type Configuration struct {
 	JWT struct {
 		Secret string `json:"secret"`
@@ -50,7 +50,9 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 		return nil, err
 	}
 
-	viper.SetEnvPrefix("NETLIFY")
+	viper.SetEnvPrefix("NETLIFY_AUTH")
+
+	viper.SetConfigType("json")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
@@ -59,10 +61,11 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 	} else {
 		viper.SetConfigName("config")
 		viper.AddConfigPath("./")
-		viper.AddConfigPath("$HOME/.netlify/authlify/")
+		viper.AddConfigPath("$HOME/.netlify/authlify/") // keep backwards compatibility
+		viper.AddConfigPath("$HOME/.netlify/netlify-auth/")
 	}
 
-	if err := viper.ReadInConfig(); err != nil {
+	if err := viper.ReadInConfig(); err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 

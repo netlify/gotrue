@@ -7,14 +7,14 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/sqlite" // Import SQLite
 	"github.com/spf13/cobra"
 
-	"github.com/netlify/authlify/api"
-	"github.com/netlify/authlify/conf"
-	"github.com/netlify/authlify/mailer"
-	"github.com/netlify/authlify/models"
+	"github.com/netlify/netlify-auth/api"
+	"github.com/netlify/netlify-auth/conf"
+	"github.com/netlify/netlify-auth/mailer"
+	"github.com/netlify/netlify-auth/models"
 )
 
 var rootCmd = cobra.Command{
-	Use: "authlify",
+	Use: "netlify-auth",
 	Run: run,
 }
 

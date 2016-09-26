@@ -9,7 +9,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
-	"github.com/netlify/authlify/models"
+	"github.com/netlify/netlify-auth/models"
 )
 
 // AccessTokenResponse represents an OAuth2 success response

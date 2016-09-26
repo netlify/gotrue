@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/netlify/authlify/models"
+	"github.com/netlify/netlify-auth/models"
 )
 
 // VerifyParams are the parameters the Verify endpoint accepts

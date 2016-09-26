@@ -3,8 +3,8 @@ package mailer
 import (
 	"gopkg.in/gomail.v2"
 
-	"github.com/netlify/authlify/conf"
-	"github.com/netlify/authlify/models"
+	"github.com/netlify/netlify-auth/conf"
+	"github.com/netlify/netlify-auth/models"
 )
 
 // Mailer will send mail and use templates from the site for easy mail styling
@@ -26,7 +26,7 @@ type MailSubjects struct {
 	RecoveryMail     string
 }
 
-// NewMailer returns a new authlify mailer
+// NewMailer returns a new netlify-auth mailer
 func NewMailer(conf *conf.Configuration) *Mailer {
 	mailConf := conf.Mailer
 	return &Mailer{

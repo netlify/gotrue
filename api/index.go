@@ -6,8 +6,8 @@ import (
 )
 
 const description = `{
-  "name": "Authlify",
-  "description": "Authlify is a user registration and authentication API"
+  "name": "Netlify Auth",
+  "description": "Netlify Auth is a user registration and authentication API"
 }`
 
 // Index shows a description of the API

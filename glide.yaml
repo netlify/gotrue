@@ -1,4 +1,4 @@
-package: github.com/netlify/authlify
+package: github.com/netlify/netlify-auth
 import:
 - package: github.com/dgrijalva/jwt-go
   version: v2.7.0

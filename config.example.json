@@ -21,8 +21,8 @@
     "member_folder": "/users",
     "admin_email": "admin@example.com",
     "mail_subjects": {
-      "confirmation": "Welcome to Authlify!",
-      "recovery": "Reset your Authlify password!"
+      "confirmation": "Welcome to Netlify Auth!",
+      "recovery": "Reset your Netlify Auth password!"
     }
   }
 }
