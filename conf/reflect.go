@@ -30,7 +30,7 @@ func populateConfig(config *Configuration) error {
 	if config.DB.Driver == "" && config.DB.ConnURL != "" {
 		u, err := url.Parse(config.DB.ConnURL)
 		if err != nil {
-			return nil, errors.Wrap(err, "parsing db connection url")
+			return errors.Wrap(err, "parsing db connection url")
 		}
 		config.DB.Driver = u.Scheme
 	}
@@ -38,7 +38,7 @@ func populateConfig(config *Configuration) error {
 	if config.API.Port == 0 && os.Getenv("PORT") != "" {
 		port, err := strconv.Atoi(os.Getenv("PORT"))
 		if err != nil {
-			return nil, errors.Wrap(err, "formatting PORT into int")
+			return errors.Wrap(err, "formatting PORT into int")
 		}
 
 		config.API.Port = port
