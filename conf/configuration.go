@@ -18,9 +18,10 @@ type Configuration struct {
 		Exp    int    `json:"exp"`
 	} `json:"jwt"`
 	DB struct {
-		Driver    string `json:"driver"`
-		ConnURL   string `json:"url"`
-		Namespace string `json:"namespace"`
+		Driver      string `json:"driver"`
+		ConnURL     string `json:"url"`
+		Namespace   string `json:"namespace"`
+		Automigrate bool   `json:"automigrate"`
 	}
 	API struct {
 		Host string `json:"host"`
