@@ -78,6 +78,9 @@ func recursivelySet(val reflect.Value, prefix string) error {
 			// you can only set with an int64 -> int
 			configVal := int64(viper.GetInt(tag))
 			thisField.SetInt(configVal)
+		case reflect.Bool:
+			configVal := viper.GetBool(tag)
+			thisField.SetBool(configVal)
 		case reflect.String:
 			configVal := viper.GetString(tag)
 			thisField.SetString(configVal)
