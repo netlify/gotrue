@@ -23,4 +23,5 @@ func migrate(config *conf.Configuration) {
 
 	db.AutoMigrate(models.RefreshToken{})
 	db.AutoMigrate(models.User{})
+	db.AutoMigrate(models.Data{})
 }
