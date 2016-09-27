@@ -10,6 +10,12 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+// Namespace puts all tables names under a common
+// namespace. This is useful if you want to use
+// the same database for several services and don't
+// want table names to collide.
+var Namespace string
+
 // Configuration defines the info necessary to connect to a storage engine
 type Configuration struct {
 	Driver  string `json:"driver"`
@@ -31,4 +37,11 @@ func Connect(config *conf.Configuration) (*gorm.DB, error) {
 	db.AutoMigrate(&User{}, &RefreshToken{}, &Data{})
 
 	return db, nil
+}
+
+func tableName(defaultName string) string {
+	if Namespace != "" {
+		return Namespace + "_" + defaultName
+	}
+	return defaultName
 }

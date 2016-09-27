@@ -9,7 +9,7 @@ import (
 
 var migrateCmd = cobra.Command{
 	Use:  "migrate",
-	Long: "Migrate database strucutures. This will create new tables and add missing collumns and indexes.",
+	Long: "Migrate database strucutures. This will create new tables and add missing columns and indexes.",
 	Run: func(cmd *cobra.Command, args []string) {
 		execWithConfig(cmd, migrate)
 	},

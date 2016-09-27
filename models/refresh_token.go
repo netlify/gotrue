@@ -29,3 +29,7 @@ func CreateRefreshToken(db *gorm.DB, user *User) (*RefreshToken, error) {
 
 	return token, nil
 }
+
+func (RefreshToken) TableName() string {
+	return tableName("refresh_tokens")
+}

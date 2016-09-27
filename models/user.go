@@ -10,6 +10,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// NUMBER|STRING|BOOL are the different types supported in custom data for users
+const (
+	NUMBER = iota
+	STRING
+	BOOL
+)
+
 // User respresents a registered user with email/password authentication
 type User struct {
 	ID string `json:"id"`
@@ -29,12 +36,9 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// NUMBER|STRING|BOOL are the different types supported in custom data for users
-const (
-	NUMBER = iota
-	STRING
-	BOOL
-)
+func (User) TableName() string {
+	return tableName("users")
+}
 
 // Data is the custom data on a user
 type Data struct {
@@ -46,6 +50,10 @@ type Data struct {
 	NumericValue float64
 	StringValue  string
 	BoolValue    bool
+}
+
+func (Data) TableName() string {
+	return tableName("users_data")
 }
 
 // Value returns the value of the data field

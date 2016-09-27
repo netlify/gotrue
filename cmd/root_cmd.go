@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/netlify/netlify-auth/conf"
+	"github.com/netlify/netlify-auth/models"
 )
 
 var rootCmd = cobra.Command{
@@ -26,6 +27,10 @@ func execWithConfig(cmd *cobra.Command, fn func(config *conf.Configuration)) {
 	config, err := conf.LoadConfig(cmd)
 	if err != nil {
 		logrus.Fatalf("Failed to load configration: %+v", err)
+	}
+
+	if config.DB.Namespace != "" {
+		models.Namespace = config.DB.Namespace
 	}
 
 	fn(config)
