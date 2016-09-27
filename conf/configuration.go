@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -17,8 +18,10 @@ type Configuration struct {
 		Exp    int    `json:"exp"`
 	} `json:"jwt"`
 	DB struct {
-		Driver  string `json:"driver"`
-		ConnURL string `json:"url"`
+		Driver      string `json:"driver"`
+		ConnURL     string `json:"url"`
+		Namespace   string `json:"namespace"`
+		Automigrate bool   `json:"automigrate"`
 	}
 	API struct {
 		Host string `json:"host"`
@@ -82,7 +85,7 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 		return nil, err
 	}
 
-	return nil, nil
+	return config, nil
 }
 
 func configureLogging(config *Configuration) error {
@@ -96,11 +99,14 @@ func configureLogging(config *Configuration) error {
 		logrus.SetOutput(bufio.NewWriter(f))
 	}
 
-	level, err := logrus.ParseLevel(strings.ToUpper(logConfig.Level))
-	if err != nil {
-		return err
+	if logConfig.Level != "" {
+		level, err := logrus.ParseLevel(strings.ToUpper(logConfig.Level))
+		if err != nil {
+			return errors.Wrap(err, "configuring logging")
+		}
+		logrus.SetLevel(level)
 	}
-	logrus.SetLevel(level)
+
 	logrus.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:    true,
 		DisableTimestamp: false,

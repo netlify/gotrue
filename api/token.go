@@ -134,7 +134,7 @@ func (a *API) issueRefreshToken(tx *gorm.DB, user *models.User, w http.ResponseW
 		return
 	}
 
-	user.Data = []models.Data{}
+	user.Data = []models.UserData{}
 	tx.Model(user).Related(&user.Data)
 
 	tokenString, err := a.generateAccessToken(user)

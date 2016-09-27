@@ -29,7 +29,7 @@ func (a *API) UserGet(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 		return
 	}
-	user.Data = []models.Data{}
+	user.Data = []models.UserData{}
 	a.db.Model(user).Related(&user.Data)
 
 	sendJSON(w, 200, user)
@@ -96,7 +96,7 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	user.Data = []models.Data{}
+	user.Data = []models.UserData{}
 	tx.Model(user).Related(&user.Data)
 
 	tx.Save(user)

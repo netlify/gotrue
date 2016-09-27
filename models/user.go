@@ -10,6 +10,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// NUMBER|STRING|BOOL are the different types supported in custom data for users
+const (
+	NUMBER = iota
+	STRING
+	BOOL
+)
+
 // User respresents a registered user with email/password authentication
 type User struct {
 	ID string `json:"id"`
@@ -23,21 +30,18 @@ type User struct {
 	RecoverySentAt     time.Time `json:"recovery_sent_at,omitempty"`
 	LastSignInAt       time.Time `json:"last_sign_in_at,omitempty"`
 
-	Data []Data `json:"-"`
+	Data []UserData `json:"-"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// NUMBER|STRING|BOOL are the different types supported in custom data for users
-const (
-	NUMBER = iota
-	STRING
-	BOOL
-)
+func (User) TableName() string {
+	return tableName("users")
+}
 
-// Data is the custom data on a user
-type Data struct {
+// UserData is the custom data on a user
+type UserData struct {
 	UserID string `gorm:"primary_key"`
 	Key    string `gorm:"primary_key"`
 
@@ -48,8 +52,12 @@ type Data struct {
 	BoolValue    bool
 }
 
+func (UserData) TableName() string {
+	return tableName("users_data")
+}
+
 // Value returns the value of the data field
-func (d *Data) Value() interface{} {
+func (d *UserData) Value() interface{} {
 	switch d.Type {
 	case STRING:
 		return d.StringValue
@@ -71,7 +79,7 @@ func (i *InvalidDataType) Error() string {
 	return "Invalid datatype for data field " + i.Key + " only strings, numbers and bools allowed"
 }
 
-func userDataToMap(data []Data) map[string]interface{} {
+func userDataToMap(data []UserData) map[string]interface{} {
 	result := map[string]interface{}{}
 	for _, field := range data {
 		switch field.Type {
@@ -121,7 +129,7 @@ func CreateUser(db *gorm.DB, email, password string) (*User, error) {
 // UpdateUserData updates all user data from a map of updates
 func (u *User) UpdateUserData(tx *gorm.DB, updates *map[string]interface{}) error {
 	for key, value := range *updates {
-		data := &Data{}
+		data := &UserData{}
 		result := tx.First(data, "user_id = ? and key = ?", u.ID, key)
 		data.UserID = u.ID
 		data.Key = key

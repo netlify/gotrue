@@ -1,28 +1,61 @@
 package conf
 
 import (
-	"errors"
 	"fmt"
+	"net/url"
+	"os"
 	"reflect"
+	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
 const tagPrefix = "viper"
 
 func populateConfig(config *Configuration) error {
-	return recursivelySet(reflect.ValueOf(config), "")
+	err := recursivelySet(reflect.ValueOf(config), "")
+	if err != nil {
+		return err
+	}
+
+	if config == nil {
+		return nil
+	}
+
+	if config.DB.ConnURL == "" && os.Getenv("DATABASE_URL") != "" {
+		config.DB.ConnURL = os.Getenv("DATABASE_URL")
+	}
+
+	if config.DB.Driver == "" && config.DB.ConnURL != "" {
+		u, err := url.Parse(config.DB.ConnURL)
+		if err != nil {
+			return errors.Wrap(err, "parsing db connection url")
+		}
+		config.DB.Driver = u.Scheme
+	}
+
+	if config.API.Port == 0 && os.Getenv("PORT") != "" {
+		port, err := strconv.Atoi(os.Getenv("PORT"))
+		if err != nil {
+			return errors.Wrap(err, "formatting PORT into int")
+		}
+
+		config.API.Port = port
+	}
+
+	return nil
 }
 
 func recursivelySet(val reflect.Value, prefix string) error {
 	if val.Kind() != reflect.Ptr {
-		return errors.New("WTF")
+		return errors.Wrap(fmt.Errorf("unexpected value: %v", val), "expected pointer value")
 	}
 
 	// dereference
 	val = reflect.Indirect(val)
 	if val.Kind() != reflect.Struct {
-		return errors.New("FML")
+		return errors.Wrap(fmt.Errorf("unexpected value: %v", val), "expected struct value")
 	}
 
 	// grab the type for this instance
