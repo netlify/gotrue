@@ -15,4 +15,4 @@ image: ## Build the Docker image.
 	docker build .
 
 test: ## Run tests.
-	go test -v $(go list ./... | grep -v /vendor/)
+	go test -v `go list ./... | grep -v /vendor/`
