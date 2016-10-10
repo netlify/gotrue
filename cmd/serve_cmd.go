@@ -26,7 +26,7 @@ func serve(config *conf.Configuration) {
 	}
 
 	mailer := mailer.NewMailer(config)
-	api := api.NewAPI(config, db, mailer)
+	api := api.NewAPIWithVersion(config, db, mailer, Version)
 
 	l := fmt.Sprintf("%v:%v", config.API.Host, config.API.Port)
 	logrus.Infof("Netlify Auth API started on: %s", l)

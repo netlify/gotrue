@@ -14,6 +14,8 @@ import (
 	"github.com/rs/cors"
 )
 
+const defaultVersion = "unknown version"
+
 var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 
 // API is the main REST API
@@ -22,6 +24,7 @@ type API struct {
 	db      *gorm.DB
 	mailer  *mailer.Mailer
 	config  *conf.Configuration
+	version string
 }
 
 func (a *API) requireAuthentication(ctx context.Context, w http.ResponseWriter, r *http.Request) context.Context {
@@ -58,7 +61,11 @@ func (a *API) ListenAndServe(hostAndPort string) error {
 
 // NewAPI instantiates a new REST API
 func NewAPI(config *conf.Configuration, db *gorm.DB, mailer *mailer.Mailer) *API {
-	api := &API{config: config, db: db, mailer: mailer}
+	return NewAPIWithVersion(config, db, mailer, defaultVersion)
+}
+
+func NewAPIWithVersion(config *conf.Configuration, db *gorm.DB, mailer *mailer.Mailer, version string) *API {
+	api := &API{config: config, db: db, mailer: mailer, version: version}
 	mux := kami.New()
 
 	mux.Use("/user", api.requireAuthentication)
