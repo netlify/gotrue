@@ -1,5 +1,5 @@
-hash: c098b0bb5a12d25c55312600bf64f120ad7a1900461ac7f43019064923fe40f1
-updated: 2016-09-26T16:00:22.342761204-07:00
+hash: 9f813e1775bcf88725fa5efcd52588715a90ec2d45f5a2002cc35e1f912a6fc8
+updated: 2016-12-17T16:32:59.555594337-08:00
 imports:
 - name: github.com/dgrijalva/jwt-go
   version: 268038b363c7a8d7306b8e35bf77a1fde4b0c402
@@ -33,7 +33,7 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jinzhu/gorm
-  version: 5174cc5c242a728b435ea2be8a2f7f998e15429b
+  version: 0f2ceb5a775714a46bc344976324e3e439f8cdcc
   subpackages:
   - dialects/sqlite
 - name: github.com/jinzhu/inflection
@@ -65,8 +65,6 @@ imports:
 - name: github.com/rs/xhandler
   version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
 - name: github.com/Sirupsen/logrus
-  version: 3ec0642a7fb6488f65b06f9040adc67e3990296a
-- name: github.com/sirupsen/logrus
   version: 3ec0642a7fb6488f65b06f9040adc67e3990296a
 - name: github.com/spf13/afero
   version: 20500e2abd0d1f4564a499e83d11d6c73cd58c27

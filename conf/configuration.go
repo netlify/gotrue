@@ -14,8 +14,9 @@ import (
 // Configuration holds all the confiruation for netlify-auth
 type Configuration struct {
 	JWT struct {
-		Secret string `json:"secret"`
-		Exp    int    `json:"exp"`
+		Secret         string `json:"secret"`
+		Exp            int    `json:"exp"`
+		AdminGroupName string `json:"admin_group_name"`
 	} `json:"jwt"`
 	DB struct {
 		Driver      string `json:"driver"`
@@ -83,6 +84,10 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 
 	if err := configureLogging(config); err != nil {
 		return nil, err
+	}
+
+	if config.JWT.AdminGroupName == "" {
+		config.JWT.AdminGroupName = "admin"
 	}
 
 	return config, nil

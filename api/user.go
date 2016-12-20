@@ -14,6 +14,7 @@ type UserUpdateParams struct {
 	Email    string                 `json:"email"`
 	Password string                 `json:"password"`
 	Data     map[string]interface{} `json:"data"`
+	AppData  map[string]interface{} `json:"app_metadata,omitempty"`
 }
 
 // UserGet returns a user
@@ -21,7 +22,7 @@ func (a *API) UserGet(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	token := getToken(ctx)
 
 	user := &models.User{}
-	if result := a.db.First(user, "id = ?", token.Claims["id"]); result.Error != nil {
+	if result := a.db.Preload("AppMetaData").Preload("UserMetaData").First(user, "id = ?", token.Claims["id"]); result.Error != nil {
 		if result.RecordNotFound() {
 			NotFoundError(w, "No user found for this token")
 		} else {
@@ -29,8 +30,6 @@ func (a *API) UserGet(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 		return
 	}
-	user.Data = []models.UserData{}
-	a.db.Model(user).Related(&user.Data)
 
 	sendJSON(w, 200, user)
 }
@@ -84,22 +83,27 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	if params.Data != nil {
-		if err = user.UpdateUserData(tx, &params.Data); err != nil {
+		if err = user.UpdateUserMetaData(tx, &params.Data); err != nil {
 			tx.Rollback()
-			switch v := err.(type) {
-			case *models.InvalidDataType:
-				BadRequestError(w, v.Error())
-			default:
-				InternalServerError(w, err.Error())
-			}
+			InternalServerError(w, err.Error())
 			return
 		}
 	}
 
-	user.Data = []models.UserData{}
-	tx.Model(user).Related(&user.Data)
+	if params.AppData != nil {
+		if !user.HasRole(a.config.JWT.AdminGroupName) {
+			tx.Rollback()
+			UnauthorizedError(w, "Updating app_metadata requires admin privileges")
+			return
+		}
+		if err = user.UpdateAppMetaData(tx, &params.AppData); err != nil {
+			tx.Rollback()
+			InternalServerError(w, err.Error())
+			return
+		}
+	}
 
-	tx.Save(user)
+	tx.Update(user)
 	tx.Commit()
 	sendJSON(w, 200, user)
 }

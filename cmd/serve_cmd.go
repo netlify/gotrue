@@ -24,6 +24,9 @@ func serve(config *conf.Configuration) {
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
+	defer db.Close()
+
+	db.LogMode(true)
 
 	mailer := mailer.NewMailer(config)
 	api := api.NewAPIWithVersion(config, db, mailer, Version)

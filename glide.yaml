@@ -5,7 +5,7 @@ import:
 - package: github.com/guregu/kami
   version: v2.1
 - package: github.com/jinzhu/gorm
-  version: v1.0
+  version: 0f2ceb5a775714a46bc344976324e3e439f8cdcc
   subpackages:
   - dialects/sqlite
 - package: github.com/pborman/uuid
@@ -17,4 +17,4 @@ import:
   - bcrypt
 - package: gopkg.in/gomail.v2
   version: 2.0.0
-- package: github.com/sirupsen/logrus
+- package: github.com/Sirupsen/logrus

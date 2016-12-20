@@ -40,7 +40,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	password := r.FormValue("password")
 
 	user := &models.User{}
-	if result := a.db.First(user, "email = ?", username); result.Error != nil {
+	if result := a.db.Preload("UserMetaData").Preload("AppMetaData").First(user, "email = ?", username); result.Error != nil {
 		if result.RecordNotFound() {
 			sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "No user found with this email"})
 		} else {
@@ -100,7 +100,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	tx.Save(refreshToken)
 
 	user := &models.User{}
-	if result := tx.Model(refreshToken).Related(user); result.Error != nil {
+	if result := tx.Model(refreshToken).Preload("AppMetaData").Preload("UserMetaData").Related(user); result.Error != nil {
 		tx.Rollback()
 		if result.RecordNotFound() {
 			sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Refresh Token"})
@@ -119,9 +119,8 @@ func (a *API) generateAccessToken(user *models.User) (string, error) {
 	token.Claims["id"] = user.ID
 	token.Claims["email"] = user.Email
 	token.Claims["exp"] = time.Now().Add(time.Second * time.Duration(a.config.JWT.Exp)).Unix()
-	for _, data := range user.Data {
-		token.Claims[data.Key] = data.Value()
-	}
+	token.Claims["app_metadata"] = user.AppMetaDataMap()
+	token.Claims["user_metadata"] = user.UserMetaDataMap()
 
 	return token.SignedString([]byte(a.config.JWT.Secret))
 }
@@ -133,9 +132,6 @@ func (a *API) issueRefreshToken(tx *gorm.DB, user *models.User, w http.ResponseW
 		InternalServerError(w, fmt.Sprintf("Error generating token: %v", err))
 		return
 	}
-
-	user.Data = []models.UserData{}
-	tx.Model(user).Related(&user.Data)
 
 	tokenString, err := a.generateAccessToken(user)
 
