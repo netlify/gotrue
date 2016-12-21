@@ -53,12 +53,24 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return
 		}
 		existingUser.GenerateConfirmationToken()
+
 		tx.Save(existingUser)
 		user = existingUser
 	}
 
+	users := []*models.User{}
+	var userCount int64
+	if result := tx.Where("id != ?", user.ID).Find(&users).Count(&userCount); result.Error != nil {
+		InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
+		return
+	}
+
 	if params.Data != nil {
-		user.UpdateUserData(tx, &params.Data)
+		user.UpdateUserMetaData(tx, &params.Data)
+	}
+
+	if userCount == 0 {
+		user.UpdateAppMetaData(tx, &map[string]interface{}{"roles": []string{a.config.JWT.AdminGroupName}})
 	}
 
 	if err := a.mailer.ConfirmationMail(user); err != nil {
