@@ -90,6 +90,10 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 		config.JWT.AdminGroupName = "admin"
 	}
 
+	if config.JWT.Exp == 0 {
+		config.JWT.Exp = 3600
+	}
+
 	return config, nil
 }
 
