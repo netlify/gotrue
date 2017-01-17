@@ -36,11 +36,12 @@ func NewMailer(conf *conf.Configuration) *Mailer {
 		MemberFolder: mailConf.MemberFolder,
 		Config:       conf,
 		TemplateMailer: &TemplateMailer{
-			Host: conf.Mailer.Host,
-			Port: conf.Mailer.Port,
-			User: conf.Mailer.User,
-			Pass: conf.Mailer.Pass,
-			From: conf.Mailer.AdminEmail,
+			Host:    conf.Mailer.Host,
+			Port:    conf.Mailer.Port,
+			User:    conf.Mailer.User,
+			Pass:    conf.Mailer.Pass,
+			From:    conf.Mailer.AdminEmail,
+			BaseURL: conf.Mailer.SiteURL,
 		},
 	}
 }

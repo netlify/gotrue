@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,11 +20,12 @@ const TemplateExpiration = 10 * time.Second
 var templates = TemplateCache{templates: map[string]*MailTemplate{}}
 
 type TemplateMailer struct {
-	From string
-	Host string
-	Port int
-	User string
-	Pass string
+	From    string
+	Host    string
+	Port    int
+	User    string
+	Pass    string
+	BaseURL string
 }
 
 func (m *TemplateMailer) Mail(to, subjectTemplate, templateURL, defaultTemplate string, templateData map[string]interface{}) error {
@@ -120,7 +122,13 @@ func (m *TemplateMailer) MailBody(url string, defaultTemplate string, data map[s
 	var err error
 
 	if url != "" {
-		temp, err = templates.Get(url)
+		var absoluteURL string
+		if strings.HasPrefix(url, "http") {
+			absoluteURL = url
+		} else {
+			absoluteURL = m.BaseURL + url
+		}
+		temp, err = templates.Get(absoluteURL)
 		if err != nil {
 			log.Printf("Error loading template from %v: %v\n", url, err)
 		}
