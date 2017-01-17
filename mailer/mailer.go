@@ -1,23 +1,25 @@
 package mailer
 
 import (
-	"gopkg.in/gomail.v2"
-
 	"github.com/netlify/netlify-auth/conf"
 	"github.com/netlify/netlify-auth/models"
 )
 
+const DefaultConfirmationMail = `<h2>Confirm your signup</h2>
+
+<p>Follow this link to confirm your account:</p>
+<p><a href="{{ .ConfirmationURL }}">Confirm your mail</a></p>`
+const DefaultRecoveryMail = `<h2>Reset Password</h2>
+
+<p>Follow this link to reset the password for your account:</p>
+<p><a href="{{ .ConfirmationURL }}">Reset Password</a></p>`
+
 // Mailer will send mail and use templates from the site for easy mail styling
 type Mailer struct {
 	SiteURL        string
-	TemplateFolder string
 	MemberFolder   string
-	Host           string
-	Port           int
-	User           string
-	Pass           string
-	AdminEmail     string
-	MailSubjects   MailSubjects
+	Config         *conf.Configuration
+	TemplateMailer *TemplateMailer
 }
 
 // MailSubjects holds the subject lines for the emails
@@ -30,51 +32,60 @@ type MailSubjects struct {
 func NewMailer(conf *conf.Configuration) *Mailer {
 	mailConf := conf.Mailer
 	return &Mailer{
-		SiteURL:        mailConf.SiteURL,
-		TemplateFolder: mailConf.TemplateFolder,
-		MemberFolder:   mailConf.MemberFolder,
-		Host:           mailConf.Host,
-		Port:           mailConf.Port,
-		User:           mailConf.User,
-		Pass:           mailConf.Pass,
-		AdminEmail:     mailConf.AdminEmail,
-		MailSubjects: MailSubjects{
-			ConfirmationMail: mailConf.MailSubjects.ConfirmationMail,
-			RecoveryMail:     mailConf.MailSubjects.RecoveryMail,
+		SiteURL:      mailConf.SiteURL,
+		MemberFolder: mailConf.MemberFolder,
+		Config:       conf,
+		TemplateMailer: &TemplateMailer{
+			Host: conf.Mailer.Host,
+			Port: conf.Mailer.Port,
+			User: conf.Mailer.User,
+			Pass: conf.Mailer.Pass,
+			From: conf.Mailer.AdminEmail,
 		},
 	}
 }
 
 // ConfirmationMail sends a signup confirmation mail to a new user
 func (m *Mailer) ConfirmationMail(user *models.User) error {
-	confirmationURL := m.SiteURL + m.MemberFolder + "/confirm/" + user.ConfirmationToken
-
-	mail := gomail.NewMessage()
-	mail.SetHeader("From", m.AdminEmail)
-	mail.SetHeader("To", user.Email)
-	mail.SetHeader("Subject", m.MailSubjects.ConfirmationMail)
-	mail.SetBody("text/html", `<h2>Please verify your registration</h2>
-
-<p>Follow this link to complete the registration process:</p>
-<p><a href="`+confirmationURL+`">Complete Registration</a></p>`)
-
-	dial := gomail.NewPlainDialer(m.Host, m.Port, m.User, m.Pass)
-	return dial.DialAndSend(mail)
+	return m.TemplateMailer.Mail(
+		user.Email,
+		withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Signup"),
+		m.Config.Mailer.Templates.Confirmation,
+		DefaultConfirmationMail,
+		mailData("Confirmation", m.Config, user),
+	)
 }
 
 // RecoveryMail sends a password recovery mail
 func (m *Mailer) RecoveryMail(user *models.User) error {
-	confirmationURL := m.SiteURL + m.MemberFolder + "/recover/" + user.RecoveryToken
+	return m.TemplateMailer.Mail(
+		user.Email,
+		withDefault(m.Config.Mailer.Subjects.Recovery, "Reset Your Password"),
+		m.Config.Mailer.Templates.Recovery,
+		DefaultRecoveryMail,
+		mailData("Recovery", m.Config, user),
+	)
+}
 
-	mail := gomail.NewMessage()
-	mail.SetHeader("From", m.AdminEmail)
-	mail.SetHeader("To", user.Email)
-	mail.SetHeader("Subject", m.MailSubjects.RecoveryMail)
-	mail.SetBody("text/html", `<h2>Recover your password</h2>
+func mailData(mail string, config *conf.Configuration, user *models.User) map[string]interface{} {
+	data := map[string]interface{}{
+		"SiteURL":         config.Mailer.SiteURL,
+		"ConfirmationURL": config.Mailer.SiteURL + config.Mailer.MemberFolder + "/confirm/" + user.ConfirmationToken,
+		"Email":           user.Email,
+		"Token":           user.ConfirmationToken,
+		"Data":            user.UserMetaDataMap(),
+	}
 
-<p>Follow this link to reset your password:</p>
-<p><a href="`+confirmationURL+`">Reset Password</a></p>`)
+	if mail == "Recovery" {
+		data["Token"] = user.RecoveryToken
+		data["ConfirmationURL"] = config.Mailer.SiteURL + config.Mailer.MemberFolder + "/recover/" + user.RecoveryToken
+	}
+	return data
+}
 
-	dial := gomail.NewPlainDialer(m.Host, m.Port, m.User, m.Pass)
-	return dial.DialAndSend(mail)
+func withDefault(value, defaultValue string) string {
+	if value == "" {
+		return defaultValue
+	}
+	return value
 }

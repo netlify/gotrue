@@ -37,10 +37,14 @@ type Configuration struct {
 		TemplateFolder string `json:"template_folder"`
 		MemberFolder   string `json:"member_folder"`
 		AdminEmail     string `json:"admin_email"`
-		MailSubjects   struct {
-			ConfirmationMail string `json:"confirmation"`
-			RecoveryMail     string `json:"recovery"`
-		} `json:"mail_subjects"`
+		Subjects       struct {
+			Confirmation string `json:"confirmation"`
+			Recovery     string `json:"recovery"`
+		} `json:"subjects"`
+		Templates struct {
+			Confirmation string `json:"confirmation"`
+			Recovery     string `json:"recovery"`
+		} `json:"templates"`
 	} `json:"mailer"`
 	Logging struct {
 		Level string `json:"level"`
