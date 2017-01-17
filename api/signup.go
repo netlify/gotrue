@@ -39,16 +39,19 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		if result.RecordNotFound() {
 			user, err = models.CreateUser(tx, params.Email, params.Password)
 			if err != nil {
+				tx.Rollback()
 				InternalServerError(w, fmt.Sprintf("Error creating user: %v", err))
 				return
 			}
 			fmt.Printf("Created new user: %v", user)
 		} else {
+			tx.Rollback()
 			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
 			return
 		}
 	} else {
 		if !existingUser.ConfirmedAt.IsZero() {
+			tx.Rollback()
 			UnprocessableEntity(w, fmt.Sprintf("A user with this email address has already been registered"))
 			return
 		}
@@ -61,6 +64,7 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 	users := []*models.User{}
 	var userCount int64
 	if result := tx.Where("id != ?", user.ID).Find(&users).Count(&userCount); result.Error != nil {
+		tx.Rollback()
 		InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
 		return
 	}
@@ -74,6 +78,7 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	if err := a.mailer.ConfirmationMail(user); err != nil {
+		tx.Rollback()
 		InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
 		return
 	}
