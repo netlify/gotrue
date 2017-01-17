@@ -103,7 +103,7 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	tx.Update(user)
+	tx.Model(user).Update(user)
 	tx.Commit()
 	sendJSON(w, 200, user)
 }
