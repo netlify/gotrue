@@ -1,5 +1,5 @@
-hash: 9f813e1775bcf88725fa5efcd52588715a90ec2d45f5a2002cc35e1f912a6fc8
-updated: 2016-12-17T16:32:59.555594337-08:00
+hash: 6d467f0b5c865fecf9725307706bb846307540531bb05eb89698850608125b0c
+updated: 2017-01-17T16:35:34.437999954-08:00
 imports:
 - name: github.com/dgrijalva/jwt-go
   version: 268038b363c7a8d7306b8e35bf77a1fde4b0c402
@@ -50,6 +50,8 @@ imports:
   version: 3b3f1d01b2696af5501697c35629048c227586ab
 - name: github.com/mitchellh/mapstructure
   version: ca63d7c062ee3c9f34db231e352b60012b4fd0c1
+- name: github.com/netlify/mailme
+  version: ""
 - name: github.com/pborman/uuid
   version: a97ce2ca70fa5a848076093f05e639a89ca34d06
 - name: github.com/pelletier/go-buffruneio
@@ -65,7 +67,7 @@ imports:
 - name: github.com/rs/xhandler
   version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
 - name: github.com/Sirupsen/logrus
-  version: 3ec0642a7fb6488f65b06f9040adc67e3990296a
+  version: d26492970760ca5d33129d2d799e34be5c4782eb
 - name: github.com/spf13/afero
   version: 20500e2abd0d1f4564a499e83d11d6c73cd58c27
   subpackages:
@@ -120,8 +122,6 @@ imports:
   - internal/log
   - internal/modules
   - internal/remote_api
-- name: gopkg.in/alexcesaro/quotedprintable.v3
-  version: 2caba252f4dc53eaf6b553000885530023f54623
 - name: gopkg.in/gomail.v2
   version: 41f3572897373c5538c50a2402db15db079fa4fd
 - name: gopkg.in/yaml.v2

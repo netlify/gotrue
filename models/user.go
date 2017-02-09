@@ -2,23 +2,12 @@ package models
 
 import (
 	"encoding/json"
-	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/pborman/uuid"
 
 	"golang.org/x/crypto/bcrypt"
-)
-
-// NUMBER|STRING|BOOL are the different types supported in custom data for users
-const (
-	NUMBER = iota
-	STRING
-	BOOL
-	MAP
-	ARRAY
 )
 
 // User respresents a registered user with email/password authentication
@@ -34,8 +23,10 @@ type User struct {
 	RecoverySentAt     time.Time `json:"recovery_sent_at,omitempty"`
 	LastSignInAt       time.Time `json:"last_sign_in_at,omitempty"`
 
-	AppMetaData  []UserData `gorm:"polymorphic:User;polymorphic_value:app;" json:"-"`
-	UserMetaData []UserData `gorm:"polymorphic:User;polymorphic_value:user" json:"-"`
+	AppMetaData     map[string]interface{} `json:"app_metadata,omitempty" sql:"-"`
+	UserMetaData    map[string]interface{} `json:"user_metadata,omitempty" sql:"-"`
+	RawAppMetaData  string                 `json:"-"`
+	RawUserMetaData string                 `json:"-"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -45,106 +36,30 @@ func (User) TableName() string {
 	return tableName("users")
 }
 
-// UserData is the custom data on a user
-type UserData struct {
-	UserID   string `gorm:"primary_key"`
-	UserType string `gorm:"primary_key"`
-	Key      string `gorm:"primary_key"`
-
-	Type int
-
-	NumericValue    float64
-	StringValue     string
-	BoolValue       bool
-	SerializedValue string
-}
-
-func (UserData) TableName() string {
-	return tableName("users_data")
-}
-
-// Value returns the value of the data field
-func (d *UserData) Value() interface{} {
-	switch d.Type {
-	case STRING:
-		return d.StringValue
-	case NUMBER:
-		return d.NumericValue
-	case BOOL:
-		return d.BoolValue
-	case MAP:
-		data := &map[string]interface{}{}
-		json.Unmarshal([]byte(d.SerializedValue), data)
-		return data
-	case ARRAY:
-		data := &[]interface{}{}
-		err := json.Unmarshal([]byte(d.SerializedValue), data)
-		if err != nil {
-			fmt.Printf("Error unserializing %v: %v\n", d.Key, err)
-		}
-		return data
+func (u *User) AfterFind() (err error) {
+	if u.RawAppMetaData != "" {
+		return json.Unmarshal([]byte(u.RawAppMetaData), &u.AppMetaData)
 	}
-	return nil
-}
-
-// InvalidDataType is an error returned when trying to set an invalid datatype for
-// a user data key
-type InvalidDataType struct {
-	Key string
-}
-
-func (i *InvalidDataType) Error() string {
-	return "Invalid datatype for data field " + i.Key + " only strings, numbers and bools allowed"
-}
-
-// NewUserData returns a new userdata from a key and value
-func NewUserData(key string, value interface{}) (UserData, error) {
-	data := UserData{Key: key}
-	switch v := value.(type) {
-	case string:
-		data.StringValue = v
-		data.Type = STRING
-	case float64:
-		data.NumericValue = v
-		data.Type = NUMBER
-	case bool:
-		data.BoolValue = v
-		data.Type = BOOL
-	default:
-		if reflect.TypeOf(value).Kind() == reflect.Slice {
-			data.Type = ARRAY
-		} else {
-			data.Type = MAP
-		}
-		serialized, error := json.Marshal(value)
-		if error != nil {
-			return data, error
-		}
-		data.SerializedValue = string(serialized[:])
+	if u.RawUserMetaData != "" {
+		return json.Unmarshal([]byte(u.RawUserMetaData), &u.UserMetaData)
 	}
-	return data, nil
+	return err
 }
 
-func userDataToMap(data []UserData) map[string]interface{} {
-	result := map[string]interface{}{}
-	for _, field := range data {
-		result[field.Key] = field.Value()
+func (u *User) BeforeUpdate() (err error) {
+	if u.AppMetaData != nil {
+		data, err := json.Marshal(u.AppMetaData)
+		if err == nil {
+			u.RawAppMetaData = string(data)
+		}
 	}
-	return result
-}
-
-// MarshalJSON is a custom JSON marshaller for Users
-func (u *User) MarshalJSON() ([]byte, error) {
-	type Alias User
-	return json.Marshal(&struct {
-		*Alias
-		AppMetaData  map[string]interface{} `json:"app_metadata"`
-		UserMetaData map[string]interface{} `json:"user_metadata"`
-	}{
-		Alias:        (*Alias)(u),
-		AppMetaData:  u.AppMetaDataMap(),
-		UserMetaData: u.UserMetaDataMap(),
-	})
+	if u.UserMetaData != nil {
+		data, err := json.Marshal(u.UserMetaData)
+		if err == nil {
+			u.RawUserMetaData = string(data)
+		}
+	}
+	return err
 }
 
 // CreateUser creates a new user from an email and password
@@ -167,108 +82,49 @@ func CreateUser(db *gorm.DB, email, password string) (*User, error) {
 	return user, nil
 }
 
-// AddRole adds a role in the app metadata
-func (u *User) AddRole(tx *gorm.DB, role string) error {
-	roles := []string{}
-	existing, ok := userDataToMap(u.AppMetaData)["roles"]
-	if ok {
-		roles, _ = existing.([]string)
-	}
-	for _, r := range roles {
-		if r == role {
-			return nil
-		}
-	}
-	roles = append(roles, role)
-	updates := &map[string]interface{}{"roles": roles}
-	return u.UpdateAppMetaData(tx, updates)
-}
-
-// RemoveRole remoes a role in the app metadata
-func (u *User) RemoveRole(tx *gorm.DB, role string) error {
-	roles := []string{}
-	existing, ok := userDataToMap(u.AppMetaData)["roles"]
-	if ok {
-		roles, _ = existing.([]string)
-	}
-	newRoles := []string{}
-	for _, r := range roles {
-		if r != role {
-			newRoles = append(newRoles, r)
-		}
-	}
-	updates := &map[string]interface{}{"roles": newRoles}
-	return u.UpdateAppMetaData(tx, updates)
-}
-
 // HasRole checks if app_metadata.roles includes the specified role
 func (u *User) HasRole(role string) bool {
-	for _, data := range u.AppMetaData {
-		if data.Key == "roles" && data.Type == ARRAY {
-			roles := []string{}
-			err := json.Unmarshal([]byte(data.SerializedValue), &roles)
-			if err != nil {
-				return false
-			}
-			for _, r := range roles {
-				if r == role {
-					return true
-				}
-			}
+	if u.AppMetaData == nil {
+		return false
+	}
+	roles, ok := u.AppMetaData["roles"]
+	if !ok {
+		return false
+	}
+	roleStrings, ok := roles.([]string)
+	if !ok {
+		return false
+	}
+	for _, r := range roleStrings {
+		if r == role {
+			return true
 		}
 	}
 	return false
 }
 
-func updateUserData(userData []UserData, updates *map[string]interface{}) ([]UserData, error) {
-	existing := userDataToMap(userData)
-	for key, value := range *updates {
-		if value == nil {
-			delete(existing, key)
-		} else {
-			existing[key] = value
-		}
-	}
-
-	newUserData := make([]UserData, len(existing))
-	i := 0
-	for key, value := range existing {
-		data, err := NewUserData(key, value)
-		if err != nil {
-			return nil, err
-		}
-		newUserData[i] = data
-		i++
-	}
-	return newUserData, nil
-}
-
 // UpdateUserData updates all user data from a map of updates
 func (u *User) UpdateUserMetaData(tx *gorm.DB, updates *map[string]interface{}) error {
-	userMetaData, err := updateUserData(u.UserMetaData, updates)
-	if err != nil {
-		return err
+	if u.UserMetaData == nil {
+		u.UserMetaData = *updates
+	} else {
+		for key, value := range *updates {
+			u.UserMetaData[key] = value
+		}
 	}
-	tx.Model(u).Association("UserMetaData").Replace(userMetaData)
-	return nil
+	return tx.Save(u).Error
 }
 
 // UpdateUserData updates all user data from a map of updates
 func (u *User) UpdateAppMetaData(tx *gorm.DB, updates *map[string]interface{}) error {
-	appMetaData, err := updateUserData(u.AppMetaData, updates)
-	if err != nil {
-		return err
+	if u.AppMetaData == nil {
+		u.AppMetaData = *updates
+	} else {
+		for key, value := range *updates {
+			u.AppMetaData[key] = value
+		}
 	}
-	tx.Model(u).Association("AppMetaData").Replace(appMetaData)
-	return nil
-}
-
-func (u *User) AppMetaDataMap() map[string]interface{} {
-	return userDataToMap(u.AppMetaData)
-}
-
-func (u *User) UserMetaDataMap() map[string]interface{} {
-	return userDataToMap(u.UserMetaData)
+	return tx.Save(u).Error
 }
 
 // EncryptPassword sets the encrypted password from a plaintext string
