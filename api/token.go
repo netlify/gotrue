@@ -119,8 +119,8 @@ func (a *API) generateAccessToken(user *models.User) (string, error) {
 	token.Claims["id"] = user.ID
 	token.Claims["email"] = user.Email
 	token.Claims["exp"] = time.Now().Add(time.Second * time.Duration(a.config.JWT.Exp)).Unix()
-	token.Claims["app_metadata"] = user.AppMetaDataMap()
-	token.Claims["user_metadata"] = user.UserMetaDataMap()
+	token.Claims["app_metadata"] = user.AppMetaData
+	token.Claims["user_metadata"] = user.UserMetaData
 
 	return token.SignedString([]byte(a.config.JWT.Secret))
 }

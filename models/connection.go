@@ -45,7 +45,7 @@ func Connect(config *conf.Configuration) (*gorm.DB, error) {
 }
 
 func AutoMigrate(db *gorm.DB) error {
-	db = db.AutoMigrate(User{}, RefreshToken{}, UserData{})
+	db = db.AutoMigrate(User{}, RefreshToken{})
 	return db.Error
 }
 

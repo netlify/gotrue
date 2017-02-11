@@ -1,6 +1,7 @@
 package mailer
 
 import (
+	"github.com/netlify/mailme"
 	"github.com/netlify/netlify-auth/conf"
 	"github.com/netlify/netlify-auth/models"
 )
@@ -19,7 +20,7 @@ type Mailer struct {
 	SiteURL        string
 	MemberFolder   string
 	Config         *conf.Configuration
-	TemplateMailer *TemplateMailer
+	TemplateMailer *mailme.Mailer
 }
 
 // MailSubjects holds the subject lines for the emails
@@ -35,7 +36,7 @@ func NewMailer(conf *conf.Configuration) *Mailer {
 		SiteURL:      mailConf.SiteURL,
 		MemberFolder: mailConf.MemberFolder,
 		Config:       conf,
-		TemplateMailer: &TemplateMailer{
+		TemplateMailer: &mailme.Mailer{
 			Host:    conf.Mailer.Host,
 			Port:    conf.Mailer.Port,
 			User:    conf.Mailer.User,
@@ -74,7 +75,7 @@ func mailData(mail string, config *conf.Configuration, user *models.User) map[st
 		"ConfirmationURL": config.Mailer.SiteURL + config.Mailer.MemberFolder + "/confirm/" + user.ConfirmationToken,
 		"Email":           user.Email,
 		"Token":           user.ConfirmationToken,
-		"Data":            user.UserMetaDataMap(),
+		"Data":            user.UserMetaData,
 	}
 
 	if mail == "Recovery" {
