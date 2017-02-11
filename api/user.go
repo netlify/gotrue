@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/netlify/netlify-auth/models"
@@ -11,10 +12,11 @@ import (
 
 // UserUpdateParams parameters for updating a user
 type UserUpdateParams struct {
-	Email    string                 `json:"email"`
-	Password string                 `json:"password"`
-	Data     map[string]interface{} `json:"data"`
-	AppData  map[string]interface{} `json:"app_metadata,omitempty"`
+	Email            string                 `json:"email"`
+	Password         string                 `json:"password"`
+	EmailChangeToken string                 `json:"email_change_token"`
+	Data             map[string]interface{} `json:"data"`
+	AppData          map[string]interface{} `json:"app_metadata,omitempty"`
 }
 
 // UserGet returns a user
@@ -22,7 +24,7 @@ func (a *API) UserGet(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	token := getToken(ctx)
 
 	user := &models.User{}
-	if result := a.db.Preload("AppMetaData").Preload("UserMetaData").First(user, "id = ?", token.Claims["id"]); result.Error != nil {
+	if result := a.db.First(user, "id = ?", token.Claims["id"]); result.Error != nil {
 		if result.RecordNotFound() {
 			NotFoundError(w, "No user found for this token")
 		} else {
@@ -59,12 +61,12 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// TODO: we should probably do an email verification for this?
 	if params.Email != "" {
 		existingUser := &models.User{}
 		result := tx.First(existingUser, "id != ? and email = ?", user.ID, params.Email)
 		if result.RecordNotFound() {
-			user.Email = params.Email
+			user.GenerateEmailChange(params.Email)
+			a.mailer.EmailChangeMail(user)
 		} else {
 			tx.Rollback()
 			if result.Error != nil {
@@ -72,6 +74,19 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 			} else {
 				UnprocessableEntity(w, "Email address already registered by another user")
 			}
+		}
+	}
+
+	log.Printf("Checkign params fortoken %v", params)
+	if params.EmailChangeToken != "" {
+		log.Printf("Got change token %v", params.EmailChangeToken)
+		if params.EmailChangeToken == user.EmailChangeToken {
+			log.Printf("Confirm email change")
+			user.ConfirmEmailChange()
+		} else {
+			tx.Rollback()
+			UnauthorizedError(w, "Email Change Token didn't match token on file")
+			return
 		}
 	}
 

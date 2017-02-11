@@ -40,10 +40,12 @@ type Configuration struct {
 		Subjects       struct {
 			Confirmation string `json:"confirmation"`
 			Recovery     string `json:"recovery"`
+			EmailChange  string `json:"email_change"`
 		} `json:"subjects"`
 		Templates struct {
 			Confirmation string `json:"confirmation"`
 			Recovery     string `json:"recovery"`
+			EmailChange  string `json:"email_change"`
 		} `json:"templates"`
 	} `json:"mailer"`
 	Logging struct {

@@ -10,10 +10,16 @@ const DefaultConfirmationMail = `<h2>Confirm your signup</h2>
 
 <p>Follow this link to confirm your account:</p>
 <p><a href="{{ .ConfirmationURL }}">Confirm your mail</a></p>`
+
 const DefaultRecoveryMail = `<h2>Reset Password</h2>
 
 <p>Follow this link to reset the password for your account:</p>
 <p><a href="{{ .ConfirmationURL }}">Reset Password</a></p>`
+
+const DefaultEmailChangeMail = `<h2>Confirm Change of Email</h2>
+
+<p>Follow this link to confirm the update of your email from {{ .Email }} to {{ .NewEmail }}:</p>
+<p><a href="{{ .ConfirmationURL }}">Change Email</a></p>`
 
 // Mailer will send mail and use templates from the site for easy mail styling
 type Mailer struct {
@@ -58,6 +64,17 @@ func (m *Mailer) ConfirmationMail(user *models.User) error {
 	)
 }
 
+// EmailChangeMail sends an email change confirmation mail to a user
+func (m *Mailer) EmailChangeMail(user *models.User) error {
+	return m.TemplateMailer.Mail(
+		user.EmailChange,
+		withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change"),
+		m.Config.Mailer.Templates.EmailChange,
+		DefaultEmailChangeMail,
+		mailData("EmailChange", m.Config, user),
+	)
+}
+
 // RecoveryMail sends a password recovery mail
 func (m *Mailer) RecoveryMail(user *models.User) error {
 	return m.TemplateMailer.Mail(
@@ -81,6 +98,11 @@ func mailData(mail string, config *conf.Configuration, user *models.User) map[st
 	if mail == "Recovery" {
 		data["Token"] = user.RecoveryToken
 		data["ConfirmationURL"] = config.Mailer.SiteURL + config.Mailer.MemberFolder + "/recover/" + user.RecoveryToken
+	}
+	if mail == "EmailChange" {
+		data["Token"] = user.EmailChangeToken
+		data["ConfirmationURL"] = config.Mailer.SiteURL + config.Mailer.MemberFolder + "/confirm-email/" + user.EmailChangeToken
+		data["NewEmail"] = user.EmailChange
 	}
 	return data
 }

@@ -14,14 +14,21 @@ import (
 type User struct {
 	ID string `json:"id"`
 
-	Email              string    `json:"email"`
-	EncryptedPassword  string    `json:"-"`
-	ConfirmedAt        time.Time `json:"confirmed_at"`
+	Email             string    `json:"email"`
+	EncryptedPassword string    `json:"-"`
+	ConfirmedAt       time.Time `json:"confirmed_at"`
+
 	ConfirmationToken  string    `json:"-"`
 	ConfirmationSentAt time.Time `json:"confirmation_sent_at,omitempty"`
-	RecoveryToken      string    `json:"-"`
-	RecoverySentAt     time.Time `json:"recovery_sent_at,omitempty"`
-	LastSignInAt       time.Time `json:"last_sign_in_at,omitempty"`
+
+	RecoveryToken  string    `json:"-"`
+	RecoverySentAt time.Time `json:"recovery_sent_at,omitempty"`
+
+	EmailChangeToken  string    `json:"-"`
+	EmailChange       string    `json:"new_email,ommitempty"`
+	EmailChangeSentAt time.Time `json:"email_change_sent_at,omitempty"`
+
+	LastSignInAt time.Time `json:"last_sign_in_at,omitempty"`
 
 	AppMetaData     map[string]interface{} `json:"app_metadata,omitempty" sql:"-"`
 	UserMetaData    map[string]interface{} `json:"user_metadata,omitempty" sql:"-"`
@@ -158,10 +165,25 @@ func (u *User) GenerateRecoveryToken() {
 	u.RecoverySentAt = time.Now()
 }
 
+// GenerateEmailChangeToken prepares for verifying a new email
+func (u *User) GenerateEmailChange(email string) {
+	token := secureToken()
+	u.EmailChangeToken = token
+	u.EmailChangeSentAt = time.Now()
+	u.EmailChange = email
+}
+
 // Confirm resets the confimation token and the confirm timestamp
 func (u *User) Confirm() {
 	u.ConfirmationToken = ""
 	u.ConfirmedAt = time.Now()
+}
+
+// ConfirmEmailChange confirm the change of email for a user
+func (u *User) ConfirmEmailChange() {
+	u.Email = u.EmailChange
+	u.EmailChange = ""
+	u.EmailChangeToken = ""
 }
 
 // Recover resets the recovery token
