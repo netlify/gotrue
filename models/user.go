@@ -43,14 +43,14 @@ func (User) TableName() string {
 	return tableName("users")
 }
 
-func (u *User) AfterFind() error {
+func (u *User) AfterFind() (err error) {
 	if u.RawAppMetaData != "" {
-		return json.Unmarshal([]byte(u.RawAppMetaData), &u.AppMetaData)
+		err = json.Unmarshal([]byte(u.RawAppMetaData), &u.AppMetaData)
 	}
-	if u.RawUserMetaData != "" {
-		return json.Unmarshal([]byte(u.RawUserMetaData), &u.UserMetaData)
+	if err == nil && u.RawUserMetaData != "" {
+		err = json.Unmarshal([]byte(u.RawUserMetaData), &u.UserMetaData)
 	}
-	return nil
+	return err
 }
 
 func (u *User) BeforeUpdate() (err error) {
