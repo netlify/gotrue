@@ -8,6 +8,7 @@ import (
 	"github.com/netlify/netlify-auth/conf"
 	"github.com/netlify/netlify-auth/mailer"
 	"github.com/netlify/netlify-auth/models"
+	"github.com/netlify/netlify-auth/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -20,13 +21,17 @@ var serveCmd = cobra.Command{
 }
 
 func serve(config *conf.Configuration) {
-	db, err := models.Connect(config)
+	db, err := storage.Connect(config)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 	defer db.Close()
 
-	db.LogMode(true)
+	if config.DB.Automigrate {
+		if err := db.Automigrate(models.Managed()...); err != nil {
+			logrus.Fatalf("Error migrating models: %+v", err)
+		}
+	}
 
 	mailer := mailer.NewMailer(config)
 	api := api.NewAPIWithVersion(config, db, mailer, Version)

@@ -2,12 +2,20 @@ package models
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"github.com/netlify/netlify-auth/crypto"
 	"github.com/pborman/uuid"
 
 	"golang.org/x/crypto/bcrypt"
+)
+
+type VerifyType string
+
+const (
+	ConfirmationVerifyType VerifyType = "confirmation_token"
+	RecoveryVerifyType     VerifyType = "recovery_token"
 )
 
 // User respresents a registered user with email/password authentication
@@ -69,11 +77,12 @@ func (u *User) BeforeUpdate() (err error) {
 	return err
 }
 
-// CreateUser creates a new user from an email and password
-func CreateUser(db *gorm.DB, email, password string) (*User, error) {
+// NewUser initializes a new user from an email, password and user data.
+func NewUser(email, password string, userData map[string]interface{}) (*User, error) {
 	user := &User{
-		ID:    uuid.NewRandom().String(),
-		Email: email,
+		ID:           uuid.NewRandom().String(),
+		Email:        email,
+		UserMetaData: userData,
 	}
 
 	if err := user.EncryptPassword(password); err != nil {
@@ -81,12 +90,32 @@ func CreateUser(db *gorm.DB, email, password string) (*User, error) {
 	}
 
 	user.GenerateConfirmationToken()
-
-	if err := db.Create(user).Error; err != nil {
-		return nil, err
-	}
-
 	return user, nil
+}
+
+// IsRegistered checks if a user has already being
+// registered and confirmed.
+func (u *User) IsRegistered() bool {
+	return !u.ConfirmedAt.IsZero()
+}
+
+func (u *User) SetRole(roleName string) {
+	newRole := strings.TrimSpace(roleName)
+
+	if u.AppMetaData == nil {
+		u.AppMetaData = map[string]interface{}{"roles": []string{newRole}}
+	} else if roles, ok := u.AppMetaData["roles"]; ok {
+		if rolesSlice, ok := roles.([]string); ok {
+			for _, role := range rolesSlice {
+				if role == newRole {
+					return
+				}
+			}
+			u.AppMetaData["roles"] = append(rolesSlice, newRole)
+		}
+	} else {
+		u.AppMetaData["roles"] = []string{newRole}
+	}
 }
 
 // HasRole checks if app_metadata.roles includes the specified role
@@ -110,28 +139,28 @@ func (u *User) HasRole(role string) bool {
 	return false
 }
 
-// UpdateUserData updates all user data from a map of updates
-func (u *User) UpdateUserMetaData(tx *gorm.DB, updates *map[string]interface{}) error {
+// UpdateUserMetaData sets all user data from a map of updates,
+// ensuring that it doesn't override attributes that are not
+// in the provided map.
+func (u *User) UpdateUserMetaData(updates map[string]interface{}) {
 	if u.UserMetaData == nil {
-		u.UserMetaData = *updates
-	} else {
-		for key, value := range *updates {
+		u.UserMetaData = updates
+	} else if updates != nil {
+		for key, value := range updates {
 			u.UserMetaData[key] = value
 		}
 	}
-	return tx.Save(u).Error
 }
 
-// UpdateUserData updates all user data from a map of updates
-func (u *User) UpdateAppMetaData(tx *gorm.DB, updates *map[string]interface{}) error {
+// UpdateAppMetaData updates all app data from a map of updates
+func (u *User) UpdateAppMetaData(updates map[string]interface{}) {
 	if u.AppMetaData == nil {
-		u.AppMetaData = *updates
-	} else {
-		for key, value := range *updates {
+		u.AppMetaData = updates
+	} else if updates != nil {
+		for key, value := range updates {
 			u.AppMetaData[key] = value
 		}
 	}
-	return tx.Save(u).Error
 }
 
 // EncryptPassword sets the encrypted password from a plaintext string
@@ -153,21 +182,21 @@ func (u *User) Authenticate(password string) bool {
 // GenerateConfirmationToken generates a secure confirmation token for confirming
 // signup
 func (u *User) GenerateConfirmationToken() {
-	token := secureToken()
+	token := crypto.SecureToken()
 	u.ConfirmationToken = token
 	u.ConfirmationSentAt = time.Now()
 }
 
 // GenerateRecoveryToken generates a secure password recovery token
 func (u *User) GenerateRecoveryToken() {
-	token := secureToken()
+	token := crypto.SecureToken()
 	u.RecoveryToken = token
 	u.RecoverySentAt = time.Now()
 }
 
 // GenerateEmailChangeToken prepares for verifying a new email
 func (u *User) GenerateEmailChange(email string) {
-	token := secureToken()
+	token := crypto.SecureToken()
 	u.EmailChangeToken = token
 	u.EmailChangeSentAt = time.Now()
 	u.EmailChange = email
