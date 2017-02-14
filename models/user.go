@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -20,61 +19,35 @@ const (
 
 // User respresents a registered user with email/password authentication
 type User struct {
-	ID string `json:"id"`
+	ID string `json:"id" bson:"_id,omitempty"`
 
-	Email             string    `json:"email"`
-	EncryptedPassword string    `json:"-"`
-	ConfirmedAt       time.Time `json:"confirmed_at"`
+	Email             string    `json:"email" bson:"email"`
+	EncryptedPassword string    `json:"-" bson:"encrypted_password"`
+	ConfirmedAt       time.Time `json:"confirmed_at" bson:"confirmed_at"`
 
-	ConfirmationToken  string    `json:"-"`
-	ConfirmationSentAt time.Time `json:"confirmation_sent_at,omitempty"`
+	ConfirmationToken  string    `json:"-" bson:"confirmation_token,omitempty"`
+	ConfirmationSentAt time.Time `json:"confirmation_sent_at,omitempty" bson:"confirmation_sent_at,omitempty"`
 
-	RecoveryToken  string    `json:"-"`
-	RecoverySentAt time.Time `json:"recovery_sent_at,omitempty"`
+	RecoveryToken  string    `json:"-" bson:"recovery_token,omitempty"`
+	RecoverySentAt time.Time `json:"recovery_sent_at,omitempty" bson:"recovery_sent_at,omitempty"`
 
-	EmailChangeToken  string    `json:"-"`
-	EmailChange       string    `json:"new_email,ommitempty"`
-	EmailChangeSentAt time.Time `json:"email_change_sent_at,omitempty"`
+	EmailChangeToken  string    `json:"-" bson:"email_change_token,omitempty"`
+	EmailChange       string    `json:"new_email,ommitempty" bson:"new_email,ommitempty"`
+	EmailChangeSentAt time.Time `json:"email_change_sent_at,omitempty" bson:"email_change_sent_at,omitempty"`
 
-	LastSignInAt time.Time `json:"last_sign_in_at,omitempty"`
+	LastSignInAt time.Time `json:"last_sign_in_at,omitempty" bson:"last_sign_in_at,omitempty"`
 
-	AppMetaData     map[string]interface{} `json:"app_metadata,omitempty" sql:"-"`
-	UserMetaData    map[string]interface{} `json:"user_metadata,omitempty" sql:"-"`
-	RawAppMetaData  string                 `json:"-"`
-	RawUserMetaData string                 `json:"-"`
+	AppMetaData     map[string]interface{} `json:"app_metadata,omitempty" sql:"-" bson:"app_metadata,omitempty"`
+	UserMetaData    map[string]interface{} `json:"user_metadata,omitempty" sql:"-" bson:"user_metadata,omitempty"`
+	RawAppMetaData  string                 `json:"-" bson:"-"`
+	RawUserMetaData string                 `json:"-" bson:"-"`
 
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at" bson:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
 }
 
 func (User) TableName() string {
 	return tableName("users")
-}
-
-func (u *User) AfterFind() (err error) {
-	if u.RawAppMetaData != "" {
-		err = json.Unmarshal([]byte(u.RawAppMetaData), &u.AppMetaData)
-	}
-	if err == nil && u.RawUserMetaData != "" {
-		err = json.Unmarshal([]byte(u.RawUserMetaData), &u.UserMetaData)
-	}
-	return err
-}
-
-func (u *User) BeforeUpdate() (err error) {
-	if u.AppMetaData != nil {
-		data, err := json.Marshal(u.AppMetaData)
-		if err == nil {
-			u.RawAppMetaData = string(data)
-		}
-	}
-	if u.UserMetaData != nil {
-		data, err := json.Marshal(u.UserMetaData)
-		if err == nil {
-			u.RawUserMetaData = string(data)
-		}
-	}
-	return err
 }
 
 // NewUser initializes a new user from an email, password and user data.

@@ -1,17 +1,22 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gopkg.in/mgo.v2/bson"
+)
 
 type RefreshToken struct {
-	ID int64
+	ID  int64         `bson:"seq_id,omitempty"`
+	BID bson.ObjectId `bson:"_id" sql:"-"`
 
-	Token string
+	Token string `bson:"token"`
 
-	User   User
-	UserID string
+	User   User   `bson:"-"`
+	UserID string `bson:"user_id"`
 
-	Revoked   bool
-	CreatedAt time.Time
+	Revoked   bool      `bson:"revoked"`
+	CreatedAt time.Time `bson:"created_at"`
 }
 
 func (RefreshToken) TableName() string {

@@ -3,6 +3,7 @@ package storage
 import (
 	"github.com/netlify/netlify-auth/conf"
 	"github.com/netlify/netlify-auth/models"
+	"github.com/netlify/netlify-auth/storage/mongo"
 	"github.com/netlify/netlify-auth/storage/sql"
 )
 
@@ -27,6 +28,10 @@ type Connection interface {
 func Connect(config *conf.Configuration) (Connection, error) {
 	if config.DB.Namespace != "" {
 		models.Namespace = config.DB.Namespace
+	}
+
+	if config.DB.Driver == "mongo" {
+		return mongo.Connect(config)
 	}
 
 	return sql.Connect(config)

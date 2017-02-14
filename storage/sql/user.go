@@ -1,6 +1,8 @@
 package sql
 
 import (
+	"encoding/json"
+
 	"github.com/jinzhu/gorm"
 	"github.com/netlify/netlify-auth/models"
 	"github.com/pkg/errors"
@@ -26,4 +28,30 @@ func (u *UserObj) BeforeCreate(tx *gorm.DB) error {
 		u.User.SetRole(u.FirstRoleName)
 	}
 	return nil
+}
+
+func (u *UserObj) AfterFind() (err error) {
+	if u.RawAppMetaData != "" {
+		err = json.Unmarshal([]byte(u.RawAppMetaData), &u.AppMetaData)
+	}
+	if err == nil && u.RawUserMetaData != "" {
+		err = json.Unmarshal([]byte(u.RawUserMetaData), &u.UserMetaData)
+	}
+	return err
+}
+
+func (u *UserObj) BeforeUpdate() (err error) {
+	if u.AppMetaData != nil {
+		data, err := json.Marshal(u.AppMetaData)
+		if err == nil {
+			u.RawAppMetaData = string(data)
+		}
+	}
+	if u.UserMetaData != nil {
+		data, err := json.Marshal(u.UserMetaData)
+		if err == nil {
+			u.RawUserMetaData = string(data)
+		}
+	}
+	return err
 }
