@@ -3,6 +3,7 @@ package sql
 import (
 	// this is where we do the connections
 
+	"github.com/Sirupsen/logrus"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
@@ -12,6 +13,14 @@ import (
 	"github.com/netlify/netlify-auth/models"
 	"github.com/pkg/errors"
 )
+
+type logger struct {
+	entry *logrus.Entry
+}
+
+func (l logger) Print(v ...interface{}) {
+	l.entry.Print(v...)
+}
 
 type Connection struct {
 	db     *gorm.DB
@@ -194,12 +203,15 @@ func Connect(config *conf.Configuration) (*Connection, error) {
 		return nil, errors.Wrap(err, "opening database connection")
 	}
 
-	err = db.DB().Ping()
-	if err != nil {
+	if err := db.DB().Ping(); err != nil {
 		return nil, errors.Wrap(err, "checking database connection")
 	}
 
-	db.LogMode(true)
+	db.SetLogger(logger{logrus.WithField("db-connection", config.DB.Driver)})
+
+	if config.Logging.IsDebugEnabled() {
+		db.LogMode(true)
+	}
 
 	conn := &Connection{
 		db:     db,
