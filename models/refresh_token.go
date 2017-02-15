@@ -19,6 +19,6 @@ type RefreshToken struct {
 	CreatedAt time.Time `bson:"created_at"`
 }
 
-func (RefreshToken) TableName() string {
+func (*RefreshToken) TableName() string {
 	return tableName("refresh_tokens")
 }

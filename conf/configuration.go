@@ -16,20 +16,24 @@ type LogConfiguration struct {
 	File  string `json:"file"`
 }
 
+type DBConfiguration struct {
+	Driver      string `json:"driver"`
+	ConnURL     string `json:"url"`
+	Namespace   string `json:"namespace"`
+	Automigrate bool   `json:"automigrate"`
+}
+
+type JWTConfiguration struct {
+	Secret             string `json:"secret"`
+	Exp                int    `json:"exp"`
+	AdminGroupName     string `json:"admin_group_name"`
+	AdminGroupDisabled bool   `json:"admin_group_disabled"`
+}
+
 // Configuration holds all the confiruation for netlify-auth
 type Configuration struct {
-	JWT struct {
-		Secret             string `json:"secret"`
-		Exp                int    `json:"exp"`
-		AdminGroupName     string `json:"admin_group_name"`
-		AdminGroupDisabled bool   `json:"admin_group_disabled"`
-	} `json:"jwt"`
-	DB struct {
-		Driver      string `json:"driver"`
-		ConnURL     string `json:"url"`
-		Namespace   string `json:"namespace"`
-		Automigrate bool   `json:"automigrate"`
-	} `json:"db"`
+	JWT JWTConfiguration `json:"jwt"`
+	DB  DBConfiguration  `json:"db"`
 	API struct {
 		Host string `json:"host"`
 		Port int    `json:"port"`

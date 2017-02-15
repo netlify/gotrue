@@ -11,9 +11,10 @@ type Connection interface {
 	Close() error
 	Automigrate(models ...interface{}) error
 	CreateUser(user *models.User) error
+	FindUserByConfirmationToken(token string) (*models.User, error)
 	FindUserByEmail(email string) (*models.User, error)
 	FindUserByID(id string) (*models.User, error)
-	FindUserByVerificationToken(verificationType models.VerifyType, token string) (*models.User, error)
+	FindUserByRecoveryToken(token string) (*models.User, error)
 	FindUserWithRefreshToken(token string) (*models.User, *models.RefreshToken, error)
 	GrantAuthenticatedUser(user *models.User) (*models.RefreshToken, error)
 	GrantRefreshTokenSwap(user *models.User, token *models.RefreshToken) (*models.RefreshToken, error)

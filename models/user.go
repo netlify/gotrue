@@ -10,13 +10,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type VerifyType string
-
-const (
-	ConfirmationVerifyType VerifyType = "confirmation_token"
-	RecoveryVerifyType     VerifyType = "recovery_token"
-)
-
 // User respresents a registered user with email/password authentication
 type User struct {
 	ID string `json:"id" bson:"_id,omitempty"`
@@ -44,10 +37,6 @@ type User struct {
 
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
-}
-
-func (User) TableName() string {
-	return tableName("users")
 }
 
 // NewUser initializes a new user from an email, password and user data.
@@ -191,4 +180,8 @@ func (u *User) ConfirmEmailChange() {
 // Recover resets the recovery token
 func (u *User) Recover() {
 	u.RecoveryToken = ""
+}
+
+func (*User) TableName() string {
+	return tableName("users")
 }

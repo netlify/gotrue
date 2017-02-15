@@ -11,6 +11,7 @@ import (
 type UserObj struct {
 	FirstRoleName  string `json:"-" sql:"-"`
 	AutoAsignRoles bool   `json:"-" sql:"-"`
+
 	*models.User
 }
 
@@ -20,23 +21,26 @@ func (u *UserObj) BeforeCreate(tx *gorm.DB) error {
 	}
 
 	var userCount int64
-	if result := tx.Where("id != ?", u.ID).Count(&userCount); result.Error != nil {
+	if result := tx.Table(u.TableName()).Where("id != ?", u.ID).Count(&userCount); result.Error != nil {
 		return errors.Wrap(result.Error, "error finding registered users")
 	}
 
 	if userCount == 0 {
-		u.User.SetRole(u.FirstRoleName)
+		u.SetRole(u.FirstRoleName)
 	}
-	return nil
+
+	return u.BeforeUpdate()
 }
 
 func (u *UserObj) AfterFind() (err error) {
 	if u.RawAppMetaData != "" {
 		err = json.Unmarshal([]byte(u.RawAppMetaData), &u.AppMetaData)
 	}
+
 	if err == nil && u.RawUserMetaData != "" {
 		err = json.Unmarshal([]byte(u.RawUserMetaData), &u.UserMetaData)
 	}
+
 	return err
 }
 
@@ -53,5 +57,6 @@ func (u *UserObj) BeforeUpdate() (err error) {
 			u.RawUserMetaData = string(data)
 		}
 	}
+
 	return err
 }

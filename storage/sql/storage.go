@@ -40,7 +40,7 @@ func (conn *Connection) CreateUser(user *models.User) error {
 	obj := &UserObj{
 		User:           user,
 		FirstRoleName:  conn.config.JWT.AdminGroupName,
-		AutoAsignRoles: conn.config.JWT.AdminGroupDisabled,
+		AutoAsignRoles: !conn.config.JWT.AdminGroupDisabled,
 	}
 
 	if result := conn.db.Create(obj); result.Error != nil {
@@ -49,9 +49,13 @@ func (conn *Connection) CreateUser(user *models.User) error {
 	return nil
 }
 
-func (conn *Connection) FindUserByEmail(email string) (*models.User, error) {
-	user := &models.User{}
-	if result := conn.db.First(user, "email = ?", email); result.Error != nil {
+func (conn *Connection) findUser(query string, args ...interface{}) (*models.User, error) {
+	obj := &UserObj{
+		User: &models.User{},
+	}
+	values := append([]interface{}{query}, args...)
+
+	if result := conn.db.First(obj, values...); result.Error != nil {
 		if result.RecordNotFound() {
 			return nil, models.UserNotFoundError{}
 		} else {
@@ -59,33 +63,23 @@ func (conn *Connection) FindUserByEmail(email string) (*models.User, error) {
 		}
 	}
 
-	return user, nil
+	return obj.User, nil
+}
+
+func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User, error) {
+	return conn.findUser("confirmation_token = ?", token)
+}
+
+func (conn *Connection) FindUserByEmail(email string) (*models.User, error) {
+	return conn.findUser("email = ?", email)
 }
 
 func (conn *Connection) FindUserByID(id string) (*models.User, error) {
-	user := &models.User{}
-	if result := conn.db.First(user, "id = ?", id); result.Error != nil {
-		if result.RecordNotFound() {
-			return nil, models.UserNotFoundError{}
-		} else {
-			return nil, errors.Wrap(result.Error, "error finding user")
-		}
-	}
-
-	return user, nil
+	return conn.findUser("id = ?", id)
 }
 
-func (conn *Connection) FindUserByVerificationToken(verificationType models.VerifyType, token string) (*models.User, error) {
-	user := &models.User{}
-	if result := conn.db.First(user, "? = ?", verificationType, token); result.Error != nil {
-		if result.RecordNotFound() {
-			return nil, models.UserNotFoundError{}
-		} else {
-			return nil, errors.Wrap(result.Error, "error finding user")
-		}
-	}
-
-	return user, nil
+func (conn *Connection) FindUserByRecoveryToken(token string) (*models.User, error) {
+	return conn.findUser("recovery_token = ?", token)
 }
 
 func (conn *Connection) FindUserWithRefreshToken(token string) (*models.User, *models.RefreshToken, error) {
@@ -98,13 +92,9 @@ func (conn *Connection) FindUserWithRefreshToken(token string) (*models.User, *m
 		}
 	}
 
-	user := &models.User{}
-	if result := conn.db.Model(refreshToken).Related(user); result.Error != nil {
-		if result.RecordNotFound() {
-			return nil, nil, models.UserNotFoundError{}
-		} else {
-			return nil, nil, errors.Wrap(result.Error, "error finding user")
-		}
+	user, err := conn.findUser("id = ?", refreshToken.UserID)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return user, refreshToken, nil
@@ -145,13 +135,12 @@ func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.R
 }
 
 func (conn *Connection) IsDuplicatedEmail(email, id string) (bool, error) {
-	user := &models.User{}
-	result := conn.db.First(user, "id != ? and email = ?", id, email)
-	if result.Error != nil {
-		if result.RecordNotFound() {
+	_, err := conn.findUser("id != ? and email = ?", id, email)
+	if err != nil {
+		if models.IsNotFoundError(err) {
 			return false, nil
 		}
-		return false, errors.Wrap(result.Error, "error checking duplicated email")
+		return false, err
 	}
 
 	return true, nil
@@ -190,7 +179,10 @@ func (conn *Connection) RollbackRefreshTokenSwap(newToken, oldToken *models.Refr
 }
 
 func (conn *Connection) UpdateUser(user *models.User) error {
-	if result := conn.db.Model(user).Update(user); result.Error != nil {
+	obj := &UserObj{
+		User: user,
+	}
+	if result := conn.db.Save(obj); result.Error != nil {
 		return errors.Wrap(result.Error, "Error updating user record")
 	}
 	return nil
@@ -223,8 +215,9 @@ func Connect(config *conf.Configuration) (*Connection, error) {
 
 func createRefreshToken(tx *gorm.DB, user *models.User) (*models.RefreshToken, error) {
 	token := &models.RefreshToken{
-		User:  *user,
-		Token: crypto.SecureToken(),
+		User:   *user,
+		UserID: user.ID,
+		Token:  crypto.SecureToken(),
 	}
 
 	if err := tx.Create(token).Error; err != nil {

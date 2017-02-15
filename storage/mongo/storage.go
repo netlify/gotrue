@@ -58,6 +58,24 @@ func (conn *Connection) CreateUser(user *models.User) error {
 	return nil
 }
 
+func (conn *Connection) findUser(query bson.M) (*models.User, error) {
+	user := &models.User{}
+	c := conn.db.C(user.TableName())
+
+	if err := c.Find(query).One(user); err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, models.UserNotFoundError{}
+		} else {
+			return nil, errors.Wrap(err, "error finding user")
+		}
+	}
+	return user, nil
+}
+
+func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User, error) {
+	return conn.findUser(bson.M{"confirmation_token": token})
+}
+
 func (conn *Connection) FindUserByEmail(email string) (*models.User, error) {
 	return conn.findUser(bson.M{"email": email})
 }
@@ -66,8 +84,8 @@ func (conn *Connection) FindUserByID(id string) (*models.User, error) {
 	return conn.findUser(bson.M{"_id": id})
 }
 
-func (conn *Connection) FindUserByVerificationToken(verificationType models.VerifyType, token string) (*models.User, error) {
-	return conn.findUser(bson.M{string(verificationType): token})
+func (conn *Connection) FindUserByRecoveryToken(token string) (*models.User, error) {
+	return conn.findUser(bson.M{"recovery_token": token})
 }
 
 func (conn *Connection) FindUserWithRefreshToken(token string) (*models.User, *models.RefreshToken, error) {
@@ -88,20 +106,6 @@ func (conn *Connection) FindUserWithRefreshToken(token string) (*models.User, *m
 	}
 
 	return user, refreshToken, nil
-}
-
-func (conn *Connection) findUser(query bson.M) (*models.User, error) {
-	user := &models.User{}
-	c := conn.db.C(user.TableName())
-
-	if err := c.Find(query).One(user); err != nil {
-		if err == mgo.ErrNotFound {
-			return nil, models.UserNotFoundError{}
-		} else {
-			return nil, errors.Wrap(err, "error finding user")
-		}
-	}
-	return user, nil
 }
 
 func (conn *Connection) GrantAuthenticatedUser(user *models.User) (*models.RefreshToken, error) {
@@ -174,7 +178,8 @@ func (conn *Connection) IsDuplicatedEmail(email, id string) (bool, error) {
 }
 
 func (conn *Connection) Logout(id interface{}) {
-	c := conn.db.C(models.RefreshToken{}.TableName())
+	t := &models.RefreshToken{}
+	c := conn.db.C(t.TableName())
 	c.RemoveAll(bson.M{"user_id": id})
 }
 

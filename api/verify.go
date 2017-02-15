@@ -42,10 +42,10 @@ func (a *API) Verify(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	switch params.Type {
 	case signupVerification:
-		user, err = a.db.FindUserByVerificationToken(models.ConfirmationVerifyType, params.Token)
+		user, err = a.db.FindUserByConfirmationToken(params.Token)
 		verifyFunc = func(user *models.User) { user.Confirm() }
 	case recoveryVerification:
-		user, err = a.db.FindUserByVerificationToken(models.RecoveryVerifyType, params.Token)
+		user, err = a.db.FindUserByRecoveryToken(params.Token)
 		verifyFunc = func(user *models.User) { user.Recover() }
 	default:
 		UnprocessableEntity(w, "Verify requires a verification type")
