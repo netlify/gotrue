@@ -87,7 +87,7 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 		sendChangeEmailVerification = true
 	}
 
-	logrus.Debugf("Checkign params for token %v", params)
+	logrus.Debugf("Checking params for token %v", params)
 
 	if params.EmailChangeToken != "" {
 		logrus.Debugf("Got change token %v", params.EmailChangeToken)
