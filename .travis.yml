@@ -6,7 +6,7 @@ services:
 addons:
   apt:
     sources:
-      - mongodb-3.0-precise
+      - mongodb-3.2-precise
     packages:
       - mongodb-org-server
 
