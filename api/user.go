@@ -126,10 +126,7 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	if sendChangeEmailVerification {
-		if err := a.mailer.EmailChangeMail(user); err != nil {
-			InternalServerError(w, fmt.Sprintf("Error sending email change verification: %v", err))
-			return
-		}
+		a.mailer.EmailChangeMail(user)
 	}
 
 	sendJSON(w, 200, user)
