@@ -25,7 +25,7 @@ type User struct {
 	RecoverySentAt time.Time `json:"recovery_sent_at,omitempty" bson:"recovery_sent_at,omitempty"`
 
 	EmailChangeToken  string    `json:"-" bson:"email_change_token,omitempty"`
-	EmailChange       string    `json:"new_email,ommitempty" bson:"new_email,ommitempty"`
+	EmailChange       string    `json:"new_email,omitempty" bson:"new_email,omitempty"`
 	EmailChangeSentAt time.Time `json:"email_change_sent_at,omitempty" bson:"email_change_sent_at,omitempty"`
 
 	LastSignInAt time.Time `json:"last_sign_in_at,omitempty" bson:"last_sign_in_at,omitempty"`

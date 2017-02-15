@@ -161,16 +161,16 @@ func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.R
 		return nil, errors.Wrap(err, "error granting authenticated user")
 	}
 
-	return token, nil
+	return newToken, nil
 }
 
 func (conn *Connection) IsDuplicatedEmail(email, id string) (bool, error) {
 	_, err := conn.findUser(bson.M{"email": email, "_id": bson.M{"$ne": id}})
 	if err != nil {
-		if err == mgo.ErrNotFound {
+		if models.IsNotFoundError(err) {
 			return false, nil
 		} else {
-			return false, errors.Wrap(err, "error checking duplicated email")
+			return false, err
 		}
 	}
 
