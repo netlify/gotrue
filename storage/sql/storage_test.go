@@ -371,8 +371,8 @@ func createUserWithEmail(t *testing.T, email string) *models.User {
 }
 
 func cleanTables() {
-	conn.db.DropTable(&UserObj{})
-	conn.db.DropTable(&models.RefreshToken{})
+	conn.db.DropTableIfExists(&UserObj{})
+	conn.db.DropTableIfExists(&models.RefreshToken{})
 	conn.db.CreateTable(&UserObj{})
 	conn.db.CreateTable(&models.RefreshToken{})
 }
