@@ -39,14 +39,13 @@ func TestMain(m *testing.M) {
 	// AutoMigrate doesn't work
 	// for SQLite3, so we create
 	// the tables here.
-	conn.db.CreateTable(&models.User{})
-	conn.db.CreateTable(&models.RefreshToken{})
+	cleanTables()
 
 	os.Exit(m.Run())
 }
 
 func TestCreateFirstUser(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 	if !u.HasRole("admin-test") {
 		t.Fatalf("expected first user to be an admin, got %v", u.AppMetaData)
@@ -59,7 +58,7 @@ func TestCreateFirstUser(t *testing.T) {
 }
 
 func TestFindUserByConfirmationToken(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 
 	n, err := conn.FindUserByConfirmationToken(u.ConfirmationToken)
@@ -73,7 +72,7 @@ func TestFindUserByConfirmationToken(t *testing.T) {
 }
 
 func TestFindUserByEmail(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 
 	n, err := conn.FindUserByEmail("david@netlify.com")
@@ -87,7 +86,7 @@ func TestFindUserByEmail(t *testing.T) {
 }
 
 func TestFindUserByID(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 
 	n, err := conn.FindUserByID(u.ID)
@@ -101,7 +100,7 @@ func TestFindUserByID(t *testing.T) {
 }
 
 func TestFindUserByRecoveryToken(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 	u.GenerateRecoveryToken()
 	if err := conn.UpdateUser(u); err != nil {
@@ -119,7 +118,7 @@ func TestFindUserByRecoveryToken(t *testing.T) {
 }
 
 func TestFindUserWithRefreshToken(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 	r, err := conn.GrantAuthenticatedUser(u)
 	if err != nil {
@@ -141,7 +140,7 @@ func TestFindUserWithRefreshToken(t *testing.T) {
 }
 
 func TestGrantAuthenticatedUser(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 	r, err := conn.GrantAuthenticatedUser(u)
 	if err != nil {
@@ -158,7 +157,7 @@ func TestGrantAuthenticatedUser(t *testing.T) {
 }
 
 func TestGrantRefreshTokenSwap(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 	r, err := conn.GrantAuthenticatedUser(u)
 	if err != nil {
@@ -193,7 +192,7 @@ func TestGrantRefreshTokenSwap(t *testing.T) {
 }
 
 func TestIsDuplicatedEmail(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 	createUserWithEmail(t, "david.calavera@netlify.com")
 
@@ -226,7 +225,7 @@ func TestIsDuplicatedEmail(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 	r, err := conn.GrantAuthenticatedUser(u)
 	if err != nil {
@@ -245,7 +244,7 @@ func TestLogout(t *testing.T) {
 }
 
 func TestRevokeToken(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 	r, err := conn.GrantAuthenticatedUser(u)
 	if err != nil {
@@ -272,7 +271,7 @@ func TestRevokeToken(t *testing.T) {
 }
 
 func TestRollbackRefreshTokenSwap(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 	r, err := conn.GrantAuthenticatedUser(u)
 	if err != nil {
@@ -309,7 +308,7 @@ func TestRollbackRefreshTokenSwap(t *testing.T) {
 }
 
 func TestUpdateUser(t *testing.T) {
-	defer teardown()
+	defer cleanTables()
 	u := createUser(t)
 
 	userUpdates := map[string]interface{}{
@@ -371,9 +370,9 @@ func createUserWithEmail(t *testing.T, email string) *models.User {
 	return user
 }
 
-func teardown() {
-	conn.db.DropTable(&models.User{})
+func cleanTables() {
+	conn.db.DropTable(&UserObj{})
 	conn.db.DropTable(&models.RefreshToken{})
-	conn.db.CreateTable(&models.User{})
+	conn.db.CreateTable(&UserObj{})
 	conn.db.CreateTable(&models.RefreshToken{})
 }

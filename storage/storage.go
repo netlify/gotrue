@@ -9,7 +9,7 @@ import (
 
 type Connection interface {
 	Close() error
-	Automigrate(models ...interface{}) error
+	Automigrate() error
 	CreateUser(user *models.User) error
 	FindUserByConfirmationToken(token string) (*models.User, error)
 	FindUserByEmail(email string) (*models.User, error)

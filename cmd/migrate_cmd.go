@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/netlify/netlify-auth/conf"
-	"github.com/netlify/netlify-auth/models"
 	"github.com/netlify/netlify-auth/storage"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +21,7 @@ func migrate(config *conf.Configuration) {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 
-	if err := db.Automigrate(models.Managed()...); err != nil {
+	if err := db.Automigrate(); err != nil {
 		logrus.Fatalf("Error migrating tables: %+v", err)
 	}
 }

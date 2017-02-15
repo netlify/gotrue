@@ -31,7 +31,7 @@ func (conn *Connection) Close() error {
 	return nil
 }
 
-func (conn *Connection) Automigrate(models ...interface{}) error {
+func (conn *Connection) Automigrate() error {
 	return nil
 }
 

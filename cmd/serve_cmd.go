@@ -7,7 +7,6 @@ import (
 	"github.com/netlify/netlify-auth/api"
 	"github.com/netlify/netlify-auth/conf"
 	"github.com/netlify/netlify-auth/mailer"
-	"github.com/netlify/netlify-auth/models"
 	"github.com/netlify/netlify-auth/storage"
 	"github.com/spf13/cobra"
 )
@@ -28,7 +27,7 @@ func serve(config *conf.Configuration) {
 	defer db.Close()
 
 	if config.DB.Automigrate {
-		if err := db.Automigrate(models.Managed()...); err != nil {
+		if err := db.Automigrate(); err != nil {
 			logrus.Fatalf("Error migrating models: %+v", err)
 		}
 	}

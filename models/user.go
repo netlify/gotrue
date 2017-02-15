@@ -30,10 +30,8 @@ type User struct {
 
 	LastSignInAt time.Time `json:"last_sign_in_at,omitempty" bson:"last_sign_in_at,omitempty"`
 
-	AppMetaData     map[string]interface{} `json:"app_metadata,omitempty" sql:"-" bson:"app_metadata,omitempty"`
-	UserMetaData    map[string]interface{} `json:"user_metadata,omitempty" sql:"-" bson:"user_metadata,omitempty"`
-	RawAppMetaData  string                 `json:"-" bson:"-"`
-	RawUserMetaData string                 `json:"-" bson:"-"`
+	AppMetaData  map[string]interface{} `json:"app_metadata,omitempty" sql:"-" bson:"app_metadata,omitempty"`
+	UserMetaData map[string]interface{} `json:"user_metadata,omitempty" sql:"-" bson:"user_metadata,omitempty"`
 
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`

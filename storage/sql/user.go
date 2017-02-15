@@ -13,6 +13,9 @@ type UserObj struct {
 	AutoAsignRoles bool   `json:"-" sql:"-"`
 
 	*models.User
+
+	RawAppMetaData  string `json:"-" bson:"-"`
+	RawUserMetaData string `json:"-" bson:"-"`
 }
 
 func (u *UserObj) BeforeCreate(tx *gorm.DB) error {

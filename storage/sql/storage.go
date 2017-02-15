@@ -31,8 +31,8 @@ func (conn *Connection) Close() error {
 	return conn.db.Close()
 }
 
-func (conn *Connection) Automigrate(models ...interface{}) error {
-	conn.db = conn.db.AutoMigrate(models...)
+func (conn *Connection) Automigrate() error {
+	conn.db = conn.db.AutoMigrate(&UserObj{}, &models.RefreshToken{})
 	return conn.db.Error
 }
 
