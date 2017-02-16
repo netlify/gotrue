@@ -1,5 +1,5 @@
-hash: e7833def3f0bb5d96974d1fe9bc3b9f8a65d8369ec556dfe7fda5b31b3945b28
-updated: 2017-02-14T15:48:31.79513951+01:00
+hash: 365950be2133f6a4e70e6200ba1d3c34a2fd78ca52fa6a111b85322fbf58ba70
+updated: 2017-02-15T21:17:32.721423091+01:00
 imports:
 - name: github.com/dgrijalva/jwt-go
   version: 268038b363c7a8d7306b8e35bf77a1fde4b0c402
@@ -83,6 +83,11 @@ imports:
   version: c7e63cf4530bcd3ba943729cee0efeff2ebea63f
 - name: github.com/spf13/viper
   version: 16990631d4aa7e38f73dbbbf37fa13e67c648531
+- name: github.com/stretchr/testify
+  version: f390dcf405f7b83c997eac1b06768bb9f44dec18
+  subpackages:
+  - require
+  - suite
 - name: github.com/zenazn/goji
   version: 4d7077956293261309684d3cf1af673f773c6819
   subpackages:

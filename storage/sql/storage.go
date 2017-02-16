@@ -188,8 +188,8 @@ func (conn *Connection) UpdateUser(user *models.User) error {
 	return nil
 }
 
-// Connect will connect to that storage engine
-func Connect(config *conf.Configuration) (*Connection, error) {
+// Dial will connect to that storage engine
+func Dial(config *conf.Configuration) (*Connection, error) {
 	db, err := gorm.Open(config.DB.Driver, config.DB.ConnURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "opening database connection")

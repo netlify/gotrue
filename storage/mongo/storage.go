@@ -228,8 +228,8 @@ func (conn *Connection) newTxRunner() *txn.Runner {
 	return txn.NewRunner(conn.db.C("auth_transactions"))
 }
 
-// Connect will connect to that storage engine
-func Connect(config *conf.Configuration) (*Connection, error) {
+// Dial will connect to that storage engine
+func Dial(config *conf.Configuration) (*Connection, error) {
 	mgo.SetLogger(logger{logrus.WithField("db-connection", "mongo")})
 
 	if config.Logging.IsDebugEnabled() {

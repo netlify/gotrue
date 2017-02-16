@@ -7,7 +7,7 @@ import (
 	"github.com/netlify/netlify-auth/api"
 	"github.com/netlify/netlify-auth/conf"
 	"github.com/netlify/netlify-auth/mailer"
-	"github.com/netlify/netlify-auth/storage"
+	"github.com/netlify/netlify-auth/storage/dial"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +20,7 @@ var serveCmd = cobra.Command{
 }
 
 func serve(config *conf.Configuration) {
-	db, err := storage.Connect(config)
+	db, err := dial.Dial(config)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}

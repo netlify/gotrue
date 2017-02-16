@@ -1,11 +1,6 @@
 package storage
 
-import (
-	"github.com/netlify/netlify-auth/conf"
-	"github.com/netlify/netlify-auth/models"
-	"github.com/netlify/netlify-auth/storage/mongo"
-	"github.com/netlify/netlify-auth/storage/sql"
-)
+import "github.com/netlify/netlify-auth/models"
 
 type Connection interface {
 	Close() error
@@ -23,17 +18,4 @@ type Connection interface {
 	RevokeToken(token *models.RefreshToken) error
 	RollbackRefreshTokenSwap(newToken, oldToken *models.RefreshToken) error
 	UpdateUser(user *models.User) error
-}
-
-// Connect will connect to that storage engine
-func Connect(config *conf.Configuration) (Connection, error) {
-	if config.DB.Namespace != "" {
-		models.Namespace = config.DB.Namespace
-	}
-
-	if config.DB.Driver == "mongo" {
-		return mongo.Connect(config)
-	}
-
-	return sql.Connect(config)
 }

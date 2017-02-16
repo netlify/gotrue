@@ -22,3 +22,7 @@ import:
 - package: gopkg.in/mgo.v2
   subpackages:
   - txn
+- package: github.com/stretchr/testify
+  subpackages:
+  - suite
+  - require
