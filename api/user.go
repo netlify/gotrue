@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/netlify/netlify-auth/models"
 )
 
@@ -23,12 +23,18 @@ type UserUpdateParams struct {
 func (a *API) UserGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	token := getToken(ctx)
 
-	user := &models.User{}
-	if result := a.db.First(user, "id = ?", token.Claims["id"]); result.Error != nil {
-		if result.RecordNotFound() {
-			NotFoundError(w, "No user found for this token")
+	id, ok := token.Claims["id"].(string)
+	if !ok {
+		BadRequestError(w, "Could not read User ID claim")
+		return
+	}
+
+	user, err := a.db.FindUserByID(id)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			NotFoundError(w, err.Error())
 		} else {
-			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
+			InternalServerError(w, err.Error())
 		}
 		return
 	}
@@ -48,77 +54,80 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	tx := a.db.Begin()
+	id, ok := token.Claims["id"].(string)
+	if !ok {
+		BadRequestError(w, "Could not read User ID claim")
+		return
+	}
 
-	user := &models.User{}
-	if result := tx.First(user, "id = ?", token.Claims["id"]); result.Error != nil {
-		tx.Rollback()
-		if result.RecordNotFound() {
-			NotFoundError(w, "No user found for this token")
+	user, err := a.db.FindUserByID(id)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			NotFoundError(w, err.Error())
 		} else {
-			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
+			InternalServerError(w, err.Error())
 		}
 		return
 	}
 
+	var sendChangeEmailVerification bool
 	if params.Email != "" {
-		existingUser := &models.User{}
-		result := tx.First(existingUser, "id != ? and email = ?", user.ID, params.Email)
-		if result.RecordNotFound() {
-			user.GenerateEmailChange(params.Email)
-			a.mailer.EmailChangeMail(user)
-		} else {
-			tx.Rollback()
-			if result.Error != nil {
-				InternalServerError(w, fmt.Sprintf("Error during database query:%v", result.Error))
-			} else {
-				UnprocessableEntity(w, "Email address already registered by another user")
-			}
+		exists, err := a.db.IsDuplicatedEmail(params.Email, user.ID)
+		if err != nil {
+			InternalServerError(w, err.Error())
+			return
 		}
+
+		if exists {
+			UnprocessableEntity(w, "Email address already registered by another user")
+			return
+		}
+
+		user.GenerateEmailChange(params.Email)
+		sendChangeEmailVerification = true
 	}
 
-	log.Printf("Checkign params fortoken %v", params)
+	logrus.Debugf("Checking params for token %v", params)
+
 	if params.EmailChangeToken != "" {
-		log.Printf("Got change token %v", params.EmailChangeToken)
-		if params.EmailChangeToken == user.EmailChangeToken {
-			log.Printf("Confirm email change")
-			user.ConfirmEmailChange()
-		} else {
-			tx.Rollback()
+		logrus.Debugf("Got change token %v", params.EmailChangeToken)
+
+		if params.EmailChangeToken != user.EmailChangeToken {
 			UnauthorizedError(w, "Email Change Token didn't match token on file")
 			return
 		}
+
+		user.ConfirmEmailChange()
 	}
 
 	if params.Password != "" {
 		if err = user.EncryptPassword(params.Password); err != nil {
-			tx.Rollback()
 			InternalServerError(w, fmt.Sprintf("Error during password encryption: %v", err))
+			return
 		}
 	}
 
 	if params.Data != nil {
-		if err = user.UpdateUserMetaData(tx, &params.Data); err != nil {
-			tx.Rollback()
-			InternalServerError(w, err.Error())
-			return
-		}
+		user.UpdateUserMetaData(params.Data)
 	}
 
 	if params.AppData != nil {
 		if !user.HasRole(a.config.JWT.AdminGroupName) {
-			tx.Rollback()
 			UnauthorizedError(w, "Updating app_metadata requires admin privileges")
 			return
 		}
-		if err = user.UpdateAppMetaData(tx, &params.AppData); err != nil {
-			tx.Rollback()
-			InternalServerError(w, err.Error())
-			return
-		}
+
+		user.UpdateAppMetaData(params.AppData)
 	}
 
-	tx.Model(user).Update(user)
-	tx.Commit()
+	if err := a.db.UpdateUser(user); err != nil {
+		InternalServerError(w, err.Error())
+		return
+	}
+
+	if sendChangeEmailVerification {
+		a.mailer.EmailChangeMail(user)
+	}
+
 	sendJSON(w, 200, user)
 }

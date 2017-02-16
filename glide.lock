@@ -1,5 +1,5 @@
-hash: 6d467f0b5c865fecf9725307706bb846307540531bb05eb89698850608125b0c
-updated: 2017-01-17T16:35:34.437999954-08:00
+hash: 365950be2133f6a4e70e6200ba1d3c34a2fd78ca52fa6a111b85322fbf58ba70
+updated: 2017-02-15T21:17:32.721423091+01:00
 imports:
 - name: github.com/dgrijalva/jwt-go
   version: 268038b363c7a8d7306b8e35bf77a1fde4b0c402
@@ -51,7 +51,7 @@ imports:
 - name: github.com/mitchellh/mapstructure
   version: ca63d7c062ee3c9f34db231e352b60012b4fd0c1
 - name: github.com/netlify/mailme
-  version: ""
+  version: 3b136431fdebea1d886bbd1a30b23c43e2d8b4d0
 - name: github.com/pborman/uuid
   version: a97ce2ca70fa5a848076093f05e639a89ca34d06
 - name: github.com/pelletier/go-buffruneio
@@ -83,6 +83,11 @@ imports:
   version: c7e63cf4530bcd3ba943729cee0efeff2ebea63f
 - name: github.com/spf13/viper
   version: 16990631d4aa7e38f73dbbbf37fa13e67c648531
+- name: github.com/stretchr/testify
+  version: f390dcf405f7b83c997eac1b06768bb9f44dec18
+  subpackages:
+  - require
+  - suite
 - name: github.com/zenazn/goji
   version: 4d7077956293261309684d3cf1af673f773c6819
   subpackages:
@@ -122,8 +127,18 @@ imports:
   - internal/log
   - internal/modules
   - internal/remote_api
+- name: gopkg.in/alexcesaro/quotedprintable.v3
+  version: 2caba252f4dc53eaf6b553000885530023f54623
 - name: gopkg.in/gomail.v2
   version: 41f3572897373c5538c50a2402db15db079fa4fd
+- name: gopkg.in/mgo.v2
+  version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
+  subpackages:
+  - bson
+  - internal/json
+  - internal/sasl
+  - internal/scram
+  - txn
 - name: gopkg.in/yaml.v2
   version: 31c299268d302dd0aa9a0dcf765a3d58971ac83f
 testImports: []

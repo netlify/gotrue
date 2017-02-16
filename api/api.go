@@ -8,9 +8,9 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/guregu/kami"
-	"github.com/jinzhu/gorm"
 	"github.com/netlify/netlify-auth/conf"
 	"github.com/netlify/netlify-auth/mailer"
+	"github.com/netlify/netlify-auth/storage"
 	"github.com/rs/cors"
 )
 
@@ -21,7 +21,7 @@ var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 // API is the main REST API
 type API struct {
 	handler http.Handler
-	db      *gorm.DB
+	db      storage.Connection
 	mailer  *mailer.Mailer
 	config  *conf.Configuration
 	version string
@@ -60,11 +60,11 @@ func (a *API) ListenAndServe(hostAndPort string) error {
 }
 
 // NewAPI instantiates a new REST API
-func NewAPI(config *conf.Configuration, db *gorm.DB, mailer *mailer.Mailer) *API {
+func NewAPI(config *conf.Configuration, db storage.Connection, mailer *mailer.Mailer) *API {
 	return NewAPIWithVersion(config, db, mailer, defaultVersion)
 }
 
-func NewAPIWithVersion(config *conf.Configuration, db *gorm.DB, mailer *mailer.Mailer, version string) *API {
+func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer *mailer.Mailer, version string) *API {
 	api := &API{config: config, db: db, mailer: mailer, version: version}
 	mux := kami.New()
 

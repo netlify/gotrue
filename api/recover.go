@@ -29,18 +29,21 @@ func (a *API) Recover(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	user := &models.User{}
-	if result := a.db.First(user, "email = ?", params.Email); result.Error != nil {
-		if result.RecordNotFound() {
-			NotFoundError(w, "User not found")
+	user, err := a.db.FindUserByEmail(params.Email)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			NotFoundError(w, err.Error())
 		} else {
-			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
+			InternalServerError(w, err.Error())
 		}
 		return
 	}
 
 	user.GenerateRecoveryToken()
-	a.db.Save(user)
+	if err := a.db.UpdateUser(user); err != nil {
+		InternalServerError(w, err.Error())
+		return
+	}
 
 	if err := a.mailer.RecoveryMail(user); err != nil {
 		InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))

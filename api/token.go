@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/jinzhu/gorm"
 	"github.com/netlify/netlify-auth/models"
 )
 
@@ -39,78 +38,72 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
-	user := &models.User{}
-	if result := a.db.First(user, "email = ?", username); result.Error != nil {
-		if result.RecordNotFound() {
+	user, err := a.db.FindUserByEmail(username)
+	if err != nil {
+		if models.IsNotFoundError(err) {
 			sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "No user found with this email"})
 		} else {
-			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
+			InternalServerError(w, err.Error())
 		}
 		return
 	}
 
-	if user.ConfirmedAt.IsZero() {
+	if !user.IsRegistered() {
 		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Email not confirmed"})
 		return
 	}
 
-	if user.Authenticate(password) {
-		tx := a.db.Begin()
-
-		user.LastSignInAt = time.Now()
-		tx.Save(user)
-
-		a.issueRefreshToken(tx, user, w)
-	} else {
+	if !user.Authenticate(password) {
 		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Password"})
+		return
 	}
+
+	user.LastSignInAt = time.Now()
+	a.issueRefreshToken(user, w)
 }
 
 // RefreshTokenGrant implements the refresh_token grant type flow
 func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	token := r.FormValue("refresh_token")
+	tokenStr := r.FormValue("refresh_token")
 
-	if token == "" {
+	if tokenStr == "" {
 		sendJSON(w, 400, &OAuthError{Error: "invalid_request", Description: "refresh_token required"})
 		return
 	}
 
-	tx := a.db.Begin()
-	refreshToken := &models.RefreshToken{}
-	if result := tx.First(refreshToken, "token = ?", token); result.Error != nil {
-		tx.Rollback()
-		if result.RecordNotFound() {
+	user, token, err := a.db.FindUserWithRefreshToken(tokenStr)
+	if err != nil {
+		if models.IsNotFoundError(err) {
 			sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Refresh Token"})
 		} else {
-			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
+			InternalServerError(w, err.Error())
 		}
-		return
 	}
 
-	if refreshToken.Revoked {
+	if token.Revoked {
 		log.Printf("Possible abuse attempt: %v", r)
 		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Refresh Token"})
-		tx.Rollback()
 		return
 	}
 
-	// Make sure we revoke the current refreshtoken
-	// (will be undone by a tx.Rollback if anything fails)
-	refreshToken.Revoked = true
-	tx.Save(refreshToken)
+	newToken, err := a.db.GrantRefreshTokenSwap(user, token)
+	if err != nil {
+		InternalServerError(w, err.Error())
+	}
 
-	user := &models.User{}
-	if result := tx.Model(refreshToken).Related(user); result.Error != nil {
-		tx.Rollback()
-		if result.RecordNotFound() {
-			sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Refresh Token"})
-		} else {
-			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
-		}
+	tokenString, err := a.generateAccessToken(user)
+	if err != nil {
+		a.db.RollbackRefreshTokenSwap(newToken, token)
+		InternalServerError(w, fmt.Sprintf("error generating jwt token: %v", err))
 		return
 	}
 
-	a.issueRefreshToken(tx, user, w)
+	sendJSON(w, 200, &AccessTokenResponse{
+		Token:        tokenString,
+		TokenType:    "bearer",
+		ExpiresIn:    a.config.JWT.Exp,
+		RefreshToken: newToken.Token,
+	})
 }
 
 func (a *API) generateAccessToken(user *models.User) (string, error) {
@@ -125,23 +118,19 @@ func (a *API) generateAccessToken(user *models.User) (string, error) {
 	return token.SignedString([]byte(a.config.JWT.Secret))
 }
 
-func (a *API) issueRefreshToken(tx *gorm.DB, user *models.User, w http.ResponseWriter) {
-	refreshToken, err := models.CreateRefreshToken(tx, user)
+func (a *API) issueRefreshToken(user *models.User, w http.ResponseWriter) {
+	refreshToken, err := a.db.GrantAuthenticatedUser(user)
 	if err != nil {
-		tx.Rollback()
-		InternalServerError(w, fmt.Sprintf("Error generating token: %v", err))
+		InternalServerError(w, err.Error())
 		return
 	}
 
 	tokenString, err := a.generateAccessToken(user)
-
 	if err != nil {
-		tx.Rollback()
-		InternalServerError(w, fmt.Sprintf("Error generating jwt token: %v", err))
+		a.db.RevokeToken(refreshToken)
+		InternalServerError(w, fmt.Sprintf("error generating jwt token: %v", err))
 		return
 	}
-
-	tx.Commit()
 
 	sendJSON(w, 200, &AccessTokenResponse{
 		Token:        tokenString,

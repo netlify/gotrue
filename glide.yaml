@@ -19,3 +19,10 @@ import:
   version: 2.0.0
 - package: github.com/Sirupsen/logrus
 - package: github.com/netlify/mailme
+- package: gopkg.in/mgo.v2
+  subpackages:
+  - txn
+- package: github.com/stretchr/testify
+  subpackages:
+  - suite
+  - require

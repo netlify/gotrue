@@ -1,8 +1,20 @@
 ---
 language: go
 
+services:
+  - mongodb
+addons:
+  apt:
+    sources:
+      - mongodb-3.2-precise
+    packages:
+      - mongodb-org-server
+
 go:
   - 1.7
+
+env:
+  - NETLIFY_AUTH_MONGODB_TEST_CONN_URL=127.0.0.1
 
 install: make deps
 script: make all

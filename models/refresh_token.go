@@ -3,33 +3,22 @@ package models
 import (
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type RefreshToken struct {
-	ID int64
+	ID  int64         `bson:"seq_id,omitempty"`
+	BID bson.ObjectId `bson:"_id" sql:"-"`
 
-	Token string
+	Token string `bson:"token"`
 
-	User   User
-	UserID string
+	User   User   `bson:"-"`
+	UserID string `bson:"user_id"`
 
-	Revoked   bool
-	CreatedAt time.Time
+	Revoked   bool      `bson:"revoked"`
+	CreatedAt time.Time `bson:"created_at"`
 }
 
-func CreateRefreshToken(db *gorm.DB, user *User) (*RefreshToken, error) {
-	token := &RefreshToken{
-		User:  *user,
-		Token: secureToken(),
-	}
-	if err := db.Create(token).Error; err != nil {
-		return nil, err
-	}
-
-	return token, nil
-}
-
-func (RefreshToken) TableName() string {
+func (*RefreshToken) TableName() string {
 	return tableName("refresh_tokens")
 }

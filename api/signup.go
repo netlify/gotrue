@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -18,8 +19,8 @@ type SignupParams struct {
 
 // Signup is the endpoint for registering a new user
 func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	var user *models.User
 	params := &SignupParams{}
+
 	jsonDecoder := json.NewDecoder(r.Body)
 	err := jsonDecoder.Decode(params)
 	if err != nil {
@@ -32,57 +33,58 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	existingUser := &models.User{}
+	user, err := a.db.FindUserByEmail(params.Email)
+	if err != nil {
+		if !models.IsNotFoundError(err) {
+			InternalServerError(w, err.Error())
+			return
+		}
 
-	tx := a.db.Begin()
-	if result := tx.First(existingUser, "email = ?", params.Email); result.Error != nil {
-		if result.RecordNotFound() {
-			user, err = models.CreateUser(tx, params.Email, params.Password)
-			if err != nil {
-				tx.Rollback()
-				InternalServerError(w, fmt.Sprintf("Error creating user: %v", err))
-				return
-			}
-			fmt.Printf("Created new user: %v", user)
-		} else {
-			tx.Rollback()
-			InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
+		user, err = a.signupNewUser(params)
+		if err != nil {
+			InternalServerError(w, err.Error())
 			return
 		}
 	} else {
-		if !existingUser.ConfirmedAt.IsZero() {
-			tx.Rollback()
-			UnprocessableEntity(w, fmt.Sprintf("A user with this email address has already been registered"))
+		user, err = a.confirmUser(user, params)
+		if err != nil {
+			InternalServerError(w, err.Error())
 			return
 		}
-		existingUser.GenerateConfirmationToken()
-
-		tx.Save(existingUser)
-		user = existingUser
-	}
-
-	users := []*models.User{}
-	var userCount int64
-	if result := tx.Where("id != ?", user.ID).Find(&users).Count(&userCount); result.Error != nil {
-		tx.Rollback()
-		InternalServerError(w, fmt.Sprintf("Error during database query: %v", result.Error))
-		return
-	}
-
-	if params.Data != nil {
-		user.UpdateUserMetaData(tx, &params.Data)
-	}
-
-	if userCount == 0 {
-		user.UpdateAppMetaData(tx, &map[string]interface{}{"roles": []string{a.config.JWT.AdminGroupName}})
 	}
 
 	if err := a.mailer.ConfirmationMail(user); err != nil {
-		tx.Rollback()
 		InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
 		return
 	}
 
-	tx.Commit()
 	sendJSON(w, 200, user)
+}
+
+func (a *API) signupNewUser(params *SignupParams) (*models.User, error) {
+	user, err := models.NewUser(params.Email, params.Password, params.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := a.db.CreateUser(user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (a *API) confirmUser(user *models.User, params *SignupParams) (*models.User, error) {
+	if user.IsRegistered() {
+		return nil, errors.New("A user with this email address has already been registered")
+	}
+
+	user.UpdateUserMetaData(params.Data)
+	user.GenerateConfirmationToken()
+
+	if err := a.db.UpdateUser(user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }

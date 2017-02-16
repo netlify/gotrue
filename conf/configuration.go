@@ -11,19 +11,29 @@ import (
 	"github.com/spf13/viper"
 )
 
+type LogConfiguration struct {
+	Level string `json:"level"`
+	File  string `json:"file"`
+}
+
+type DBConfiguration struct {
+	Driver      string `json:"driver"`
+	ConnURL     string `json:"url"`
+	Namespace   string `json:"namespace"`
+	Automigrate bool   `json:"automigrate"`
+}
+
+type JWTConfiguration struct {
+	Secret             string `json:"secret"`
+	Exp                int    `json:"exp"`
+	AdminGroupName     string `json:"admin_group_name"`
+	AdminGroupDisabled bool   `json:"admin_group_disabled"`
+}
+
 // Configuration holds all the confiruation for netlify-auth
 type Configuration struct {
-	JWT struct {
-		Secret         string `json:"secret"`
-		Exp            int    `json:"exp"`
-		AdminGroupName string `json:"admin_group_name"`
-	} `json:"jwt"`
-	DB struct {
-		Driver      string `json:"driver"`
-		ConnURL     string `json:"url"`
-		Namespace   string `json:"namespace"`
-		Automigrate bool   `json:"automigrate"`
-	}
+	JWT JWTConfiguration `json:"jwt"`
+	DB  DBConfiguration  `json:"db"`
 	API struct {
 		Host string `json:"host"`
 		Port int    `json:"port"`
@@ -48,10 +58,7 @@ type Configuration struct {
 			EmailChange  string `json:"email_change"`
 		} `json:"templates"`
 	} `json:"mailer"`
-	Logging struct {
-		Level string `json:"level"`
-		File  string `json:"file"`
-	} `json:"logging"`
+	Logging LogConfiguration `json:"logging"`
 }
 
 func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
@@ -114,12 +121,12 @@ func configureLogging(config *Configuration) error {
 		logrus.SetOutput(bufio.NewWriter(f))
 	}
 
-	if logConfig.Level != "" {
-		level, err := logrus.ParseLevel(strings.ToUpper(logConfig.Level))
-		if err != nil {
-			return errors.Wrap(err, "configuring logging")
-		}
-		logrus.SetLevel(level)
+	level, err := logConfig.ParseLevel()
+	if err != nil {
+		return err
+	}
+	if level != nil {
+		logrus.SetLevel(*level)
 	}
 
 	logrus.SetFormatter(&logrus.TextFormatter{
@@ -128,4 +135,26 @@ func configureLogging(config *Configuration) error {
 	})
 
 	return nil
+}
+
+func (l LogConfiguration) ParseLevel() (*logrus.Level, error) {
+	if l.Level == "" {
+		return nil, nil
+	}
+
+	level, err := logrus.ParseLevel(strings.ToUpper(l.Level))
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing log level information")
+	}
+
+	return &level, nil
+}
+
+func (l LogConfiguration) IsDebugEnabled() bool {
+	level, err := l.ParseLevel()
+	if err != nil {
+		return false
+	}
+
+	return level != nil && *level == logrus.DebugLevel
 }
