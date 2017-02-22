@@ -1,4 +1,4 @@
-# Netlify Auth - User mangament for APIs
+# Netlify Auth - User managment for APIs
 
 Netlify Auth is a small open-source API written in golang, that can act as a self-standing
 API service for handling user registration and authentication for JAM projects.
