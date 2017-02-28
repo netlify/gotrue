@@ -63,3 +63,11 @@ func (u *UserObj) BeforeUpdate() (err error) {
 
 	return err
 }
+
+func (conn *Connection) newUserObj(user *models.User) *UserObj {
+	return &UserObj{
+		User:           user,
+		FirstRoleName:  conn.config.JWT.AdminGroupName,
+		AutoAsignRoles: !conn.config.JWT.AdminGroupDisabled,
+	}
+}

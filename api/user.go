@@ -29,6 +29,18 @@ func (a *API) UserGet(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	tokenAud, ok := token.Claims["aud"].(string)
+	if !ok {
+		BadRequestError(w, "Could not read User Aud claim")
+		return
+	}
+
+	aud := a.requestAud(r)
+	if aud != tokenAud {
+		BadRequestError(w, "Token audience doesn't match request audience")
+		return
+	}
+
 	user, err := a.db.FindUserByID(id)
 	if err != nil {
 		if models.IsNotFoundError(err) {
@@ -72,7 +84,7 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	var sendChangeEmailVerification bool
 	if params.Email != "" {
-		exists, err := a.db.IsDuplicatedEmail(params.Email, user.ID)
+		exists, err := a.db.IsDuplicatedEmail(params.Email, user.Aud, user.ID)
 		if err != nil {
 			InternalServerError(w, err.Error())
 			return

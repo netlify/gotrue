@@ -34,12 +34,15 @@ func (s *StorageTestSuite) TestFindUserByConfirmationToken() {
 	require.Equal(s.T(), u.ID, n.ID)
 }
 
-func (s *StorageTestSuite) TestFindUserByEmail() {
+func (s *StorageTestSuite) TestFindUserByEmailAndAudience() {
 	u := s.createUser()
 
-	n, err := s.C.FindUserByEmail("david@netlify.com")
+	n, err := s.C.FindUserByEmailAndAudience(u.Email, "test")
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), u.ID, n.ID)
+
+	_, err = s.C.FindUserByEmailAndAudience(u.Email, "invalid")
+	require.EqualError(s.T(), err, models.UserNotFoundError{}.Error())
 }
 
 func (s *StorageTestSuite) TestFindUserByID() {
@@ -68,11 +71,13 @@ func (s *StorageTestSuite) TestFindUserWithRefreshToken() {
 	r, err := s.C.GrantAuthenticatedUser(u)
 	require.NoError(s.T(), err)
 
-	n, nr, err := s.C.FindUserWithRefreshToken(r.Token)
+	n, nr, err := s.C.FindUserWithRefreshToken(r.Token, "test")
 	require.NoError(s.T(), err)
-
 	require.Equal(s.T(), s.TokenID(r), s.TokenID(nr))
 	require.Equal(s.T(), u.ID, n.ID)
+
+	n, nr, err = s.C.FindUserWithRefreshToken(r.Token, "other-aud")
+	require.EqualError(s.T(), err, models.UserNotFoundError{}.Error())
 }
 
 func (s *StorageTestSuite) TestGrantAuthenticatedUser() {
@@ -92,7 +97,7 @@ func (s *StorageTestSuite) TestGrantRefreshTokenSwap() {
 	ts, err := s.C.GrantRefreshTokenSwap(u, r)
 	require.NoError(s.T(), err)
 
-	_, nr, err := s.C.FindUserWithRefreshToken(r.Token)
+	_, nr, err := s.C.FindUserWithRefreshToken(r.Token, "test")
 	require.NoError(s.T(), err)
 
 	require.Equal(s.T(), s.TokenID(r), s.TokenID(nr))
@@ -106,17 +111,19 @@ func (s *StorageTestSuite) TestIsDuplicatedEmail() {
 	u := s.createUser()
 	s.createUserWithEmail("david.calavera@netlify.com")
 
-	e, err := s.C.IsDuplicatedEmail("david.calavera@netlify.com", u.ID)
+	e, err := s.C.IsDuplicatedEmail("david.calavera@netlify.com", "test", u.ID)
 	require.NoError(s.T(), err)
-
 	require.True(s.T(), e, "expected email to be duplicated")
 
-	e, err = s.C.IsDuplicatedEmail("davidcalavera@netlify.com", u.ID)
+	e, err = s.C.IsDuplicatedEmail("davidcalavera@netlify.com", "test", u.ID)
 	require.NoError(s.T(), err)
-
 	require.False(s.T(), e, "expected email to not be duplicated")
 
-	e, err = s.C.IsDuplicatedEmail("david@netlify.com", u.ID)
+	e, err = s.C.IsDuplicatedEmail("david@netlify.com", "test", u.ID)
+	require.NoError(s.T(), err)
+	require.False(s.T(), e, "expected same email to not be duplicated")
+
+	e, err = s.C.IsDuplicatedEmail("david.calavera@netlify.com", "other-aud", u.ID)
 	require.NoError(s.T(), err)
 	require.False(s.T(), e, "expected same email to not be duplicated")
 }
@@ -127,7 +134,7 @@ func (s *StorageTestSuite) TestLogout() {
 	require.NoError(s.T(), err)
 
 	s.C.Logout(u.ID)
-	_, _, err = s.C.FindUserWithRefreshToken(r.Token)
+	_, _, err = s.C.FindUserWithRefreshToken(r.Token, "test")
 	require.Error(s.T(), err, "expected error when there are no refresh tokens to authenticate")
 
 	require.True(s.T(), models.IsNotFoundError(err), "expected NotFoundError")
@@ -141,7 +148,7 @@ func (s *StorageTestSuite) TestRevokeToken() {
 	err = s.C.RevokeToken(r)
 	require.NoError(s.T(), err)
 
-	_, nr, err := s.C.FindUserWithRefreshToken(r.Token)
+	_, nr, err := s.C.FindUserWithRefreshToken(r.Token, "test")
 	require.NoError(s.T(), err)
 
 	require.Equal(s.T(), s.TokenID(r), s.TokenID(nr))
@@ -159,12 +166,12 @@ func (s *StorageTestSuite) TestRollbackRefreshTokenSwap() {
 	err = s.C.RollbackRefreshTokenSwap(ts, r)
 	require.NoError(s.T(), err)
 
-	_, nr, err := s.C.FindUserWithRefreshToken(r.Token)
+	_, nr, err := s.C.FindUserWithRefreshToken(r.Token, "test")
 	require.NoError(s.T(), err)
 
 	require.False(s.T(), nr.Revoked, "expected token to not be revoked")
 
-	_, ns, err := s.C.FindUserWithRefreshToken(ts.Token)
+	_, ns, err := s.C.FindUserWithRefreshToken(ts.Token, "test")
 	require.NoError(s.T(), err)
 
 	require.True(s.T(), ns.Revoked, "expected token to be revoked")
@@ -208,7 +215,7 @@ func (s *StorageTestSuite) createUser() *models.User {
 }
 
 func (s *StorageTestSuite) createUserWithEmail(email string) *models.User {
-	user, err := models.NewUser(email, "secret", nil)
+	user, err := models.NewUser(email, "secret", "test", nil)
 	require.NoError(s.T(), err)
 
 	err = s.C.CreateUser(user)

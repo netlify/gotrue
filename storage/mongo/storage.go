@@ -41,21 +41,7 @@ func (conn *Connection) CreateUser(user *models.User) error {
 		return errors.Wrap(err, "Error creating user")
 	}
 
-	if !conn.config.JWT.AdminGroupDisabled {
-		v, err := c.Find(bson.M{"_id": bson.M{"$ne": user.ID}}).Count()
-		if err != nil {
-			return errors.Wrap(err, "Error making user an admin")
-		}
-
-		if v == 0 {
-			user.SetRole(conn.config.JWT.AdminGroupName)
-			if err := c.Update(bson.M{"_id": user.ID}, bson.M{"$set": user}); err != nil {
-				return errors.Wrap(err, "Error making user an admin")
-			}
-		}
-	}
-
-	return nil
+	return conn.makeUserAdmin(c, user)
 }
 
 func (conn *Connection) findUser(query bson.M) (*models.User, error) {
@@ -76,8 +62,8 @@ func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User,
 	return conn.findUser(bson.M{"confirmation_token": token})
 }
 
-func (conn *Connection) FindUserByEmail(email string) (*models.User, error) {
-	return conn.findUser(bson.M{"email": email})
+func (conn *Connection) FindUserByEmailAndAudience(email, aud string) (*models.User, error) {
+	return conn.findUser(bson.M{"email": email, "aud": aud})
 }
 
 func (conn *Connection) FindUserByID(id string) (*models.User, error) {
@@ -88,7 +74,7 @@ func (conn *Connection) FindUserByRecoveryToken(token string) (*models.User, err
 	return conn.findUser(bson.M{"recovery_token": token})
 }
 
-func (conn *Connection) FindUserWithRefreshToken(token string) (*models.User, *models.RefreshToken, error) {
+func (conn *Connection) FindUserWithRefreshToken(token, aud string) (*models.User, *models.RefreshToken, error) {
 	refreshToken := &models.RefreshToken{}
 	rc := conn.db.C(refreshToken.TableName())
 
@@ -100,7 +86,7 @@ func (conn *Connection) FindUserWithRefreshToken(token string) (*models.User, *m
 		}
 	}
 
-	user, err := conn.findUser(bson.M{"_id": refreshToken.UserID})
+	user, err := conn.findUser(bson.M{"_id": refreshToken.UserID, "aud": aud})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -164,8 +150,8 @@ func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.R
 	return newToken, nil
 }
 
-func (conn *Connection) IsDuplicatedEmail(email, id string) (bool, error) {
-	_, err := conn.findUser(bson.M{"email": email, "_id": bson.M{"$ne": id}})
+func (conn *Connection) IsDuplicatedEmail(email, aud, id string) (bool, error) {
+	_, err := conn.findUser(bson.M{"email": email, "aud": aud, "_id": bson.M{"$ne": id}})
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return false, nil
@@ -177,10 +163,30 @@ func (conn *Connection) IsDuplicatedEmail(email, id string) (bool, error) {
 	return true, nil
 }
 
-func (conn *Connection) Logout(id interface{}) {
+func (conn *Connection) Logout(id string) {
 	t := &models.RefreshToken{}
 	c := conn.db.C(t.TableName())
 	c.RemoveAll(bson.M{"user_id": id})
+}
+
+func (conn *Connection) makeUserAdmin(c *mgo.Collection, user *models.User) error {
+	if conn.config.JWT.AdminGroupDisabled {
+		return nil
+	}
+
+	v, err := c.Find(bson.M{"_id": bson.M{"$ne": user.ID}}).Count()
+	if err != nil {
+		return errors.Wrap(err, "Error making user an admin")
+	}
+
+	if v == 0 {
+		user.SetRole(conn.config.JWT.AdminGroupName)
+		if err := c.Update(bson.M{"_id": user.ID}, bson.M{"$set": user}); err != nil {
+			return errors.Wrap(err, "Error making user an admin")
+		}
+	}
+
+	return nil
 }
 
 func (conn *Connection) RevokeToken(token *models.RefreshToken) error {

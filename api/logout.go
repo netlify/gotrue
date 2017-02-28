@@ -9,7 +9,12 @@ import (
 func (a *API) Logout(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	token := getToken(ctx)
 
-	a.db.Logout(token.Claims["id"])
+	id, ok := token.Claims["id"].(string)
+	if !ok {
+		BadRequestError(w, "Could not read User ID claim")
+		return
+	}
 
+	a.db.Logout(id)
 	w.WriteHeader(204)
 }
