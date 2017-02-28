@@ -14,6 +14,7 @@ import (
 type User struct {
 	ID string `json:"id" bson:"_id,omitempty"`
 
+	Aud               string    `json:"aud" bson:"aud"`
 	Email             string    `json:"email" bson:"email"`
 	EncryptedPassword string    `json:"-" bson:"encrypted_password"`
 	ConfirmedAt       time.Time `json:"confirmed_at" bson:"confirmed_at"`
@@ -38,9 +39,10 @@ type User struct {
 }
 
 // NewUser initializes a new user from an email, password and user data.
-func NewUser(email, password string, userData map[string]interface{}) (*User, error) {
+func NewUser(email, password, aud string, userData map[string]interface{}) (*User, error) {
 	user := &User{
 		ID:           uuid.NewRandom().String(),
+		Aud:          aud,
 		Email:        email,
 		UserMetaData: userData,
 	}

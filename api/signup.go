@@ -33,14 +33,16 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	user, err := a.db.FindUserByEmail(params.Email)
+	aud := a.requestAud(r)
+
+	user, err := a.db.FindUserByEmailAndAudience(params.Email, aud)
 	if err != nil {
 		if !models.IsNotFoundError(err) {
 			InternalServerError(w, err.Error())
 			return
 		}
 
-		user, err = a.signupNewUser(params)
+		user, err = a.signupNewUser(params, aud)
 		if err != nil {
 			InternalServerError(w, err.Error())
 			return
@@ -61,8 +63,8 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 	sendJSON(w, 200, user)
 }
 
-func (a *API) signupNewUser(params *SignupParams) (*models.User, error) {
-	user, err := models.NewUser(params.Email, params.Password, params.Data)
+func (a *API) signupNewUser(params *SignupParams, aud string) (*models.User, error) {
+	user, err := models.NewUser(params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		return nil, err
 	}

@@ -38,7 +38,8 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
-	user, err := a.db.FindUserByEmail(username)
+	aud := a.requestAud(r)
+	user, err := a.db.FindUserByEmailAndAudience(username, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "No user found with this email"})
@@ -71,7 +72,8 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	user, token, err := a.db.FindUserWithRefreshToken(tokenStr)
+	aud := a.requestAud(r)
+	user, token, err := a.db.FindUserWithRefreshToken(tokenStr, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Refresh Token"})
@@ -111,6 +113,7 @@ func (a *API) generateAccessToken(user *models.User) (string, error) {
 
 	token.Claims["id"] = user.ID
 	token.Claims["email"] = user.Email
+	token.Claims["aud"] = user.Aud
 	token.Claims["exp"] = time.Now().Add(time.Second * time.Duration(a.config.JWT.Exp)).Unix()
 	token.Claims["app_metadata"] = user.AppMetaData
 	token.Claims["user_metadata"] = user.UserMetaData

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/textproto"
 	"regexp"
 
 	"github.com/dgrijalva/jwt-go"
@@ -14,7 +15,10 @@ import (
 	"github.com/rs/cors"
 )
 
-const defaultVersion = "unknown version"
+const (
+	audHeaderName  = "X-JWT-AUD"
+	defaultVersion = "unknown version"
+)
 
 var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 
@@ -52,6 +56,14 @@ func (a *API) requireAuthentication(ctx context.Context, w http.ResponseWriter, 
 	}
 
 	return context.WithValue(ctx, "jwt", token)
+}
+
+func (a *API) requestAud(r *http.Request) string {
+	p := textproto.MIMEHeader(r.Header)
+	if h, exist := p[textproto.CanonicalMIMEHeaderKey(audHeaderName)]; exist && len(h) > 0 {
+		return h[0]
+	}
+	return a.config.JWT.Aud
 }
 
 // ListenAndServe starts the REST API
