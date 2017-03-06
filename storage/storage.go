@@ -1,6 +1,6 @@
 package storage
 
-import "github.com/netlify/netlify-auth/models"
+import "github.com/netlify/gotrue/models"
 
 type Connection interface {
 	Close() error

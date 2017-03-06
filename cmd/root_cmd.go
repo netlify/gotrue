@@ -4,11 +4,11 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/netlify/netlify-auth/conf"
+	"github.com/netlify/gotrue/conf"
 )
 
 var rootCmd = cobra.Command{
-	Use: "netlify-auth",
+	Use: "gotrue",
 	Run: func(cmd *cobra.Command, args []string) {
 		execWithConfig(cmd, serve)
 	},

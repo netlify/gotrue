@@ -1,9 +1,9 @@
 package mailer
 
 import (
+	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/models"
 	"github.com/netlify/mailme"
-	"github.com/netlify/netlify-auth/conf"
-	"github.com/netlify/netlify-auth/models"
 )
 
 const DefaultConfirmationMail = `<h2>Confirm your signup</h2>
@@ -35,7 +35,7 @@ type MailSubjects struct {
 	RecoveryMail     string
 }
 
-// NewMailer returns a new netlify-auth mailer
+// NewMailer returns a new gotrue mailer
 func NewMailer(conf *conf.Configuration) *Mailer {
 	mailConf := conf.Mailer
 	return &Mailer{

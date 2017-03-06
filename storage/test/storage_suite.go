@@ -1,8 +1,8 @@
 package test
 
 import (
-	"github.com/netlify/netlify-auth/models"
-	"github.com/netlify/netlify-auth/storage"
+	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

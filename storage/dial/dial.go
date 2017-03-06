@@ -1,11 +1,11 @@
 package dial
 
 import (
-	"github.com/netlify/netlify-auth/conf"
-	"github.com/netlify/netlify-auth/models"
-	"github.com/netlify/netlify-auth/storage"
-	"github.com/netlify/netlify-auth/storage/mongo"
-	"github.com/netlify/netlify-auth/storage/sql"
+	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
+	"github.com/netlify/gotrue/storage/mongo"
+	"github.com/netlify/gotrue/storage/sql"
 )
 
 // Dial will connect to that storage engine

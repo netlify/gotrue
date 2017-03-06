@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/netlify/netlify-auth/crypto"
+	"github.com/netlify/gotrue/crypto"
 	"github.com/pborman/uuid"
 
 	"golang.org/x/crypto/bcrypt"

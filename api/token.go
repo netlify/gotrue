@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/netlify/netlify-auth/models"
+	"github.com/netlify/gotrue/models"
 )
 
 // AccessTokenResponse represents an OAuth2 success response

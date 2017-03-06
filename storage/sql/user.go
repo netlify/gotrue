@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/jinzhu/gorm"
-	"github.com/netlify/netlify-auth/models"
+	"github.com/netlify/gotrue/models"
 	"github.com/pkg/errors"
 )
 

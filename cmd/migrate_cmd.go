@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/netlify/netlify-auth/conf"
-	"github.com/netlify/netlify-auth/storage/dial"
+	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/storage/dial"
 	"github.com/spf13/cobra"
 )
 
