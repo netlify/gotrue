@@ -67,7 +67,7 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 		return nil, err
 	}
 
-	viper.SetEnvPrefix("NETLIFY_AUTH")
+	viper.SetEnvPrefix("GOTRUE")
 
 	viper.SetConfigType("json")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
