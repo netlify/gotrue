@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/netlify/netlify-auth/models"
+	"github.com/netlify/gotrue/models"
 )
 
 // RecoverParams holds the parameters for a password recovery request

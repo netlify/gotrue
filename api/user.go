@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/netlify/netlify-auth/models"
+	"github.com/netlify/gotrue/models"
 )
 
 // UserUpdateParams parameters for updating a user

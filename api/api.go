@@ -8,9 +8,9 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/guregu/kami"
-	"github.com/netlify/netlify-auth/conf"
-	"github.com/netlify/netlify-auth/mailer"
-	"github.com/netlify/netlify-auth/storage"
+	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/mailer"
+	"github.com/netlify/gotrue/storage"
 	"github.com/rs/cors"
 )
 

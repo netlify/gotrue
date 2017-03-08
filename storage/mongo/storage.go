@@ -2,9 +2,9 @@ package mongo
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/netlify/netlify-auth/conf"
-	"github.com/netlify/netlify-auth/crypto"
-	"github.com/netlify/netlify-auth/models"
+	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/crypto"
+	"github.com/netlify/gotrue/models"
 	"github.com/pkg/errors"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"

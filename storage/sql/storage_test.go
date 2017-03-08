@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/netlify/netlify-auth/conf"
-	"github.com/netlify/netlify-auth/models"
-	"github.com/netlify/netlify-auth/storage/test"
+	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage/test"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -15,7 +15,7 @@ import (
 var conn *Connection
 
 func TestSQLTestSuite(t *testing.T) {
-	f, err := ioutil.TempFile("", "netlify-auth-test-")
+	f, err := ioutil.TempFile("", "gotrue-test-")
 	require.NoError(t, err)
 
 	defer os.Remove(f.Name())

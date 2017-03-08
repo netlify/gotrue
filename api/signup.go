@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/netlify/netlify-auth/models"
+	"github.com/netlify/gotrue/models"
 )
 
 // SignupParams are the parameters the Signup endpoint accepts

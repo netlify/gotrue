@@ -30,7 +30,7 @@ type JWTConfiguration struct {
 	AdminGroupDisabled bool   `json:"admin_group_disabled"`
 }
 
-// Configuration holds all the confiruation for netlify-auth
+// Configuration holds all the confiruation for gotrue
 type Configuration struct {
 	JWT JWTConfiguration `json:"jwt"`
 	DB  DBConfiguration  `json:"db"`
@@ -67,7 +67,7 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 		return nil, err
 	}
 
-	viper.SetEnvPrefix("NETLIFY_AUTH")
+	viper.SetEnvPrefix("GOTRUE")
 
 	viper.SetConfigType("json")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -78,8 +78,7 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 	} else {
 		viper.SetConfigName("config")
 		viper.AddConfigPath("./")
-		viper.AddConfigPath("$HOME/.netlify/authlify/") // keep backwards compatibility
-		viper.AddConfigPath("$HOME/.netlify/netlify-auth/")
+		viper.AddConfigPath("$HOME/.netlify/gotrue/") // keep backwards compatibility
 	}
 
 	if err := viper.ReadInConfig(); err != nil && !os.IsNotExist(err) {

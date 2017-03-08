@@ -8,9 +8,9 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/netlify/netlify-auth/conf"
-	"github.com/netlify/netlify-auth/crypto"
-	"github.com/netlify/netlify-auth/models"
+	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/crypto"
+	"github.com/netlify/gotrue/models"
 	"github.com/pkg/errors"
 )
 
