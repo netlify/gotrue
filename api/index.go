@@ -9,7 +9,7 @@ import (
 func (a *API) Index(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, 200, map[string]string{
 		"version":     a.version,
-		"name":        "Netlify Auth",
-		"description": "Netlify Auth is a user registration and authentication API",
+		"name":        "GoTrue",
+		"description": "GoTrue is a user registration and authentication API",
 	})
 }

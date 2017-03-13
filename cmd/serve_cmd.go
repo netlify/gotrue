@@ -36,6 +36,6 @@ func serve(config *conf.Configuration) {
 	api := api.NewAPIWithVersion(config, db, mailer, Version)
 
 	l := fmt.Sprintf("%v:%v", config.API.Host, config.API.Port)
-	logrus.Infof("Netlify Auth API started on: %s", l)
+	logrus.Infof("GoTrue API started on: %s", l)
 	api.ListenAndServe(l)
 }
