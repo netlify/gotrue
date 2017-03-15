@@ -1,0 +1,26 @@
+{{ partial "header" . }}
+
+<div class="landing page">
+  <section class="hero">
+    <div class="contained">
+      <div class="hero-copy">
+        <h1 class="headline">{{ .Site.Data.landing.hero.headline | markdownify }}</h1>
+        <h2 class="subhead">{{ .Site.Data.landing.hero.subhead | markdownify }}</h2>
+      </div>
+    </div>
+  </section>
+
+  <div class="contained clearfix">
+    <div class="sections">
+      <h1>{{ .Site.Data.landing.sectionsintro }}</h1>
+      {{ range .Site.Data.landing.sections }}
+        <section class="{{ .headline | urlize }}">
+          <h2>{{ .headline }}</h2>
+          <p>{{ .body | markdownify }}</p>
+        </section>
+      {{ end }}
+    </div>
+  </div>
+</div>
+
+{{ partial "footer" . }}

@@ -1,0 +1,47 @@
+0 info it worked if it ends with ok
+1 verbose cli [ '/usr/local/Cellar/node/7.5.0/bin/node',
+1 verbose cli   '/usr/local/bin/npm',
+1 verbose cli   'start' ]
+2 info using npm@4.1.2
+3 info using node@v7.5.0
+4 verbose run-script [ 'prestart', 'start', 'poststart' ]
+5 info lifecycle victor-hugo@1.0.0~prestart: victor-hugo@1.0.0
+6 silly lifecycle victor-hugo@1.0.0~prestart: no script for prestart, continuing
+7 info lifecycle victor-hugo@1.0.0~start: victor-hugo@1.0.0
+8 verbose lifecycle victor-hugo@1.0.0~start: unsafe-perm in lifecycle true
+9 verbose lifecycle victor-hugo@1.0.0~start: PATH: /usr/local/lib/node_modules/npm/bin/node-gyp-bin:/Users/eliwilliamson/repos/gotrue/www/node_modules/.bin:/Users/eliwilliamson/.rvm/gems/ruby-2.3.3/bin:/Users/eliwilliamson/.rvm/gems/ruby-2.3.3@global/bin:/Users/eliwilliamson/.rvm/rubies/ruby-2.3.3/bin:/bin:/usr/local/heroku/bin:/usr/local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/go/bin:/Users/eliwilliamson/.rvm/bin
+10 verbose lifecycle victor-hugo@1.0.0~start: CWD: /Users/eliwilliamson/repos/gotrue/www
+11 silly lifecycle victor-hugo@1.0.0~start: Args: [ '-c', 'gulp server' ]
+12 silly lifecycle victor-hugo@1.0.0~start: Returned: code: 1  signal: null
+13 info lifecycle victor-hugo@1.0.0~start: Failed to exec start script
+14 verbose stack Error: victor-hugo@1.0.0 start: `gulp server`
+14 verbose stack Exit status 1
+14 verbose stack     at EventEmitter.<anonymous> (/usr/local/lib/node_modules/npm/lib/utils/lifecycle.js:279:16)
+14 verbose stack     at emitTwo (events.js:106:13)
+14 verbose stack     at EventEmitter.emit (events.js:192:7)
+14 verbose stack     at ChildProcess.<anonymous> (/usr/local/lib/node_modules/npm/lib/utils/spawn.js:40:14)
+14 verbose stack     at emitTwo (events.js:106:13)
+14 verbose stack     at ChildProcess.emit (events.js:192:7)
+14 verbose stack     at maybeClose (internal/child_process.js:890:16)
+14 verbose stack     at Process.ChildProcess._handle.onexit (internal/child_process.js:226:5)
+15 verbose pkgid victor-hugo@1.0.0
+16 verbose cwd /Users/eliwilliamson/repos/gotrue/www
+17 error Darwin 16.4.0
+18 error argv "/usr/local/Cellar/node/7.5.0/bin/node" "/usr/local/bin/npm" "start"
+19 error node v7.5.0
+20 error npm  v4.1.2
+21 error code ELIFECYCLE
+22 error victor-hugo@1.0.0 start: `gulp server`
+22 error Exit status 1
+23 error Failed at the victor-hugo@1.0.0 start script 'gulp server'.
+23 error Make sure you have the latest version of node.js and npm installed.
+23 error If you do, this is most likely a problem with the victor-hugo package,
+23 error not with npm itself.
+23 error Tell the author that this fails on your system:
+23 error     gulp server
+23 error You can get information on how to open an issue for this project with:
+23 error     npm bugs victor-hugo
+23 error Or if that isn't available, you can get their info via:
+23 error     npm owner ls victor-hugo
+23 error There is likely additional logging output above.
+24 verbose exit [ 1, true ]

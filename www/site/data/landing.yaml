@@ -1,0 +1,23 @@
+---
+hero:
+  headline: A self-standing API service for handling user registration and authentication, accessible with client-side JavaScript using the [GoTrue JS](https://github.com/netlify/gotrue-js) library.
+  subhead: |
+    - Handles user signup, authentication, and custom user data
+    - Based on OAuth2 and JSON Web Tokens (JWT)
+    - Built in Go, accessible via client-side JS
+
+sectionsintro: Get Started
+
+sections:
+  - headline: Running the API
+    body: |
+      First, you’ll need to get the API running on a server. You can do this quickly and easily with Heroku:
+
+      <a href="https://www.heroku.com/deploy/?template=https://github.com/heroku/node-js-getting-started"><img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy"></a>
+  - headline: Endpoints
+    body: GoTrue exposes several endpoints. Details can be found in the [documentation](https://github.com/netlify/gotrue/blob/master/README.md).
+  - headline: Client-Side JavaScript Access with GoTrue JS
+    body: The easiest way to access the GoTrue API from the client is with the GoTrue JS library. Details and sample commands can be found in the [documentation](https://github.com/netlify/gotrue/blob/master/README.md).
+  - headline: Proxy with Gotiator API
+    body: If you need to authenticate with many services, a simple proxy setup can help manage this. Check the [Gotiator API repo](https://github.com/netlify/gotiator) for more information.
+---
