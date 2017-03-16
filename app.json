@@ -4,7 +4,7 @@
   "website": "https://www.gotrueapi.org",
   "repository": "https://github.com/netlify/gotrue",
   "env": {
-    "DATABASE_URL: {},
+    "DATABASE_URL": {},
     "GOTRUE_DB_DRIVER": {
       "value": "sqlite3"
     },
