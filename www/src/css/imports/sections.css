@@ -1,0 +1,24 @@
+.sections {
+  margin-top: $large;
+  margin-bottom: $large;
+  overflow: hidden;
+
+  @media screen and (min-width: $tablet) {
+    margin-top: $xl;
+    margin-bottom: $xl;
+    @neat-span-columns 10;
+    @neat-shift 1;
+  }
+
+  h1 {
+    margin-bottom: $medium;
+  }
+
+  h2:not(.running-the-api) {
+    margin-top: $medium;
+  }
+
+  a {
+    color: $darkBlue;
+  }
+}

@@ -1,0 +1,66 @@
+header {
+  background: transparent;
+  box-shadow: none;
+  font-family: $roboto;
+  padding: $medium 0;
+  position: absolute;
+  text-align: center;
+  transition: background .2s ease, padding .2s ease, box-shadow .2s ease;
+  width: 100%;
+  z-index: 100;
+
+  @media screen and (min-width: $mobile) {
+    text-align: right;
+    position: fixed;
+  }
+
+  &.scrolled {
+    @media screen and (min-width: $mobile) {
+      background: $darkBlue;
+      padding: $small 0;
+    }
+  }
+
+  a {
+    color: white;
+    display: inline-block;
+    vertical-align: middle;
+
+    &:not(:first-child):not(:last-child) {
+      display: none;
+
+      @media screen and (min-width: 550px) {
+        display: initial;
+      }
+    }
+
+    &:last-child {
+      vertical-align: middle;
+      padding-bottom: 10px;
+
+      @media screen and (min-width: $mobile) {
+        margin-left: 19px;
+      }
+    }
+  }
+
+  .logo {
+    margin: 0 auto $tiny auto;
+    padding-top: 12px;
+    width: 100%;
+
+    @media screen and (min-width: $mobile) {
+      float: left;
+      margin: -3px 0 -6px 0;
+      width: initial;
+    }
+
+    img {
+      height: $small;
+      width: auto;
+      vertical-align: middle;
+      vertical-align: text-top;
+      margin-right: $micro;
+    }
+  }
+}

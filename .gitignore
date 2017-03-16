@@ -3,3 +3,9 @@ gorm.db
 vendor/
 authlify
 netlify-auth
+
+.DS_Store
+www/dist/
+www/.DS_Store
+www/node_modules
+npm-debug.log

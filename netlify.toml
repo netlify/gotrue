@@ -1,0 +1,7 @@
+[build]
+  base = "www"
+  command = "npm run build"
+  publish = "www/dist"
+
+[context.deploy-preview]
+  command = "npm run build-preview"

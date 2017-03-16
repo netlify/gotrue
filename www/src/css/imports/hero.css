@@ -1,0 +1,72 @@
+.hero {
+  @neat-row;
+  background: $darkerGrey;
+  background-image: radial-gradient(at top left, $blue, $darkBlue);
+  color: white;
+  overflow: hidden;
+  padding: calc($xl * 1.75) 0 $large 0;
+  position: relative;
+
+  @media screen and (min-width: $mobile) {
+    padding-top: calc($xl * 1.5);
+  }
+
+  @media screen and (min-width: $tablet) {
+    padding-top: calc($large * 1.5);
+  }
+
+  &:before {
+    background: url('/img/bow.svg') no-repeat bottom center;
+    background-size: contain;
+    bottom: -1px;
+    content: '';
+    height: $xl;
+    left: -$xl;
+    position: absolute;
+    right: -$xl;
+    width: calc(100% + ($xl * 2));
+  }
+
+  @media screen and (min-width: $tablet) {
+    background-position: center;
+    padding: calc($xl * 1.5) 0 $xl 0;
+  }
+
+  .hero-copy {
+    @media screen and (min-width: $tablet) {
+      @neat-span-columns 10;
+      @neat-shift 1;
+    }
+  }
+
+  .headline {
+    margin-top: -12px;
+
+    @media screen and (min-width: $mobile) {
+      text-align: left;
+    }
+
+    span {
+      display: none;
+
+      @media screen and (min-width: $tablet) {
+        display: initial;
+      }
+    }
+  }
+
+  .subhead {
+    display: inline-block;
+    margin: $micro auto;
+    text-align: left;
+
+    @media screen and (min-width: $mobile) {
+      display: block;
+      margin: $medium 0 $small 0;
+    }
+  }
+
+  a {
+    color: $yellow;
+  }
+}
