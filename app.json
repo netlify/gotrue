@@ -1,0 +1,33 @@
+{
+  "name": "Gotrue",
+  "description": "",
+  "website": "https://www.gotrueapi.org",
+  "repository": "https://github.com/netlify/gotrue",
+  "env": {
+    "DATABASE_URL: {},
+    "GOTRUE_DB_DRIVER": {
+      "value": "sqlite3"
+    },
+    "GOTRUE_DB_AUTOMIGRATE": {
+      "value": true
+    },
+    "GOTRUE_DB_NAMESPACE": {
+      "value": "auth"
+    },
+    "GOTRUE_JWT_SECRET": {
+      "required": true
+    },
+    "GOTRUE_MAILER_ADMIN_EMAIL": {},
+    "GOTRUE_MAILER_HOST": {},
+    "GOTRUE_MAILER_MEMBER_FOLDER": {},
+    "GOTRUE_MAILER_PASS": {},
+    "GOTRUE_MAILER_PORT": {},
+    "GOTRUE_MAILER_SITE_URL": {},
+    "GOTRUE_MAILER_SUBJECTS_CONFIRMATION": {},
+    "GOTRUE_MAILER_SUBJECTS_RECOVERY": {},
+    "GOTRUE_MAILER_TEMPLATES_CONFIRMATION": {},
+    "GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE": {},
+    "GOTRUE_MAILER_TEMPLATES_RECOVERY": {},
+    "GOTRUE_MAILER_USER": {}
+  }
+}
