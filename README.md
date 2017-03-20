@@ -1,4 +1,4 @@
-# GoTrue - User mangament for APIs
+# GoTrue - User management for APIs
 
 GoTrue is a small open-source API written in golang, that can act as a self-standing
 API service for handling user registration and authentication for JAM projects.
@@ -8,7 +8,7 @@ user data.
 
 ## Endpoints
 
-Auhlify exposes the following endpoints:
+GoTrue exposes the following endpoints:
 
 * **POST /signup**
 
@@ -164,7 +164,7 @@ Auhlify exposes the following endpoints:
 ## License
 
 The MIT License (MIT)
-Copyright (c) 2016 Mathias Biilmann Christensen
+Copyright (c) 2016-2017 Mathias Biilmann Christensen
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
