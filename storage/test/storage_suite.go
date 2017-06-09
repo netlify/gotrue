@@ -210,6 +210,15 @@ func (s *StorageTestSuite) TestUpdateUser() {
 	require.Equal(s.T(), "admin", roles[0].(string))
 }
 
+func (s *StorageTestSuite) TestDeleteUser() {
+	u := s.createUserWithEmail("test@example.com")
+
+	require.Equal(s.T(), s.C.DeleteUser(u), nil)
+
+	_, err := s.C.FindUserByEmailAndAudience("test@example.com", "test")
+	require.Equal(s.T(), err, models.UserNotFoundError{})
+}
+
 func (s *StorageTestSuite) createUser() *models.User {
 	return s.createUserWithEmail("david@netlify.com")
 }
