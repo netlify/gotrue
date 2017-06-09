@@ -60,6 +60,15 @@ type Configuration struct {
 		} `json:"templates"`
 	} `json:"mailer"`
 	Logging LogConfiguration `json:"logging"`
+	Testing bool             `json:"testing"`
+}
+
+func LoadConfigFile(name string) (*Configuration, error) {
+	cmd := &cobra.Command{}
+	config := ""
+	cmd.Flags().StringVar(&config, "config", "config.test.json", "Config file")
+
+	return LoadConfig(cmd)
 }
 
 func LoadConfig(cmd *cobra.Command) (*Configuration, error) {

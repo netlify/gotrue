@@ -12,6 +12,7 @@ import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
+	"github.com/netlify/gotrue/storage/dial"
 	"github.com/rs/cors"
 )
 
@@ -100,4 +101,25 @@ func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer
 
 	api.handler = corsHandler.Handler(mux)
 	return api
+}
+
+func NewAPIFromConfigFile(filename string, version string) (*API, error) {
+	config, err := conf.LoadConfigFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := dial.Dial(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if config.DB.Automigrate {
+		if err := db.Automigrate(); err != nil {
+			return nil, err
+		}
+	}
+
+	mailer := mailer.NewMailer(config)
+	return NewAPIWithVersion(config, db, mailer, version), nil
 }

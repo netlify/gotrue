@@ -44,6 +44,16 @@ func (conn *Connection) CreateUser(user *models.User) error {
 	return conn.makeUserAdmin(c, user)
 }
 
+func (conn *Connection) DeleteUser(user *models.User) error {
+	u, err := conn.FindUserByID(user.ID)
+	if err != nil {
+		return err
+	}
+
+	c := conn.db.C(u.TableName())
+	return c.Remove(bson.M{"_id": user.ID})
+}
+
 func (conn *Connection) findUser(query bson.M) (*models.User, error) {
 	user := &models.User{}
 	c := conn.db.C(user.TableName())

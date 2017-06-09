@@ -55,6 +55,10 @@ func NewMailer(conf *conf.Configuration) *Mailer {
 
 // ConfirmationMail sends a signup confirmation mail to a new user
 func (m *Mailer) ConfirmationMail(user *models.User) error {
+	if m.Config.Testing {
+		return nil
+	}
+
 	return m.TemplateMailer.Mail(
 		user.Email,
 		withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Signup"),
@@ -66,6 +70,10 @@ func (m *Mailer) ConfirmationMail(user *models.User) error {
 
 // EmailChangeMail sends an email change confirmation mail to a user
 func (m *Mailer) EmailChangeMail(user *models.User) error {
+	if m.Config.Testing {
+		return nil
+	}
+
 	return m.TemplateMailer.Mail(
 		user.EmailChange,
 		withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change"),
@@ -77,6 +85,10 @@ func (m *Mailer) EmailChangeMail(user *models.User) error {
 
 // RecoveryMail sends a password recovery mail
 func (m *Mailer) RecoveryMail(user *models.User) error {
+	if m.Config.Testing {
+		return nil
+	}
+
 	return m.TemplateMailer.Mail(
 		user.Email,
 		withDefault(m.Config.Mailer.Subjects.Recovery, "Reset Your Password"),

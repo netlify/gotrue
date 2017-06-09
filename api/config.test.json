@@ -1,0 +1,18 @@
+{
+  "testing": true,
+  "jwt": {
+    "secret": "CHANGE-THIS! VERY IMPORTANT!",
+    "exp": 3600,
+    "aud": "api.netlify.com",
+    "admin_group_disabled": true
+  },
+  "db": {
+    "driver": "sqlite3",
+    "automigrate": true,
+    "url": "test.db"
+  },
+  "api": {
+    "host": "localhost",
+    "port": 9999
+  }
+}

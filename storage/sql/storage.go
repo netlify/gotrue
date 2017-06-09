@@ -72,6 +72,10 @@ func (conn *Connection) findUser(query string, args ...interface{}) (*models.Use
 	return obj.User, nil
 }
 
+func (conn *Connection) DeleteUser(u *models.User) error {
+	return conn.db.Delete(u).Error
+}
+
 func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User, error) {
 	return conn.findUser("confirmation_token = ?", token)
 }

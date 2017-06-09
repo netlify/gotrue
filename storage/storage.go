@@ -6,6 +6,7 @@ type Connection interface {
 	Close() error
 	Automigrate() error
 	CreateUser(user *models.User) error
+	DeleteUser(user *models.User) error
 	FindUserByConfirmationToken(token string) (*models.User, error)
 	FindUserByEmailAndAudience(email, aud string) (*models.User, error)
 	FindUserByID(id string) (*models.User, error)
