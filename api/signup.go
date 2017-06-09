@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/netlify/gotrue/models"
 )
@@ -55,9 +56,11 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	if err := a.mailer.ConfirmationMail(user); err != nil {
-		InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
-		return
+	if user.ConfirmationSentAt.Add(time.Minute * 30).Before(time.Now()) {
+		if err := a.mailer.ConfirmationMail(user); err != nil {
+			InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
+			return
+		}
 	}
 
 	sendJSON(w, 200, user)
