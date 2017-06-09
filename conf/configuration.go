@@ -59,8 +59,9 @@ type Configuration struct {
 			EmailChange  string `json:"email_change"`
 		} `json:"templates"`
 	} `json:"mailer"`
-	Logging LogConfiguration `json:"logging"`
-	Testing bool             `json:"testing"`
+	Logging     LogConfiguration `json:"logging"`
+	Testing     bool             `json:"testing"`
+	Autoconfirm bool             `json:"autoconfirm"`
 }
 
 func LoadConfigFile(name string) (*Configuration, error) {

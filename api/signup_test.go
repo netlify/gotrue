@@ -69,15 +69,20 @@ func TestSignupTwice(t *testing.T) {
 
 	// Request body
 	var buffer bytes.Buffer
-	if err = json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"email":    "test1@example.com",
-		"password": "test1",
-		"data": map[string]interface{}{
-			"a": 1,
-		},
-	}); err != nil {
-		t.Error(err)
+
+	encode := func() {
+		if err = json.NewEncoder(&buffer).Encode(map[string]interface{}{
+			"email":    "test1@example.com",
+			"password": "test1",
+			"data": map[string]interface{}{
+				"a": 1,
+			},
+		}); err != nil {
+			t.Error(err)
+		}
 	}
+
+	encode()
 
 	// Setup request
 	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
@@ -94,6 +99,8 @@ func TestSignupTwice(t *testing.T) {
 		u.Confirm()
 		api.db.UpdateUser(u)
 	}
+
+	encode()
 	api.Signup(ctx, w, req)
 
 	resp := w.Result()
@@ -105,7 +112,10 @@ func TestSignupTwice(t *testing.T) {
 
 	if code, ok := data["code"]; ok {
 		if c, ok := code.(float64); ok {
-			if c != 400 {
+			if resp.StatusCode != 500 || c != 500 {
+				t.Log("StatusCode: ", resp.StatusCode)
+				t.Log("Code: ", c)
+				t.Log("Message: ", data["msg"])
 				t.Fail()
 			}
 		} else {
