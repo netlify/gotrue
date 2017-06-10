@@ -4,6 +4,8 @@ import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/mailme"
+
+	"github.com/badoux/checkmail"
 )
 
 const DefaultConfirmationMail = `<h2>Confirm your signup</h2>
@@ -51,6 +53,20 @@ func NewMailer(conf *conf.Configuration) *Mailer {
 			BaseURL: conf.Mailer.SiteURL,
 		},
 	}
+}
+
+// ValidateEmail returns nil if the email is valid,
+// otherwise an error indicating the reason it is invalid
+func ValidateEmail(email string) error {
+	if err := checkmail.ValidateFormat(email); err != nil {
+		return err
+	}
+
+	if err := checkmail.ValidateHost(email); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ConfirmationMail sends a signup confirmation mail to a new user
@@ -107,10 +123,13 @@ func mailData(mail string, config *conf.Configuration, user *models.User) map[st
 		"Data":            user.UserMetaData,
 	}
 
+	// Setup recovery email
 	if mail == "Recovery" {
 		data["Token"] = user.RecoveryToken
 		data["ConfirmationURL"] = config.Mailer.SiteURL + config.Mailer.MemberFolder + "/recover/" + user.RecoveryToken
 	}
+
+	// Setup email change confirmation email
 	if mail == "EmailChange" {
 		data["Token"] = user.EmailChangeToken
 		data["ConfirmationURL"] = config.Mailer.SiteURL + config.Mailer.MemberFolder + "/confirm-email/" + user.EmailChangeToken

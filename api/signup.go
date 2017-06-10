@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/models"
 )
 
@@ -30,7 +31,7 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	if params.Email == "" || params.Password == "" {
-		UnprocessableEntity(w, fmt.Sprintf("Signup requires a valid email and password"))
+		UnprocessableEntity(w, "Signup requires a valid email and password")
 		return
 	}
 
@@ -56,7 +57,14 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	if a.config.Autoconfirm {
+	if err = mailer.ValidateEmail(params.Email); err != nil {
+		if !a.config.Testing {
+			UnprocessableEntity(w, "Unable to validate email address: "+err.Error())
+			return
+		}
+	}
+
+	if a.config.Mailer.Autoconfirm {
 		user.Confirm()
 		a.db.UpdateUser(user)
 	} else if user.ConfirmationSentAt.Add(time.Minute * 15).Before(time.Now()) {

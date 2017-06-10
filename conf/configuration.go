@@ -40,6 +40,7 @@ type Configuration struct {
 		Port int    `json:"port"`
 	} `json:"api"`
 	Mailer struct {
+		Autoconfirm    bool   `json:"autoconfirm"`
 		SiteURL        string `json:"site_url"`
 		Host           string `json:"host"`
 		Port           int    `json:"port"`
@@ -59,9 +60,8 @@ type Configuration struct {
 			EmailChange  string `json:"email_change"`
 		} `json:"templates"`
 	} `json:"mailer"`
-	Logging     LogConfiguration `json:"logging"`
-	Testing     bool             `json:"testing"`
-	Autoconfirm bool             `json:"autoconfirm"`
+	Logging LogConfiguration `json:"logging"`
+	Testing bool             `json:"testing"`
 }
 
 func LoadConfigFile(name string) (*Configuration, error) {

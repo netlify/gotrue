@@ -61,6 +61,7 @@ func (u *User) IsRegistered() bool {
 	return !u.ConfirmedAt.IsZero()
 }
 
+// SetRole adds rollName to the user's configured roles
 func (u *User) SetRole(roleName string) {
 	newRole := strings.TrimSpace(roleName)
 
@@ -156,7 +157,7 @@ func (u *User) GenerateRecoveryToken() {
 	u.RecoverySentAt = time.Now()
 }
 
-// GenerateEmailChangeToken prepares for verifying a new email
+// GenerateEmailChange prepares for verifying a new email
 func (u *User) GenerateEmailChange(email string) {
 	token := crypto.SecureToken()
 	u.EmailChangeToken = token
@@ -182,6 +183,7 @@ func (u *User) Recover() {
 	u.RecoveryToken = ""
 }
 
+// TableName returns the namespaced user table name
 func (*User) TableName() string {
 	return tableName("users")
 }
