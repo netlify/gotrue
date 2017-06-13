@@ -20,7 +20,7 @@ func getAudience(c *conf.Configuration) string {
 }
 
 func init() {
-	adminCmd.AddCommand(&adminCreateUserCmd)
+	adminCmd.AddCommand(&adminCreateUserCmd, &adminDeleteUserCmd)
 	adminCmd.PersistentFlags().StringVarP(&audience, "aud", "a", "", "Set the new user's audience")
 
 	adminCreateUserCmd.Flags().BoolVar(&autoconfirm, "confirm", false, "Automatically confirm user without sending an email")
@@ -41,6 +41,18 @@ var adminCreateUserCmd = cobra.Command{
 		}
 
 		execWithConfigAndArgs(cmd, adminCreateUser, args)
+	},
+}
+
+var adminDeleteUserCmd = cobra.Command{
+	Use: "deleteuser",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 1 {
+			logrus.Fatal("Not enough arguments to deleteuser command. Expected at least ID or email")
+			return
+		}
+
+		execWithConfigAndArgs(cmd, adminDeleteUser, args)
 	},
 }
 
@@ -74,5 +86,31 @@ func adminCreateUser(config *conf.Configuration, args []string) {
 		return
 	}
 
+	if config.Mailer.Autoconfirm || autoconfirm {
+		user.Confirm()
+		db.UpdateUser(user)
+	}
+
 	logrus.Infof("Created user: %s", args[0])
+}
+
+func adminDeleteUser(config *conf.Configuration, args []string) {
+	db, err := dial.Dial(config)
+	if err != nil {
+		logrus.Fatalf("Error opening database: %+v", err)
+	}
+
+	user, err := db.FindUserByEmailAndAudience(args[0], getAudience(config))
+	if err != nil {
+		user, err = db.FindUserByID(args[0])
+		if err != nil {
+			logrus.Fatalf("Error finding user (%s): %+v", args[0], err)
+		}
+	}
+
+	if err = db.DeleteUser(user); err != nil {
+		logrus.Fatalf("Error removing user (%s): %+v", args[0], err)
+	}
+
+	logrus.Infof("Removed user: %s", args[0])
 }

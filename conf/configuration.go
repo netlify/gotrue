@@ -29,6 +29,7 @@ type JWTConfiguration struct {
 	Aud                string `json:"aud"`
 	AdminGroupName     string `json:"admin_group_name"`
 	AdminGroupDisabled bool   `json:"admin_group_disabled"`
+	DefaultGroupName   string `json:"default_group_name"`
 }
 
 // Configuration holds all the confiruation for gotrue

@@ -66,13 +66,15 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	if a.config.Mailer.Autoconfirm {
 		user.Confirm()
-		a.db.UpdateUser(user)
 	} else if user.ConfirmationSentAt.Add(time.Minute * 15).Before(time.Now()) {
 		if err := a.mailer.ConfirmationMail(user); err != nil {
 			InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
 			return
 		}
 	}
+
+	user.SetRole(a.config.JWT.DefaultGroupName)
+	a.db.UpdateUser(user)
 
 	sendJSON(w, 200, user)
 }

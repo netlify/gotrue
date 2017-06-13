@@ -9,20 +9,28 @@ import (
 	"github.com/netlify/gotrue/models"
 )
 
-type adminRoleParams struct {
-	Role  string `json:"role"`
-	Aud   string `json:"aud"`
-	Email string `json:"email"`
+type adminUserParams struct {
+	Role     string                 `json:"role"`
+	Email    string                 `json:"email"`
+	Password string                 `json:"email"`
+	Confirm  bool                   `json:"confirmed"`
+	Aud      string                 `json:"aud"`
+	Data     map[string]interface{} `json:"data"`
+	User     struct {
+		Aud   string `json:"aud"`
+		Email string `json:"email"`
+		ID    string `json:"_id"`
+	} `json:"user"`
 }
 
-func (api *API) adminUserRoleGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.Request) (*models.User, *models.User, *adminUserParams, bool) {
 	// Get User associated with incoming request
-	params := adminRoleParams{}
+	params := &adminUserParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
 	err := jsonDecoder.Decode(params)
 	if err != nil {
-		BadRequestError(w, fmt.Sprintf("Could not read Admin Set Role params: %v", err))
-		return
+		BadRequestError(w, fmt.Sprintf("Could not decode admin user params: %v", err))
+		return nil, nil, nil, false
 	}
 
 	adminUser, err := getUser(ctx, api.db)
@@ -32,78 +40,131 @@ func (api *API) adminUserRoleGet(ctx context.Context, w http.ResponseWriter, r *
 		} else {
 			InternalServerError(w, err.Error())
 		}
-		return
+		return nil, nil, nil, false
 	}
 
 	// Make sure user is admin
 	if !api.isAdmin(adminUser, params.Aud) {
 		UnauthorizedError(w, "Not allowed")
-		return
+		return nil, nil, nil, false
 	}
 
-	user, err := api.db.FindUserByEmailAndAudience(params.Email, params.Aud)
+	user, err := api.db.FindUserByEmailAndAudience(params.User.Email, params.User.Aud)
 	if err != nil {
-		if models.IsNotFoundError(err) {
-			NotFoundError(w, err.Error())
-		} else {
-			InternalServerError(w, err.Error())
+		if user, err = api.db.FindUserByID(params.User.ID); err != nil {
+
+			if models.IsNotFoundError(err) {
+				NotFoundError(w, err.Error())
+			} else {
+				InternalServerError(w, err.Error())
+			}
+			return nil, nil, nil, false
 		}
-		return
 	}
 
-	sendJSON(w, 200, map[string]interface{}{
-		"aud":         user.Aud,
-		"role":        user.Role,
-		"super_admin": user.IsSuperAdmin,
-	})
+	return adminUser, user, params, true
+
 }
 
-func (api *API) adminUserRoleSet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-
+func (api *API) adminUserGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	// Get User associated with incoming request
-	params := &adminRoleParams{}
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(params)
-	if err != nil {
-		BadRequestError(w, fmt.Sprintf("Could not read Admin Set Role params: %v", err))
+	_, user, _, allowed := api.checkAdmin(ctx, w, r)
+	if allowed {
+		sendJSON(w, 200, user)
+	}
+}
+
+func (api *API) adminUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	// Get User associated with incoming request
+	_, user, params, allowed := api.checkAdmin(ctx, w, r)
+	if !allowed {
 		return
 	}
 
-	adminUser, err := getUser(ctx, api.db)
-	if err != nil {
-		if models.IsNotFoundError(err) {
-			NotFoundError(w, err.Error())
-		} else {
-			InternalServerError(w, err.Error())
-		}
-		return
+	if params.Role != "" {
+		user.SetRole(params.Role)
 	}
 
-	// Make sure user is admin
-	if !api.isAdmin(adminUser, params.Aud) {
-		UnauthorizedError(w, "Not allowed")
-		return
+	if params.Confirm {
+		user.Confirm()
 	}
 
-	user, err := api.db.FindUserByEmailAndAudience(params.Email, params.Aud)
-	if err != nil {
-		if models.IsNotFoundError(err) {
-			NotFoundError(w, err.Error())
-		} else {
-			InternalServerError(w, err.Error())
-		}
-		return
+	if params.Password != "" {
+		user.EncryptPassword(params.Password)
 	}
 
-	user.SetRole(params.Role)
+	if params.Email != "" {
+		user.Email = params.Email
+	}
 
-	if err = api.db.UpdateUser(user); err != nil {
+	if err := api.db.UpdateUser(user); err != nil {
 		InternalServerError(w, fmt.Sprintf("Error setting role: %v", err))
 		return
 	}
 
-	sendJSON(w, 200, map[string]interface{}{
-		"aud":  user.Aud,
-		"role": user.Role,
-	})
+	sendJSON(w, 200, user)
+}
+
+func (api *API) adminUserCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	// Get User associated with incoming request
+	params := &adminUserParams{}
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(params)
+	if err != nil {
+		BadRequestError(w, fmt.Sprintf("Could not decode admin user params: %v", err))
+		return
+	}
+
+	adminUser, err := getUser(ctx, api.db)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			NotFoundError(w, err.Error())
+		} else {
+			InternalServerError(w, err.Error())
+		}
+		return
+	}
+
+	// Make sure user is admin
+	if !api.isAdmin(adminUser, params.Aud) {
+		UnauthorizedError(w, "Not allowed")
+		return
+	}
+
+	user, err := models.NewUser(params.Email, params.Password, params.Aud, params.Data)
+	if err != nil {
+		InternalServerError(w, err.Error())
+		return
+	}
+
+	if params.Role != "" {
+		user.SetRole(params.Role)
+	} else {
+		user.SetRole(api.config.JWT.DefaultGroupName)
+	}
+
+	if params.Confirm {
+		user.Confirm()
+	}
+
+	if err = api.db.CreateUser(user); err != nil {
+		InternalServerError(w, fmt.Sprintf("Error creating new user: %v", err))
+		return
+	}
+
+	sendJSON(w, 200, user)
+}
+
+func (api *API) adminUserDelete(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	_, user, _, allowed := api.checkAdmin(ctx, w, r)
+	if !allowed {
+		return
+	}
+
+	if err := api.db.DeleteUser(user); err != nil {
+		InternalServerError(w, err.Error())
+		return
+	}
+
+	sendJSON(w, 200, map[string]interface{}{})
 }
