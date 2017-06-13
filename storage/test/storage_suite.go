@@ -185,10 +185,7 @@ func (s *StorageTestSuite) TestUpdateUser() {
 	}
 	u.UpdateUserMetaData(userUpdates)
 
-	appUpdates := map[string]interface{}{
-		"roles": []string{"admin"},
-	}
-	u.UpdateAppMetaData(appUpdates)
+	u.SetRole("admin")
 
 	err := s.C.UpdateUser(u)
 	require.NoError(s.T(), err)
@@ -201,13 +198,7 @@ func (s *StorageTestSuite) TestUpdateUser() {
 	fn := nu.UserMetaData["firstName"]
 	require.Equal(s.T(), "David", fn)
 
-	require.NotNil(s.T(), nu.AppMetaData, "expected app metadata to not be nil")
-
-	rr := nu.AppMetaData["roles"]
-	require.NotNil(s.T(), rr, "expected roles to not be nil")
-
-	roles := rr.([]interface{})
-	require.Equal(s.T(), "admin", roles[0].(string))
+	require.Equal(s.T(), "admin", nu.Role)
 }
 
 func (s *StorageTestSuite) TestDeleteUser() {

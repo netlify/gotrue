@@ -84,6 +84,7 @@ func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer
 	mux.Use("/user", api.requireAuthentication)
 	mux.Use("/logout", api.requireAuthentication)
 	mux.Use("/admin/user", api.requireAuthentication)
+	mux.Use("/admin/users", api.requireAuthentication)
 
 	mux.Get("/", api.Index)
 	mux.Post("/signup", api.Signup)
@@ -95,6 +96,7 @@ func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer
 	mux.Post("/logout", api.Logout)
 
 	// Admin API
+	mux.Get("/admin/users", api.adminUsers)
 	mux.Put("/admin/user", api.adminUserUpdate)
 	mux.Post("/admin/user", api.adminUserCreate)
 	mux.Delete("/admin/user", api.adminUserDelete)

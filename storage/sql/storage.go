@@ -76,6 +76,12 @@ func (conn *Connection) DeleteUser(u *models.User) error {
 	return conn.db.Delete(u).Error
 }
 
+func (conn *Connection) FindUsersInAudience(aud string) []*models.User {
+	users := []*models.User{}
+	conn.db.Find(&users, "aud = ?", aud)
+	return users
+}
+
 func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User, error) {
 	return conn.findUser("confirmation_token = ?", token)
 }

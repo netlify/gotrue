@@ -54,6 +54,14 @@ func (conn *Connection) DeleteUser(user *models.User) error {
 	return c.Remove(bson.M{"_id": user.ID})
 }
 
+func (conn *Connection) FindUsersInAudience(aud string) []*models.User {
+	user := &models.User{}
+	users := []*models.User{}
+	c := conn.db.C(user.TableName())
+	c.Find(bson.M{"aud": aud}).All(&users)
+	return users
+}
+
 func (conn *Connection) findUser(query bson.M) (*models.User, error) {
 	user := &models.User{}
 	c := conn.db.C(user.TableName())

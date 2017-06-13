@@ -14,7 +14,6 @@ type adminUserParams struct {
 	Email    string                 `json:"email"`
 	Password string                 `json:"email"`
 	Confirm  bool                   `json:"confirmed"`
-	Aud      string                 `json:"aud"`
 	Data     map[string]interface{} `json:"data"`
 	User     struct {
 		Aud   string `json:"aud"`
@@ -44,7 +43,7 @@ func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	// Make sure user is admin
-	if !api.isAdmin(adminUser, params.Aud) {
+	if !api.isAdmin(adminUser, api.requestAud(r)) {
 		UnauthorizedError(w, "Not allowed")
 		return nil, nil, nil, false
 	}
@@ -67,15 +66,45 @@ func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 }
 
 func (api *API) adminUserGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	// Get User associated with incoming request
 	_, user, _, allowed := api.checkAdmin(ctx, w, r)
 	if allowed {
 		sendJSON(w, 200, user)
 	}
 }
 
+func (api *API) adminUsers(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	params := &adminUserParams{}
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(params)
+	if err != nil {
+		BadRequestError(w, fmt.Sprintf("Could not decode admin user params: %v", err))
+		return
+	}
+
+	adminUser, err := getUser(ctx, api.db)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			NotFoundError(w, err.Error())
+		} else {
+			InternalServerError(w, err.Error())
+		}
+		return
+	}
+
+	aud := api.requestAud(r)
+	if !api.isAdmin(adminUser, aud) {
+		UnauthorizedError(w, "Not allowed")
+		return
+	}
+
+	users := api.db.FindUsersInAudience(aud)
+	sendJSON(w, 200, map[string]interface{}{
+		"users": users,
+		"aud":   aud,
+	})
+}
+
 func (api *API) adminUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	// Get User associated with incoming request
 	_, user, params, allowed := api.checkAdmin(ctx, w, r)
 	if !allowed {
 		return
@@ -106,7 +135,6 @@ func (api *API) adminUserUpdate(ctx context.Context, w http.ResponseWriter, r *h
 }
 
 func (api *API) adminUserCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	// Get User associated with incoming request
 	params := &adminUserParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
 	err := jsonDecoder.Decode(params)
@@ -125,13 +153,13 @@ func (api *API) adminUserCreate(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	// Make sure user is admin
-	if !api.isAdmin(adminUser, params.Aud) {
+	aud := api.requestAud(r)
+	if !api.isAdmin(adminUser, ud) {
 		UnauthorizedError(w, "Not allowed")
 		return
 	}
 
-	user, err := models.NewUser(params.Email, params.Password, params.Aud, params.Data)
+	user, err := models.NewUser(params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		InternalServerError(w, err.Error())
 		return

@@ -40,6 +40,9 @@ func getToken(ctx context.Context) *jwt.Token {
 
 func getUser(ctx context.Context, conn storage.Connection) (*models.User, error) {
 	token := getToken(ctx)
+	if token == nil {
+		return nil, errors.New("Invalid token")
+	}
 
 	_id, ok := token.Claims["id"]
 	if !ok {
