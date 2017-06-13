@@ -83,6 +83,7 @@ func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer
 
 	mux.Use("/user", api.requireAuthentication)
 	mux.Use("/logout", api.requireAuthentication)
+	mux.Use("/admin/user/role", api.requireAuthentication)
 
 	mux.Get("/", api.Index)
 	mux.Post("/signup", api.Signup)
@@ -92,6 +93,10 @@ func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer
 	mux.Put("/user", api.UserUpdate)
 	mux.Post("/token", api.Token)
 	mux.Post("/logout", api.Logout)
+
+	// Admin API
+	mux.Post("/admin/user/role", api.adminUserRoleSet)
+	mux.Get("/admin/user/role", api.adminUserRoleGet)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "PUT", "DELETE"},

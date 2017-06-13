@@ -1,5 +1,5 @@
 config.json
-condig.test.json
+config.test.json
 gorm.db
 vendor/
 authlify

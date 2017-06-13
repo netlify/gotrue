@@ -15,6 +15,7 @@ type User struct {
 	ID string `json:"id" bson:"_id,omitempty"`
 
 	Aud               string    `json:"aud" bson:"aud"`
+	Role              string    `json:"role" bson:"role"`
 	Email             string    `json:"email" bson:"email"`
 	EncryptedPassword string    `json:"-" bson:"encrypted_password"`
 	ConfirmedAt       time.Time `json:"confirmed_at" bson:"confirmed_at"`
@@ -33,6 +34,8 @@ type User struct {
 
 	AppMetaData  map[string]interface{} `json:"app_metadata,omitempty" sql:"-" bson:"app_metadata,omitempty"`
 	UserMetaData map[string]interface{} `json:"user_metadata,omitempty" sql:"-" bson:"user_metadata,omitempty"`
+
+	IsSuperAdmin bool `json:"-" bson:"is_super_admin"`
 
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
@@ -61,45 +64,14 @@ func (u *User) IsRegistered() bool {
 	return !u.ConfirmedAt.IsZero()
 }
 
-// SetRole adds rollName to the user's configured roles
+// SetRole sets the users Role to roleName
 func (u *User) SetRole(roleName string) {
-	newRole := strings.TrimSpace(roleName)
-
-	if u.AppMetaData == nil {
-		u.AppMetaData = map[string]interface{}{"roles": []string{newRole}}
-	} else if roles, ok := u.AppMetaData["roles"]; ok {
-		if rolesSlice, ok := roles.([]string); ok {
-			for _, role := range rolesSlice {
-				if role == newRole {
-					return
-				}
-			}
-			u.AppMetaData["roles"] = append(rolesSlice, newRole)
-		}
-	} else {
-		u.AppMetaData["roles"] = []string{newRole}
-	}
+	u.Role = strings.TrimSpace(roleName)
 }
 
-// HasRole checks if app_metadata.roles includes the specified role
-func (u *User) HasRole(role string) bool {
-	if u.AppMetaData == nil {
-		return false
-	}
-	roles, ok := u.AppMetaData["roles"]
-	if !ok {
-		return false
-	}
-	roleStrings, ok := roles.([]string)
-	if !ok {
-		return false
-	}
-	for _, r := range roleStrings {
-		if r == role {
-			return true
-		}
-	}
-	return false
+// HasRole returns true when the users role is set to roleName
+func (u *User) HasRole(roleName string) bool {
+	return u.Role == roleName
 }
 
 // UpdateUserMetaData sets all user data from a map of updates,
