@@ -16,7 +16,7 @@ var rootCmd = cobra.Command{
 
 // RootCommand will setup and return the root command
 func RootCommand() *cobra.Command {
-	rootCmd.AddCommand(&serveCmd, &migrateCmd, &versionCmd)
+	rootCmd.AddCommand(&serveCmd, &migrateCmd, &versionCmd, &adminCmd)
 	rootCmd.PersistentFlags().StringP("config", "c", "", "the config file to use")
 
 	return &rootCmd
@@ -29,4 +29,13 @@ func execWithConfig(cmd *cobra.Command, fn func(config *conf.Configuration)) {
 	}
 
 	fn(config)
+}
+
+func execWithConfigAndArgs(cmd *cobra.Command, fn func(config *conf.Configuration, args []string), args []string) {
+	config, err := conf.LoadConfig(cmd)
+	if err != nil {
+		logrus.Fatalf("Failed to load configration: %+v", err)
+	}
+
+	fn(config, args)
 }
