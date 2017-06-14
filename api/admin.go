@@ -73,14 +73,6 @@ func (api *API) adminUserGet(ctx context.Context, w http.ResponseWriter, r *http
 }
 
 func (api *API) adminUsers(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	params := &adminUserParams{}
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(params)
-	if err != nil {
-		BadRequestError(w, fmt.Sprintf("Could not decode admin user params: %v", err))
-		return
-	}
-
 	adminUser, err := getUser(ctx, api.db)
 	if err != nil {
 		if models.IsNotFoundError(err) {
@@ -154,7 +146,7 @@ func (api *API) adminUserCreate(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	aud := api.requestAud(r)
-	if !api.isAdmin(adminUser, ud) {
+	if !api.isAdmin(adminUser, aud) {
 		UnauthorizedError(w, "Not allowed")
 		return
 	}
