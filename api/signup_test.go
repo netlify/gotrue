@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// TestIndex tests API / route
+// TestSignup tests API /signup route
 func TestSignup(t *testing.T) {
 	api, err := NewAPIFromConfigFile("config.test.json", "v1")
 	if err != nil {
