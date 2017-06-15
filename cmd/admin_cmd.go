@@ -56,6 +56,13 @@ var adminDeleteUserCmd = cobra.Command{
 	},
 }
 
+var adminEditRoleCmd = cobra.Command{
+	Use: "editrole",
+	Run: func(cmd *cobra.Command, args []string) {
+		execWithConfigAndArgs(cmd, adminEditRole, args)
+	},
+}
+
 func adminCreateUser(config *conf.Configuration, args []string) {
 	db, err := dial.Dial(config)
 	if err != nil {
@@ -81,7 +88,7 @@ func adminCreateUser(config *conf.Configuration, args []string) {
 	if len(args) > 2 {
 		user.SetRole(args[2])
 	} else if isAdmin {
-		user.SetRole("admin")
+		user.SetRole(config.JWT.AdminGroupName)
 	}
 
 	user.IsSuperAdmin = isSuperAdmin
@@ -118,4 +125,35 @@ func adminDeleteUser(config *conf.Configuration, args []string) {
 	}
 
 	logrus.Infof("Removed user: %s", args[0])
+}
+
+func adminEditRole(config *conf.Configuration, args []string) {
+	db, err := dial.Dial(config)
+	if err != nil {
+		logrus.Fatalf("Error opening database: %+v", err)
+	}
+
+	user, err := db.FindUserByEmailAndAudience(args[0], getAudience(config))
+	if err != nil {
+		user, err = db.FindUserByID(args[0])
+		if err != nil {
+			logrus.Fatalf("Error finding user (%s): %+v", args[0], err)
+		}
+	}
+
+	if isSuperAdmin {
+		user.IsSuperAdmin = true
+	}
+
+	if len(args) > 0 {
+		user.Role = args[0]
+	} else if isAdmin {
+		user.Role = config.JWT.AdminGroupName
+	}
+
+	if err = db.UpdateUser(user); err != nil {
+		logrus.Fatalf("Error updating role for user (%s): %+v", args[0], err)
+	}
+
+	logrus.Infof("Updated user: %s", args[0])
 }
