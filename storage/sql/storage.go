@@ -150,8 +150,8 @@ func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.R
 	return newToken, nil
 }
 
-func (conn *Connection) IsDuplicatedEmail(email, aud, id string) (bool, error) {
-	_, err := conn.findUser("id != ? and email = ? and aud = ?", id, email, aud)
+func (conn *Connection) IsDuplicatedEmail(email, aud string) (bool, error) {
+	_, err := conn.findUser("email = ? and aud = ?", email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return false, nil

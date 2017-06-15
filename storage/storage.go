@@ -15,7 +15,7 @@ type Connection interface {
 	FindUsersInAudience(aud string) []*models.User
 	GrantAuthenticatedUser(user *models.User) (*models.RefreshToken, error)
 	GrantRefreshTokenSwap(user *models.User, token *models.RefreshToken) (*models.RefreshToken, error)
-	IsDuplicatedEmail(email, aud, id string) (bool, error)
+	IsDuplicatedEmail(email, aud string) (bool, error)
 	Logout(id string)
 	RevokeToken(token *models.RefreshToken) error
 	RollbackRefreshTokenSwap(newToken, oldToken *models.RefreshToken) error

@@ -168,8 +168,8 @@ func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.R
 	return newToken, nil
 }
 
-func (conn *Connection) IsDuplicatedEmail(email, aud, id string) (bool, error) {
-	_, err := conn.findUser(bson.M{"email": email, "aud": aud, "_id": bson.M{"$ne": id}})
+func (conn *Connection) IsDuplicatedEmail(email, aud string) (bool, error) {
+	_, err := conn.findUser(bson.M{"email": email, "aud": aud})
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return false, nil

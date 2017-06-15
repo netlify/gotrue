@@ -108,22 +108,21 @@ func (s *StorageTestSuite) TestGrantRefreshTokenSwap() {
 }
 
 func (s *StorageTestSuite) TestIsDuplicatedEmail() {
-	u := s.createUser()
 	s.createUserWithEmail("david.calavera@netlify.com")
 
-	e, err := s.C.IsDuplicatedEmail("david.calavera@netlify.com", "test", u.ID)
+	e, err := s.C.IsDuplicatedEmail("david.calavera@netlify.com", "test")
 	require.NoError(s.T(), err)
 	require.True(s.T(), e, "expected email to be duplicated")
 
-	e, err = s.C.IsDuplicatedEmail("davidcalavera@netlify.com", "test", u.ID)
+	e, err = s.C.IsDuplicatedEmail("davidcalavera@netlify.com", "test")
 	require.NoError(s.T(), err)
 	require.False(s.T(), e, "expected email to not be duplicated")
 
-	e, err = s.C.IsDuplicatedEmail("david@netlify.com", "test", u.ID)
+	e, err = s.C.IsDuplicatedEmail("david@netlify.com", "test")
 	require.NoError(s.T(), err)
 	require.False(s.T(), e, "expected same email to not be duplicated")
 
-	e, err = s.C.IsDuplicatedEmail("david.calavera@netlify.com", "other-aud", u.ID)
+	e, err = s.C.IsDuplicatedEmail("david.calavera@netlify.com", "other-aud")
 	require.NoError(s.T(), err)
 	require.False(s.T(), e, "expected same email to not be duplicated")
 }

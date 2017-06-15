@@ -85,7 +85,7 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	var sendChangeEmailVerification bool
 	if err = mailer.ValidateEmail(params.Email); err == nil || a.config.Testing {
-		exists, err := a.db.IsDuplicatedEmail(params.Email, user.Aud, user.ID)
+		exists, err := a.db.IsDuplicatedEmail(params.Email, user.Aud)
 		if err != nil {
 			InternalServerError(w, err.Error())
 			return
