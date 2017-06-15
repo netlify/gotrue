@@ -59,9 +59,13 @@ func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	// Make sure user is admin
-	if !api.isAdmin(adminUser, api.requestAud(ctx, r)) {
+	if !api.isAdmin(adminUser, aud) {
 		UnauthorizedError(w, "Not allowed")
 		return nil, nil, nil, aud, false
+	}
+
+	if params.User.Aud == "" {
+		params.User.Aud = aud
 	}
 
 	user, err := api.db.FindUserByEmailAndAudience(params.User.Email, params.User.Aud)
