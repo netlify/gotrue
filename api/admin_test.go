@@ -207,6 +207,58 @@ func TestAdminUserGet(t *testing.T) {
 
 }
 
+// TestAdminUserUpdate tests API /admin/user route (UPDATE)
+func TestAdminUserUpdate(t *testing.T) {
+	api, err := NewAPIFromConfigFile("config.test.json", "v1")
+	if err != nil {
+		t.Error(err)
+	}
+	defer api.db.Close()
+
+	var buffer bytes.Buffer
+	json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"role": "testing",
+		"user": map[string]interface{}{
+			"email": "test1@example.com",
+			"aud":   api.config.JWT.Aud,
+		},
+	})
+
+	// Setup request
+	req := httptest.NewRequest("UPDATE", "/admin/user", &buffer)
+
+	// Setup response recorder with super admin privileges
+	ctx, w := makeSuperAdmin(req, api, "test@example.com", t)
+
+	api.adminUserUpdate(ctx, w, req)
+
+	resp := w.Result()
+
+	if resp.StatusCode != 200 {
+		t.Log(resp)
+		t.Fail()
+	}
+
+	data := make(map[string]interface{})
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		t.Error(err)
+	}
+
+	if data["role"] != "testing" {
+		t.Error("Invalid role after update")
+	}
+
+	u, err := api.db.FindUserByEmailAndAudience("test1@example.com", api.config.JWT.Aud)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if u.Role != "testing" {
+		t.Error("Role not updated correctly")
+	}
+
+}
+
 // TestAdminUserDelete tests API /admin/user route (DELETE)
 func TestAdminUserDelete(t *testing.T) {
 	api, err := NewAPIFromConfigFile("config.test.json", "v1")
