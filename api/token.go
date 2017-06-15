@@ -38,7 +38,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
-	aud := a.requestAud(r)
+	aud := a.requestAud(ctx, r)
 	user, err := a.db.FindUserByEmailAndAudience(username, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
@@ -72,7 +72,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	aud := a.requestAud(r)
+	aud := a.requestAud(ctx, r)
 	user, token, err := a.db.FindUserWithRefreshToken(tokenStr, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {

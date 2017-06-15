@@ -32,6 +32,7 @@ type API struct {
 	version string
 }
 
+// requireAuthentication checks incoming requests for tokens presented using the Authorization header
 func (a *API) requireAuthentication(ctx context.Context, w http.ResponseWriter, r *http.Request) context.Context {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -59,11 +60,25 @@ func (a *API) requireAuthentication(ctx context.Context, w http.ResponseWriter, 
 	return context.WithValue(ctx, "jwt", token)
 }
 
-func (a *API) requestAud(r *http.Request) string {
+func (a *API) requestAud(ctx context.Context, r *http.Request) string {
+
+	// First check for an audience in the header
 	p := textproto.MIMEHeader(r.Header)
 	if h, exist := p[textproto.CanonicalMIMEHeaderKey(audHeaderName)]; exist && len(h) > 0 {
 		return h[0]
 	}
+
+	// Then check the token
+	token := getToken(ctx)
+	if token != nil {
+		if _aud, ok := token.Claims["aud"]; ok {
+			if aud, ok := _aud.(string); ok && aud != "" {
+				return aud
+			}
+		}
+	}
+
+	// Finally, return the default of none of the above methods are successful
 	return a.config.JWT.Aud
 }
 

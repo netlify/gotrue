@@ -36,7 +36,7 @@ func (a *API) UserGet(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	aud := a.requestAud(r)
+	aud := a.requestAud(ctx, r)
 	if aud != tokenAud {
 		BadRequestError(w, "Token audience doesn't match request audience")
 		return

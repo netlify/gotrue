@@ -1,10 +1,10 @@
 package api
 
 import (
-	"net/http"
-	//"bytes"
+	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -21,7 +21,7 @@ func TestAdminUsersUnauthorized(t *testing.T) {
 	defer api.db.Close()
 
 	// Setup request
-	req := httptest.NewRequest("GET", "http://localhost/admin/users", nil)
+	req := httptest.NewRequest("GET", "/admin/users", nil)
 
 	// Setup response recorder
 	w := httptest.NewRecorder()
@@ -58,7 +58,6 @@ func makeSuperAdmin(req *http.Request, api *API, email string, t *testing.T) (co
 	}
 
 	u.IsSuperAdmin = true
-	u.Role = "admin"
 	api.db.CreateUser(u)
 
 	token, err := api.generateAccessToken(u)
@@ -93,7 +92,7 @@ func TestAdminUsers(t *testing.T) {
 	defer api.db.Close()
 
 	// Setup request
-	req := httptest.NewRequest("GET", "http://localhost/admin/users", nil)
+	req := httptest.NewRequest("GET", "/admin/users", nil)
 
 	// Setup response recorder with super admin privileges
 	ctx, w := makeSuperAdmin(req, api, "test@example.com", t)
@@ -114,5 +113,128 @@ func TestAdminUsers(t *testing.T) {
 
 	if len(data["users"].([]interface{})) < 1 {
 		t.Error("Invalid user list")
+	}
+}
+
+// TestAdminUserCreate tests API /admin/user route (POST)
+func TestAdminUserCreate(t *testing.T) {
+	api, err := NewAPIFromConfigFile("config.test.json", "v1")
+	if err != nil {
+		t.Error(err)
+	}
+	defer api.db.Close()
+
+	var buffer bytes.Buffer
+	err = json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"email":    "test1@example.com",
+		"password": "test1",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Setup request
+	req := httptest.NewRequest("POST", "/admin/user", &buffer)
+
+	// Setup response recorder with super admin privileges
+	ctx, w := makeSuperAdmin(req, api, "test@example.com", t)
+
+	api.adminUserCreate(ctx, w, req)
+
+	resp := w.Result()
+
+	if resp.StatusCode != 200 {
+		t.Error(resp)
+		t.Fail()
+		return
+	}
+
+	u, err := api.db.FindUserByEmailAndAudience("test1@example.com", api.config.JWT.Aud)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	data := make(map[string]interface{})
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		t.Error(err)
+	}
+
+	if data["email"] != u.Email {
+		t.Error("Invalid email address")
+	}
+}
+
+// TestAdminUserGet tests API /admin/user route (GET)
+func TestAdminUserGet(t *testing.T) {
+	api, err := NewAPIFromConfigFile("config.test.json", "v1")
+	if err != nil {
+		t.Error(err)
+	}
+	defer api.db.Close()
+
+	var buffer bytes.Buffer
+	json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"user": map[string]interface{}{
+			"email": "test1@example.com",
+			"aud":   api.config.JWT.Aud,
+		},
+	})
+
+	// Setup request
+	req := httptest.NewRequest("GET", "/admin/user", &buffer)
+
+	// Setup response recorder with super admin privileges
+	ctx, w := makeSuperAdmin(req, api, "test@example.com", t)
+
+	api.adminUserGet(ctx, w, req)
+
+	resp := w.Result()
+
+	if resp.StatusCode != 200 {
+		t.Log(resp)
+		t.Fail()
+	}
+
+	data := make(map[string]interface{})
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		t.Error(err)
+	}
+
+	if data["email"] != "test1@example.com" {
+		t.Error("Invalid email address: ", data)
+	}
+
+}
+
+// TestAdminUserDelete tests API /admin/user route (DELETE)
+func TestAdminUserDelete(t *testing.T) {
+	api, err := NewAPIFromConfigFile("config.test.json", "v1")
+	if err != nil {
+		t.Error(err)
+	}
+	defer api.db.Close()
+
+	var buffer bytes.Buffer
+	json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"user": map[string]interface{}{
+			"email": "test1@example.com",
+			"aud":   api.config.JWT.Aud,
+		},
+	})
+
+	// Setup request
+	req := httptest.NewRequest("DELETE", "/admin/user", &buffer)
+
+	// Setup response recorder with super admin privileges
+	ctx, w := makeSuperAdmin(req, api, "test@example.com", t)
+
+	api.adminUserDelete(ctx, w, req)
+
+	resp := w.Result()
+
+	if resp.StatusCode != 200 {
+		t.Log(resp)
+		t.Fail()
 	}
 }

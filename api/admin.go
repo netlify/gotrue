@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/models"
 )
 
 type adminUserParams struct {
 	Role     string                 `json:"role"`
 	Email    string                 `json:"email"`
-	Password string                 `json:"email"`
-	Confirm  bool                   `json:"confirmed"`
+	Password string                 `json:"password"`
+	Confirm  bool                   `json:"confirm"`
 	Data     map[string]interface{} `json:"data"`
 	User     struct {
 		Aud   string `json:"aud"`
@@ -24,9 +25,9 @@ type adminUserParams struct {
 
 func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.Request) (*models.User, *models.User, *adminUserParams, bool) {
 	// Get User associated with incoming request
-	params := &adminUserParams{}
+	params := adminUserParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(params)
+	err := jsonDecoder.Decode(&params)
 	if err != nil {
 		BadRequestError(w, fmt.Sprintf("Could not decode admin user params: %v", err))
 		return nil, nil, nil, false
@@ -43,15 +44,15 @@ func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	// Make sure user is admin
-	if !api.isAdmin(adminUser, api.requestAud(r)) {
+	if !api.isAdmin(adminUser, api.requestAud(ctx, r)) {
 		UnauthorizedError(w, "Not allowed")
 		return nil, nil, nil, false
 	}
 
 	user, err := api.db.FindUserByEmailAndAudience(params.User.Email, params.User.Aud)
 	if err != nil {
+		fmt.Println("NO USER")
 		if user, err = api.db.FindUserByID(params.User.ID); err != nil {
-
 			if models.IsNotFoundError(err) {
 				NotFoundError(w, err.Error())
 			} else {
@@ -61,15 +62,8 @@ func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 		}
 	}
 
-	return adminUser, user, params, true
+	return adminUser, user, &params, true
 
-}
-
-func (api *API) adminUserGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	_, user, _, allowed := api.checkAdmin(ctx, w, r)
-	if allowed {
-		sendJSON(w, 200, user)
-	}
 }
 
 func (api *API) adminUsers(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -83,7 +77,7 @@ func (api *API) adminUsers(ctx context.Context, w http.ResponseWriter, r *http.R
 		return
 	}
 
-	aud := api.requestAud(r)
+	aud := api.requestAud(ctx, r)
 	if !api.isAdmin(adminUser, aud) {
 		UnauthorizedError(w, "Not allowed")
 		return
@@ -94,6 +88,13 @@ func (api *API) adminUsers(ctx context.Context, w http.ResponseWriter, r *http.R
 		"users": users,
 		"aud":   aud,
 	})
+}
+
+func (api *API) adminUserGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	_, user, _, allowed := api.checkAdmin(ctx, w, r)
+	if allowed {
+		sendJSON(w, 200, user)
+	}
 }
 
 func (api *API) adminUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -119,7 +120,7 @@ func (api *API) adminUserUpdate(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	if err := api.db.UpdateUser(user); err != nil {
-		InternalServerError(w, fmt.Sprintf("Error setting role: %v", err))
+		InternalServerError(w, fmt.Sprintf("Error updating user %v", err))
 		return
 	}
 
@@ -127,9 +128,9 @@ func (api *API) adminUserUpdate(ctx context.Context, w http.ResponseWriter, r *h
 }
 
 func (api *API) adminUserCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	params := &adminUserParams{}
+	params := adminUserParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(params)
+	err := jsonDecoder.Decode(&params)
 	if err != nil {
 		BadRequestError(w, fmt.Sprintf("Could not decode admin user params: %v", err))
 		return
@@ -145,9 +146,14 @@ func (api *API) adminUserCreate(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	aud := api.requestAud(r)
+	aud := api.requestAud(ctx, r)
 	if !api.isAdmin(adminUser, aud) {
 		UnauthorizedError(w, "Not allowed")
+		return
+	}
+
+	if err = mailer.ValidateEmail(params.Email); err != nil && !api.config.Testing {
+		BadRequestError(w, fmt.Sprintf("Invalid email address: %s", params.Email))
 		return
 	}
 

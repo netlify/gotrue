@@ -35,7 +35,7 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	aud := a.requestAud(r)
+	aud := a.requestAud(ctx, r)
 
 	user, err := a.db.FindUserByEmailAndAudience(params.Email, aud)
 	if err != nil {
