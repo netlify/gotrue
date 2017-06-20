@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/crypto"
@@ -54,12 +55,12 @@ func (conn *Connection) DeleteUser(user *models.User) error {
 	return c.Remove(bson.M{"_id": user.ID})
 }
 
-func (conn *Connection) FindUsersInAudience(aud string) []*models.User {
+func (conn *Connection) FindUsersInAudience(aud string) ([]*models.User, error) {
 	user := &models.User{}
 	users := []*models.User{}
 	c := conn.db.C(user.TableName())
-	c.Find(bson.M{"aud": aud}).All(&users)
-	return users
+	err := c.Find(bson.M{"aud": aud}).All(&users)
+	return users, err
 }
 
 func (conn *Connection) findUser(query bson.M) (*models.User, error) {
@@ -192,15 +193,16 @@ func (conn *Connection) makeUserAdmin(c *mgo.Collection, user *models.User) erro
 		return nil
 	}
 
+	// Automatically make first user admin
 	v, err := c.Find(bson.M{"_id": bson.M{"$ne": user.ID}}).Count()
 	if err != nil {
-		return errors.Wrap(err, "Error making user an admin")
+		return errors.Wrap(err, "Error checking existing user count in makeUserAdmin")
 	}
 
 	if v == 0 {
 		user.SetRole(conn.config.JWT.AdminGroupName)
 		if err := c.Update(bson.M{"_id": user.ID}, bson.M{"$set": user}); err != nil {
-			return errors.Wrap(err, "Error making user an admin")
+			return errors.Wrap(err, fmt.Sprintf("Error setting administrative privileges for user %s", user.ID))
 		}
 	}
 

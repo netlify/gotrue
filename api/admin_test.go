@@ -31,13 +31,13 @@ func TestAdminUsersUnauthorized(t *testing.T) {
 
 	resp := w.Result()
 
-	if resp.StatusCode == 200 {
+	if resp.StatusCode != 401 {
 		t.Log(resp)
-		t.Fail()
+		t.Error("Expected 401 status code but got: ", resp.StatusCode)
 	}
 }
 
-func makeSuperAdmin(req *http.Request, api *API, email string, t *testing.T) (context.Context, *httptest.ResponseRecorder) {
+func makeSuperAdmin(t *testing.T, req *http.Request, api *API, email string) (context.Context, *httptest.ResponseRecorder) {
 	api, err := NewAPIFromConfigFile("config.test.json", "v1")
 	if err != nil {
 		t.Error(err)
@@ -58,7 +58,9 @@ func makeSuperAdmin(req *http.Request, api *API, email string, t *testing.T) (co
 	}
 
 	u.IsSuperAdmin = true
-	api.db.CreateUser(u)
+	if err := api.db.CreateUser(u); err != nil {
+		t.Error(err)
+	}
 
 	token, err := api.generateAccessToken(u)
 	if err != nil {
@@ -95,7 +97,7 @@ func TestAdminUsers(t *testing.T) {
 	req := httptest.NewRequest("GET", "/admin/users", nil)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := makeSuperAdmin(req, api, "test@example.com", t)
+	ctx, w := makeSuperAdmin(t, req, api, "test@example.com")
 
 	api.adminUsers(ctx, w, req)
 
@@ -113,6 +115,16 @@ func TestAdminUsers(t *testing.T) {
 
 	if len(data["users"].([]interface{})) < 1 {
 		t.Error("Invalid user list")
+	}
+
+	for _, user := range data["users"].([]interface{}) {
+		if u, ok := user.(map[string]interface{}); ok {
+			if len(u["email"].(string)) == 0 {
+				t.Error("Empty email")
+			}
+		} else {
+			t.Error("Invalid user")
+		}
 	}
 }
 
@@ -137,7 +149,7 @@ func TestAdminUserCreate(t *testing.T) {
 	req := httptest.NewRequest("POST", "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := makeSuperAdmin(req, api, "test@example.com", t)
+	ctx, w := makeSuperAdmin(t, req, api, "test@example.com")
 
 	api.adminUserCreate(ctx, w, req)
 
@@ -185,7 +197,7 @@ func TestAdminUserGet(t *testing.T) {
 	req := httptest.NewRequest("GET", "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := makeSuperAdmin(req, api, "test@example.com", t)
+	ctx, w := makeSuperAdmin(t, req, api, "test@example.com")
 
 	api.adminUserGet(ctx, w, req)
 
@@ -228,7 +240,7 @@ func TestAdminUserUpdate(t *testing.T) {
 	req := httptest.NewRequest("UPDATE", "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := makeSuperAdmin(req, api, "test@example.com", t)
+	ctx, w := makeSuperAdmin(t, req, api, "test@example.com")
 
 	api.adminUserUpdate(ctx, w, req)
 
@@ -279,7 +291,7 @@ func TestAdminUserDelete(t *testing.T) {
 	req := httptest.NewRequest("DELETE", "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := makeSuperAdmin(req, api, "test@example.com", t)
+	ctx, w := makeSuperAdmin(t, req, api, "test@example.com")
 
 	api.adminUserDelete(ctx, w, req)
 

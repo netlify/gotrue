@@ -45,11 +45,7 @@ func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 	// Find the administrative user
 	adminUser, err := getUser(ctx, api.db)
 	if err != nil {
-		if models.IsNotFoundError(err) {
-			NotFoundError(w, err.Error())
-		} else {
-			InternalServerError(w, err.Error())
-		}
+		UnauthorizedError(w, "Invalid user")
 		return nil, nil, nil, "", false
 	}
 
@@ -64,35 +60,22 @@ func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 		return nil, nil, nil, aud, false
 	}
 
-	if params.User.Aud == "" {
-		params.User.Aud = aud
-	}
-
 	user, err := api.db.FindUserByEmailAndAudience(params.User.Email, params.User.Aud)
 	if err != nil {
 		if user, err = api.db.FindUserByID(params.User.ID); err != nil && requireUser {
-			if models.IsNotFoundError(err) {
-				NotFoundError(w, err.Error())
-			} else {
-				InternalServerError(w, err.Error())
-			}
+			BadRequestError(w, fmt.Sprintf("Unable to find user by email: %s and id: %s in audience: %s", params.User.Email, params.User.ID, params.User.Aud))
 			return nil, nil, nil, aud, false
 		}
 	}
 
 	return adminUser, user, &params, aud, true
-
 }
 
 // adminUsers responds with a list of all users in a given audience
 func (api *API) adminUsers(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	adminUser, err := getUser(ctx, api.db)
 	if err != nil {
-		if models.IsNotFoundError(err) {
-			NotFoundError(w, err.Error())
-		} else {
-			InternalServerError(w, err.Error())
-		}
+		UnauthorizedError(w, "Invalid user")
 		return
 	}
 
@@ -102,8 +85,12 @@ func (api *API) adminUsers(ctx context.Context, w http.ResponseWriter, r *http.R
 		return
 	}
 
-	users := api.db.FindUsersInAudience(aud)
-	sendJSON(w, 200, map[string]interface{}{
+	users, err := api.db.FindUsersInAudience(aud)
+	if err != nil {
+		InternalServerError(w, err.Error())
+	}
+
+	sendJSON(w, http.StatusOK, map[string]interface{}{
 		"users": users,
 		"aud":   aud,
 	})
@@ -113,7 +100,7 @@ func (api *API) adminUsers(ctx context.Context, w http.ResponseWriter, r *http.R
 func (api *API) adminUserGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	_, user, _, _, allowed := api.checkAdmin(ctx, w, r, true)
 	if allowed {
-		sendJSON(w, 200, user)
+		sendJSON(w, http.StatusOK, user)
 	}
 }
 
@@ -145,7 +132,7 @@ func (api *API) adminUserUpdate(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	sendJSON(w, 200, user)
+	sendJSON(w, http.StatusOK, user)
 }
 
 // adminUserCreate creates a new user based on the provided data
@@ -181,7 +168,7 @@ func (api *API) adminUserCreate(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	sendJSON(w, 200, user)
+	sendJSON(w, http.StatusOK, user)
 }
 
 // adminUserDelete delete a user
@@ -196,5 +183,5 @@ func (api *API) adminUserDelete(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	sendJSON(w, 200, map[string]interface{}{})
+	sendJSON(w, http.StatusOK, map[string]interface{}{})
 }
