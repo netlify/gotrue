@@ -157,7 +157,6 @@ func TestAdminUserCreate(t *testing.T) {
 
 	if resp.StatusCode != 200 {
 		t.Error(resp)
-		t.Fail()
 		return
 	}
 

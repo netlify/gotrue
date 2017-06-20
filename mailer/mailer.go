@@ -23,12 +23,22 @@ const DefaultEmailChangeMail = `<h2>Confirm Change of Email</h2>
 <p>Follow this link to confirm the update of your email from {{ .Email }} to {{ .NewEmail }}:</p>
 <p><a href="{{ .ConfirmationURL }}">Change Email</a></p>`
 
-// Mailer will send mail and use templates from the site for easy mail styling
-type Mailer struct {
+type Mailer interface {
+	Send(user *models.User, subject, body string, data map[string]interface{}) error
+	ConfirmationMail(user *models.User) error
+	RecoveryMail(user *models.User) error
+	EmailChangeMail(user *models.User) error
+}
+
+// TemplateMailer will send mail and use templates from the site for easy mail styling
+type TemplateMailer struct {
 	SiteURL        string
 	MemberFolder   string
 	Config         *conf.Configuration
 	TemplateMailer *mailme.Mailer
+}
+
+type NoOpMailer struct {
 }
 
 // MailSubjects holds the subject lines for the emails
@@ -38,9 +48,13 @@ type MailSubjects struct {
 }
 
 // NewMailer returns a new gotrue mailer
-func NewMailer(conf *conf.Configuration) *Mailer {
+func NewMailer(conf *conf.Configuration) Mailer {
+	if conf.Testing {
+		return &NoOpMailer{}
+	}
+
 	mailConf := conf.Mailer
-	return &Mailer{
+	return &TemplateMailer{
 		SiteURL:      mailConf.SiteURL,
 		MemberFolder: mailConf.MemberFolder,
 		Config:       conf,
@@ -70,11 +84,7 @@ func ValidateEmail(email string) error {
 }
 
 // ConfirmationMail sends a signup confirmation mail to a new user
-func (m *Mailer) ConfirmationMail(user *models.User) error {
-	if m.Config.Testing {
-		return nil
-	}
-
+func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
 	return m.TemplateMailer.Mail(
 		user.Email,
 		withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Signup"),
@@ -85,11 +95,7 @@ func (m *Mailer) ConfirmationMail(user *models.User) error {
 }
 
 // EmailChangeMail sends an email change confirmation mail to a user
-func (m *Mailer) EmailChangeMail(user *models.User) error {
-	if m.Config.Testing {
-		return nil
-	}
-
+func (m *TemplateMailer) EmailChangeMail(user *models.User) error {
 	return m.TemplateMailer.Mail(
 		user.EmailChange,
 		withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change"),
@@ -100,11 +106,7 @@ func (m *Mailer) EmailChangeMail(user *models.User) error {
 }
 
 // RecoveryMail sends a password recovery mail
-func (m *Mailer) RecoveryMail(user *models.User) error {
-	if m.Config.Testing {
-		return nil
-	}
-
+func (m *TemplateMailer) RecoveryMail(user *models.User) error {
 	return m.TemplateMailer.Mail(
 		user.Email,
 		withDefault(m.Config.Mailer.Subjects.Recovery, "Reset Your Password"),
@@ -143,4 +145,32 @@ func withDefault(value, defaultValue string) string {
 		return defaultValue
 	}
 	return value
+}
+
+// Send can be used to send one-off emails to users
+func (m TemplateMailer) Send(user *models.User, subject, body string, data map[string]interface{}) error {
+	return m.TemplateMailer.Mail(
+		user.Email,
+		subject,
+		"",
+		body,
+		data,
+	)
+}
+
+func (m *NoOpMailer) ConfirmationMail(user *models.User) error {
+	return nil
+}
+
+func (m NoOpMailer) RecoveryMail(user *models.User) error {
+	return nil
+}
+
+func (m *NoOpMailer) EmailChangeMail(user *models.User) error {
+	return nil
+}
+
+// Send does nothing for NoOpMailer
+func (m NoOpMailer) Send(user *models.User, subject, body string, data map[string]interface{}) error {
+	return nil
 }
