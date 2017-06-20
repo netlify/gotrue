@@ -45,7 +45,7 @@ func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 	// Find the administrative user
 	adminUser, err := getUser(ctx, api.db)
 	if err != nil {
-		UnauthorizedError(w, "Invalid user")
+		UnauthorizedError(w, "Invalid admin user")
 		return nil, nil, nil, "", false
 	}
 
@@ -56,7 +56,7 @@ func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	// Make sure user is admin
 	if !api.isAdmin(adminUser, aud) {
-		UnauthorizedError(w, "Not allowed")
+		UnauthorizedError(w, "User not allowed")
 		return nil, nil, nil, aud, false
 	}
 
@@ -75,13 +75,13 @@ func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 func (api *API) adminUsers(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	adminUser, err := getUser(ctx, api.db)
 	if err != nil {
-		UnauthorizedError(w, "Invalid user")
+		UnauthorizedError(w, "Invalid admin user")
 		return
 	}
 
 	aud := api.requestAud(ctx, r)
 	if !api.isAdmin(adminUser, aud) {
-		UnauthorizedError(w, "Not allowed")
+		UnauthorizedError(w, "User not allowed")
 		return
 	}
 
