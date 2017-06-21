@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/models"
 )
 
@@ -142,7 +141,7 @@ func (api *API) adminUserCreate(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	if err := mailer.ValidateEmail(params.Email); err != nil && !api.config.Testing {
+	if err := api.mailer.ValidateEmail(params.Email); err != nil {
 		BadRequestError(w, fmt.Sprintf("Invalid email address: %s", params.Email))
 		return
 	}

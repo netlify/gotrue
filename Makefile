@@ -19,4 +19,5 @@ lint: ## Lint the code
 	golint `go list ./... | grep -v /vendor/`
 
 test: ## Run tests.
+	rm -f api/test.db
 	go test -v `go list ./... | grep -v /vendor/`

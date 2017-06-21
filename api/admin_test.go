@@ -38,18 +38,16 @@ func (ts *AdminTestSuite) TestAdminUsersUnauthorized() {
 
 	ts.API.adminUsers(ctx, w, req)
 
-	resp := w.Result()
-	assert.Equal(ts.T(), resp.StatusCode, 401)
+	assert.Equal(ts.T(), w.Code, 401)
 }
 
 func (ts *AdminTestSuite) makeSuperAdmin(req *http.Request, email string) (context.Context, *httptest.ResponseRecorder) {
-	// Cleanup existing user
-	u, err := ts.API.db.FindUserByEmailAndAudience(email, ts.API.config.JWT.Aud)
-	if err == nil {
+	// Cleanup existing user, if they already exist
+	if u, _ := ts.API.db.FindUserByEmailAndAudience(email, ts.API.config.JWT.Aud); u != nil {
 		require.NoError(ts.T(), ts.API.db.DeleteUser(u), "Error deleting user")
 	}
 
-	u, err = models.NewUser(email, "test", ts.API.config.JWT.Aud, nil)
+	u, err := models.NewUser(email, "test", ts.API.config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 
 	u.IsSuperAdmin = true
@@ -81,12 +79,10 @@ func (ts *AdminTestSuite) TestAdminUsers() {
 
 	ts.API.adminUsers(ctx, w, req)
 
-	resp := w.Result()
-
 	data := make(map[string]interface{})
-	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
-	assert.Equal(ts.T(), resp.StatusCode, 200)
+	assert.Equal(ts.T(), w.Code, 200)
 	for _, user := range data["users"].([]interface{}) {
 		assert.NotEmpty(ts.T(), user)
 	}
@@ -108,14 +104,13 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 
 	ts.API.adminUserCreate(ctx, w, req)
 
-	resp := w.Result()
-	assert.Equal(ts.T(), resp.StatusCode, 200)
+	assert.Equal(ts.T(), w.Code, 200)
 
 	u, err := ts.API.db.FindUserByEmailAndAudience("test1@example.com", ts.API.config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	data := make(map[string]interface{})
-	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	assert.Equal(ts.T(), data["email"], u.Email)
 }
@@ -142,11 +137,10 @@ func (ts *AdminTestSuite) TestAdminUserGet() {
 
 	ts.API.adminUserGet(ctx, w, req)
 
-	resp := w.Result()
-	assert.Equal(ts.T(), resp.StatusCode, 200)
+	assert.Equal(ts.T(), w.Code, 200)
 
 	data := make(map[string]interface{})
-	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	assert.Equal(ts.T(), data["email"], "test1@example.com")
 }
@@ -170,11 +164,10 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 
 	ts.API.adminUserUpdate(ctx, w, req)
 
-	resp := w.Result()
-	assert.Equal(ts.T(), resp.StatusCode, 200)
+	assert.Equal(ts.T(), w.Code, 200)
 
 	data := make(map[string]interface{})
-	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	assert.Equal(ts.T(), data["role"], "testing")
 
@@ -201,9 +194,7 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 
 	ts.API.adminUserDelete(ctx, w, req)
 
-	resp := w.Result()
-
-	assert.Equal(ts.T(), resp.StatusCode, 200)
+	assert.Equal(ts.T(), w.Code, 200)
 }
 
 func TestAdmin(t *testing.T) {

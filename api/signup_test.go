@@ -52,12 +52,14 @@ func (ts *SignupTestSuite) TestSignup() {
 
 	ts.API.Signup(ctx, w, req)
 
-	resp := w.Result()
-	assert.Equal(ts.T(), resp.StatusCode, 200)
+	assert.Equal(ts.T(), w.Code, 200)
 
 	data := make(map[string]interface{})
-	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 	assert.Equal(ts.T(), data["email"], "test@example.com")
+	assert.Equal(ts.T(), data["aud"], ts.API.config.JWT.Aud)
+	assert.Equal(ts.T(), data["user_metadata"].(map[string]interface{})["a"], 1.0)
+	assert.Len(ts.T(), data, 12)
 }
 
 // TestSignupTwice checks to make sure the same email cannot be registered twice
@@ -96,12 +98,10 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 	encode()
 	ts.API.Signup(ctx, w, req)
 
-	resp := w.Result()
-
 	data := make(map[string]interface{})
-	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
-	assert.Equal(ts.T(), resp.StatusCode, 500)
+	assert.Equal(ts.T(), w.Code, 500)
 	assert.Equal(ts.T(), data["code"], 500.0)
 }
 
@@ -132,8 +132,7 @@ func (ts *SignupTestSuite) TestVerifySignup() {
 
 	ts.API.Verify(ctx, w, req)
 
-	resp := w.Result()
-	assert.Equal(ts.T(), resp.StatusCode, 200)
+	assert.Equal(ts.T(), w.Code, 200)
 }
 
 func TestSignup(t *testing.T) {

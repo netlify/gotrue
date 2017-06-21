@@ -37,8 +37,5 @@ func serve(config *conf.Configuration) {
 
 	l := fmt.Sprintf("%v:%v", config.API.Host, config.API.Port)
 	logrus.Infof("GoTrue API started on: %s", l)
-	if config.Testing {
-		logrus.Infof("WARNING: API is in testing mode")
-	}
 	api.ListenAndServe(l)
 }

@@ -28,6 +28,7 @@ type Mailer interface {
 	ConfirmationMail(user *models.User) error
 	RecoveryMail(user *models.User) error
 	EmailChangeMail(user *models.User) error
+	ValidateEmail(email string) error
 }
 
 // TemplateMailer will send mail and use templates from the site for easy mail styling
@@ -49,7 +50,7 @@ type MailSubjects struct {
 
 // NewMailer returns a new gotrue mailer
 func NewMailer(conf *conf.Configuration) Mailer {
-	if conf.Testing {
+	if conf.Mailer.Host == "" {
 		return &NoOpMailer{}
 	}
 
@@ -71,7 +72,7 @@ func NewMailer(conf *conf.Configuration) Mailer {
 
 // ValidateEmail returns nil if the email is valid,
 // otherwise an error indicating the reason it is invalid
-func ValidateEmail(email string) error {
+func (m TemplateMailer) ValidateEmail(email string) error {
 	if err := checkmail.ValidateFormat(email); err != nil {
 		return err
 	}
@@ -156,6 +157,10 @@ func (m TemplateMailer) Send(user *models.User, subject, body string, data map[s
 		body,
 		data,
 	)
+}
+
+func (m NoOpMailer) ValidateEmail(email string) error {
+	return nil
 }
 
 func (m *NoOpMailer) ConfirmationMail(user *models.User) error {

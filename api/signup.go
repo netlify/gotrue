@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/models"
 )
 
@@ -57,11 +56,9 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	if err = mailer.ValidateEmail(params.Email); err != nil {
-		if !a.config.Testing {
-			UnprocessableEntity(w, "Unable to validate email address: "+err.Error())
-			return
-		}
+	if err = a.mailer.ValidateEmail(params.Email); err != nil {
+		UnprocessableEntity(w, "Unable to validate email address: "+err.Error())
+		return
 	}
 
 	if a.config.Mailer.Autoconfirm {

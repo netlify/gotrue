@@ -62,7 +62,6 @@ type Configuration struct {
 		} `json:"templates"`
 	} `json:"mailer"`
 	Logging LogConfiguration `json:"logging"`
-	Testing bool             `json:"testing"`
 }
 
 func LoadConfigFile(name string) (*Configuration, error) {

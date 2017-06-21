@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/models"
 )
 
@@ -84,7 +83,7 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	var sendChangeEmailVerification bool
-	if err = mailer.ValidateEmail(params.Email); err == nil || a.config.Testing {
+	if err = a.mailer.ValidateEmail(params.Email); err == nil {
 		exists, err := a.db.IsDuplicatedEmail(params.Email, user.Aud)
 		if err != nil {
 			InternalServerError(w, err.Error())

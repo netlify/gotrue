@@ -29,12 +29,11 @@ func (ts *IndexTestSuite) TestIndex() {
 	ctx := req.Context()
 	ts.API.Index(ctx, w, req)
 
-	resp := w.Result()
-	assert.Equal(ts.T(), resp.StatusCode, 200)
+	assert.Equal(ts.T(), w.Code, 200)
 
 	// Check response data
 	data := make(map[string]string)
-	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	assert.Equal(ts.T(), data["name"], "GoTrue")
 	assert.Equal(ts.T(), data["version"], "v1")
