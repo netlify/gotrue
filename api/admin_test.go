@@ -130,6 +130,10 @@ func (ts *AdminTestSuite) TestAdminUserGet() {
 		},
 	}))
 
+	u, err := models.NewUser("test1@example.com", "test", ts.API.config.JWT.Aud, nil)
+	require.NoError(ts.T(), err, "Error making new user")
+	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+
 	// Setup request
 	req := httptest.NewRequest("GET", "/admin/user", &buffer)
 
