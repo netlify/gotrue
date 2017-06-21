@@ -19,17 +19,19 @@ func getAudience(c *conf.Configuration) string {
 	return audience
 }
 
-func init() {
+func AdminCmd() *cobra.Command {
+	var adminCmd = &cobra.Command{
+		Use: "admin",
+	}
+
 	adminCmd.AddCommand(&adminCreateUserCmd, &adminDeleteUserCmd)
 	adminCmd.PersistentFlags().StringVarP(&audience, "aud", "a", "", "Set the new user's audience")
 
 	adminCreateUserCmd.Flags().BoolVar(&autoconfirm, "confirm", false, "Automatically confirm user without sending an email")
 	adminCreateUserCmd.Flags().BoolVar(&isSuperAdmin, "superadmin", false, "Create user with superadmin privileges")
 	adminCreateUserCmd.Flags().BoolVar(&isAdmin, "admin", false, "Create user with admin privileges")
-}
 
-var adminCmd = cobra.Command{
-	Use: "admin",
+	return adminCmd
 }
 
 var adminCreateUserCmd = cobra.Command{
