@@ -4,36 +4,42 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-// TestIndex tests API / route
-func TestIndex(t *testing.T) {
-	api, err := NewAPIFromConfigFile("config.test.json", "v1")
-	if err != nil {
-		t.Error(err)
-	}
-	defer api.db.Close()
+type IndexTestSuite struct {
+	suite.Suite
+	API *API
+}
 
+func (ts *IndexTestSuite) SetupTest() {
+	api, err := NewAPIFromConfigFile("config.test.json", "v1")
+	require.NoError(ts.T(), err)
+	ts.API = api
+}
+
+// TestIndex tests API / route
+func (ts *IndexTestSuite) TestIndex() {
 	// Setup request and response reader
 	req := httptest.NewRequest("GET", "http://localhost/", nil)
 	w := httptest.NewRecorder()
 	ctx := req.Context()
-	api.Index(ctx, w, req)
+	ts.API.Index(ctx, w, req)
 
 	resp := w.Result()
-
-	if resp.StatusCode != 200 {
-		t.Fail()
-	}
+	assert.Equal(ts.T(), resp.StatusCode, 200)
 
 	// Check response data
 	data := make(map[string]string)
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		t.Error(err)
-	}
+	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
 
-	if data["name"] != "GoTrue" || data["version"] != "v1" {
-		t.Error("Invalid response data")
-	}
+	assert.Equal(ts.T(), data["name"], "GoTrue")
+	assert.Equal(ts.T(), data["version"], "v1")
+}
 
+func TestIndex(t *testing.T) {
+	suite.Run(t, new(IndexTestSuite))
 }

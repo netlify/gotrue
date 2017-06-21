@@ -1,40 +1,46 @@
 package api
 
 import (
-	//"net/http"
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/netlify/gotrue/models"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-// TestSignup tests API /signup route
-func TestSignup(t *testing.T) {
+type SignupTestSuite struct {
+	suite.Suite
+	API *API
+}
+
+func (ts *SignupTestSuite) SetupTest() {
 	api, err := NewAPIFromConfigFile("config.test.json", "v1")
-	if err != nil {
-		t.Error(err)
-	}
-	defer api.db.Close()
+	require.NoError(ts.T(), err)
+
+	ts.API = api
 
 	// Cleanup existing user
-	u, err := api.db.FindUserByEmailAndAudience("test@example.com", api.config.JWT.Aud)
+	u, err := ts.API.db.FindUserByEmailAndAudience("test@example.com", api.config.JWT.Aud)
 	if err == nil {
-		if err = api.db.DeleteUser(u); err != nil {
-			t.Error(err)
-		}
+		require.NoError(ts.T(), api.db.DeleteUser(u))
 	}
+}
 
+// TestSignup tests API /signup route
+func (ts *SignupTestSuite) TestSignup() {
 	// Request body
 	var buffer bytes.Buffer
-	if err = json.NewEncoder(&buffer).Encode(map[string]interface{}{
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"email":    "test@example.com",
 		"password": "test",
 		"data": map[string]interface{}{
 			"a": 1,
 		},
-	}); err != nil {
-		t.Error(err)
-	}
+	}))
 
 	// Setup request
 	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
@@ -44,42 +50,29 @@ func TestSignup(t *testing.T) {
 	w := httptest.NewRecorder()
 	ctx := req.Context()
 
-	api.Signup(ctx, w, req)
+	ts.API.Signup(ctx, w, req)
 
 	resp := w.Result()
-
-	if resp.StatusCode != 200 {
-		t.Log(resp)
-		t.Fail()
-	}
+	assert.Equal(ts.T(), resp.StatusCode, 200)
 
 	data := make(map[string]interface{})
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		t.Error(err)
-	}
+	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
+	assert.Equal(ts.T(), data["email"], "test@example.com")
 }
 
 // TestSignupTwice checks to make sure the same email cannot be registered twice
-func TestSignupTwice(t *testing.T) {
-	api, err := NewAPIFromConfigFile("config.test.json", "v1")
-	if err != nil {
-		t.Error(err)
-	}
-	defer api.db.Close()
-
+func (ts *SignupTestSuite) TestSignupTwice() {
 	// Request body
 	var buffer bytes.Buffer
 
 	encode := func() {
-		if err = json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 			"email":    "test1@example.com",
 			"password": "test1",
 			"data": map[string]interface{}{
 				"a": 1,
 			},
-		}); err != nil {
-			t.Error(err)
-		}
+		}))
 	}
 
 	encode()
@@ -93,35 +86,56 @@ func TestSignupTwice(t *testing.T) {
 	y := httptest.NewRecorder()
 	ctx := req.Context()
 
-	api.Signup(ctx, y, req)
-	u, err := api.db.FindUserByEmailAndAudience("test1@example.com", api.config.JWT.Aud)
+	ts.API.Signup(ctx, y, req)
+	u, err := ts.API.db.FindUserByEmailAndAudience("test1@example.com", ts.API.config.JWT.Aud)
 	if err == nil {
 		u.Confirm()
-		api.db.UpdateUser(u)
+		require.NoError(ts.T(), ts.API.db.UpdateUser(u))
 	}
 
 	encode()
-	api.Signup(ctx, w, req)
+	ts.API.Signup(ctx, w, req)
 
 	resp := w.Result()
 
 	data := make(map[string]interface{})
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		t.Error(err)
-	}
+	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
 
-	if code, ok := data["code"]; ok {
-		if c, ok := code.(float64); ok {
-			if resp.StatusCode != 500 || c != 500 {
-				t.Log("StatusCode: ", resp.StatusCode)
-				t.Log("Code: ", c)
-				t.Log("Message: ", data["msg"])
-				t.Fail()
-			}
-		} else {
-			t.Error("Invalid value type for 'code'")
-		}
-	} else {
-		t.Error("Invalid value for 'code'")
-	}
+	assert.Equal(ts.T(), resp.StatusCode, 500)
+	assert.Equal(ts.T(), data["code"], 500.0)
+}
+
+func (ts *SignupTestSuite) TestVerifySignup() {
+
+	user, err := models.NewUser("test@example.com", "testing", ts.API.config.JWT.Aud, nil)
+	require.NoError(ts.T(), err)
+	require.NoError(ts.T(), ts.API.db.CreateUser(user))
+
+	// Find test user
+	u, err := ts.API.db.FindUserByEmailAndAudience("test@example.com", ts.API.config.JWT.Aud)
+	require.NoError(ts.T(), err)
+
+	// Request body
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"type":  "signup",
+		"token": u.ConfirmationToken,
+	}))
+
+	// Setup request
+	req := httptest.NewRequest("POST", "http://localhost/verify", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup response recorder
+	w := httptest.NewRecorder()
+	ctx := req.Context()
+
+	ts.API.Verify(ctx, w, req)
+
+	resp := w.Result()
+	assert.Equal(ts.T(), resp.StatusCode, 200)
+}
+
+func TestSignup(t *testing.T) {
+	suite.Run(t, new(SignupTestSuite))
 }

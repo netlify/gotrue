@@ -10,16 +10,25 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/models"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-// TestAdminUsersUnauthorized tests API /admin/users route without authentication
-func TestAdminUsersUnauthorized(t *testing.T) {
-	api, err := NewAPIFromConfigFile("config.test.json", "v1")
-	if err != nil {
-		t.Error(err)
-	}
-	defer api.db.Close()
+type AdminTestSuite struct {
+	suite.Suite
+	User *models.User
+	API  *API
+}
 
+func (ts *AdminTestSuite) SetupTest() {
+	api, err := NewAPIFromConfigFile("config.test.json", "v1")
+	require.NoError(ts.T(), err)
+	ts.API = api
+}
+
+// TestAdminUsersUnauthorized tests API /admin/users route without authentication
+func (ts *AdminTestSuite) TestAdminUsersUnauthorized() {
 	// Setup request
 	req := httptest.NewRequest("GET", "/admin/users", nil)
 
@@ -27,56 +36,33 @@ func TestAdminUsersUnauthorized(t *testing.T) {
 	w := httptest.NewRecorder()
 	ctx := req.Context()
 
-	api.adminUsers(ctx, w, req)
+	ts.API.adminUsers(ctx, w, req)
 
 	resp := w.Result()
-
-	if resp.StatusCode != 401 {
-		t.Log(resp)
-		t.Error("Expected 401 status code but got: ", resp.StatusCode)
-	}
+	assert.Equal(ts.T(), resp.StatusCode, 401)
 }
 
-func makeSuperAdmin(t *testing.T, req *http.Request, api *API, email string) (context.Context, *httptest.ResponseRecorder) {
-	api, err := NewAPIFromConfigFile("config.test.json", "v1")
-	if err != nil {
-		t.Error(err)
-	}
-	defer api.db.Close()
-
+func (ts *AdminTestSuite) makeSuperAdmin(req *http.Request, email string) (context.Context, *httptest.ResponseRecorder) {
 	// Cleanup existing user
-	u, err := api.db.FindUserByEmailAndAudience(email, api.config.JWT.Aud)
+	u, err := ts.API.db.FindUserByEmailAndAudience(email, ts.API.config.JWT.Aud)
 	if err == nil {
-		if err = api.db.DeleteUser(u); err != nil {
-			t.Error(err)
-		}
+		require.NoError(ts.T(), ts.API.db.DeleteUser(u), "Error deleting user")
 	}
 
-	u, err = models.NewUser(email, "test", api.config.JWT.Aud, nil)
-	if err != nil {
-		t.Error(err)
-	}
+	u, err = models.NewUser(email, "test", ts.API.config.JWT.Aud, nil)
+	require.NoError(ts.T(), err, "Error making new user")
 
 	u.IsSuperAdmin = true
-	if err := api.db.CreateUser(u); err != nil {
-		t.Error(err)
-	}
+	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
-	token, err := api.generateAccessToken(u)
-	if err != nil {
-		t.Error(err)
-	}
+	token, err := ts.API.generateAccessToken(u)
+	require.NoError(ts.T(), err, "Error generating access token")
 
 	tok, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		if token.Header["alg"] != "HS256" {
-			t.Error("Invalid alg")
-		}
-
-		return []byte(api.config.JWT.Secret), nil
+		assert.Equal(ts.T(), token.Header["alg"], "HS256")
+		return []byte(ts.API.config.JWT.Secret), nil
 	})
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(ts.T(), err, "Error parsing token")
 
 	// Setup response recorder
 	w := httptest.NewRecorder()
@@ -86,218 +72,136 @@ func makeSuperAdmin(t *testing.T, req *http.Request, api *API, email string) (co
 }
 
 // TestAdminUsers tests API /admin/users route
-func TestAdminUsers(t *testing.T) {
-	api, err := NewAPIFromConfigFile("config.test.json", "v1")
-	if err != nil {
-		t.Error(err)
-	}
-	defer api.db.Close()
-
+func (ts *AdminTestSuite) TestAdminUsers() {
 	// Setup request
 	req := httptest.NewRequest("GET", "/admin/users", nil)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := makeSuperAdmin(t, req, api, "test@example.com")
+	ctx, w := ts.makeSuperAdmin(req, "test@example.com")
 
-	api.adminUsers(ctx, w, req)
+	ts.API.adminUsers(ctx, w, req)
 
 	resp := w.Result()
 
 	data := make(map[string]interface{})
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		t.Error(err)
-	}
+	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
 
-	if resp.StatusCode != 200 {
-		t.Log(resp)
-		t.Fail()
-	}
-
-	if len(data["users"].([]interface{})) < 1 {
-		t.Error("Invalid user list")
-	}
-
+	assert.Equal(ts.T(), resp.StatusCode, 200)
 	for _, user := range data["users"].([]interface{}) {
-		if u, ok := user.(map[string]interface{}); ok {
-			if len(u["email"].(string)) == 0 {
-				t.Error("Empty email")
-			}
-		} else {
-			t.Error("Invalid user")
-		}
+		assert.NotEmpty(ts.T(), user)
 	}
 }
 
 // TestAdminUserCreate tests API /admin/user route (POST)
-func TestAdminUserCreate(t *testing.T) {
-	api, err := NewAPIFromConfigFile("config.test.json", "v1")
-	if err != nil {
-		t.Error(err)
-	}
-	defer api.db.Close()
-
+func (ts *AdminTestSuite) TestAdminUserCreate() {
 	var buffer bytes.Buffer
-	err = json.NewEncoder(&buffer).Encode(map[string]interface{}{
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"email":    "test1@example.com",
 		"password": "test1",
-	})
-	if err != nil {
-		t.Error(err)
-	}
+	}))
 
 	// Setup request
 	req := httptest.NewRequest("POST", "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := makeSuperAdmin(t, req, api, "test@example.com")
+	ctx, w := ts.makeSuperAdmin(req, "test@example.com")
 
-	api.adminUserCreate(ctx, w, req)
+	ts.API.adminUserCreate(ctx, w, req)
 
 	resp := w.Result()
+	assert.Equal(ts.T(), resp.StatusCode, 200)
 
-	if resp.StatusCode != 200 {
-		t.Error(resp)
-		return
-	}
-
-	u, err := api.db.FindUserByEmailAndAudience("test1@example.com", api.config.JWT.Aud)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	u, err := ts.API.db.FindUserByEmailAndAudience("test1@example.com", ts.API.config.JWT.Aud)
+	require.NoError(ts.T(), err)
 
 	data := make(map[string]interface{})
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		t.Error(err)
-	}
+	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
 
-	if data["email"] != u.Email {
-		t.Error("Invalid email address")
-	}
+	assert.Equal(ts.T(), data["email"], u.Email)
 }
 
 // TestAdminUserGet tests API /admin/user route (GET)
-func TestAdminUserGet(t *testing.T) {
-	api, err := NewAPIFromConfigFile("config.test.json", "v1")
-	if err != nil {
-		t.Error(err)
-	}
-	defer api.db.Close()
-
+func (ts *AdminTestSuite) TestAdminUserGet() {
 	var buffer bytes.Buffer
-	json.NewEncoder(&buffer).Encode(map[string]interface{}{
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"user": map[string]interface{}{
 			"email": "test1@example.com",
-			"aud":   api.config.JWT.Aud,
+			"aud":   ts.API.config.JWT.Aud,
 		},
-	})
+	}))
 
 	// Setup request
 	req := httptest.NewRequest("GET", "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := makeSuperAdmin(t, req, api, "test@example.com")
+	ctx, w := ts.makeSuperAdmin(req, "test@example.com")
 
-	api.adminUserGet(ctx, w, req)
+	ts.API.adminUserGet(ctx, w, req)
 
 	resp := w.Result()
-
-	if resp.StatusCode != 200 {
-		t.Log(resp)
-		t.Fail()
-	}
+	assert.Equal(ts.T(), resp.StatusCode, 200)
 
 	data := make(map[string]interface{})
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		t.Error(err)
-	}
+	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
 
-	if data["email"] != "test1@example.com" {
-		t.Error("Invalid email address: ", data)
-	}
-
+	assert.Equal(ts.T(), data["email"], "test1@example.com")
 }
 
 // TestAdminUserUpdate tests API /admin/user route (UPDATE)
-func TestAdminUserUpdate(t *testing.T) {
-	api, err := NewAPIFromConfigFile("config.test.json", "v1")
-	if err != nil {
-		t.Error(err)
-	}
-	defer api.db.Close()
-
+func (ts *AdminTestSuite) TestAdminUserUpdate() {
 	var buffer bytes.Buffer
-	json.NewEncoder(&buffer).Encode(map[string]interface{}{
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"role": "testing",
 		"user": map[string]interface{}{
 			"email": "test1@example.com",
-			"aud":   api.config.JWT.Aud,
+			"aud":   ts.API.config.JWT.Aud,
 		},
-	})
+	}))
 
 	// Setup request
 	req := httptest.NewRequest("UPDATE", "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := makeSuperAdmin(t, req, api, "test@example.com")
+	ctx, w := ts.makeSuperAdmin(req, "test@example.com")
 
-	api.adminUserUpdate(ctx, w, req)
+	ts.API.adminUserUpdate(ctx, w, req)
 
 	resp := w.Result()
-
-	if resp.StatusCode != 200 {
-		t.Log(resp)
-		t.Fail()
-	}
+	assert.Equal(ts.T(), resp.StatusCode, 200)
 
 	data := make(map[string]interface{})
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		t.Error(err)
-	}
+	require.NoError(ts.T(), json.NewDecoder(resp.Body).Decode(&data))
 
-	if data["role"] != "testing" {
-		t.Error("Invalid role after update")
-	}
+	assert.Equal(ts.T(), data["role"], "testing")
 
-	u, err := api.db.FindUserByEmailAndAudience("test1@example.com", api.config.JWT.Aud)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if u.Role != "testing" {
-		t.Error("Role not updated correctly")
-	}
-
+	u, err := ts.API.db.FindUserByEmailAndAudience("test1@example.com", ts.API.config.JWT.Aud)
+	require.NoError(ts.T(), err)
+	assert.Equal(ts.T(), u.Role, "testing")
 }
 
 // TestAdminUserDelete tests API /admin/user route (DELETE)
-func TestAdminUserDelete(t *testing.T) {
-	api, err := NewAPIFromConfigFile("config.test.json", "v1")
-	if err != nil {
-		t.Error(err)
-	}
-	defer api.db.Close()
-
+func (ts *AdminTestSuite) TestAdminUserDelete() {
 	var buffer bytes.Buffer
-	json.NewEncoder(&buffer).Encode(map[string]interface{}{
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"user": map[string]interface{}{
 			"email": "test1@example.com",
-			"aud":   api.config.JWT.Aud,
+			"aud":   ts.API.config.JWT.Aud,
 		},
-	})
+	}))
 
 	// Setup request
 	req := httptest.NewRequest("DELETE", "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := makeSuperAdmin(t, req, api, "test@example.com")
+	ctx, w := ts.makeSuperAdmin(req, "test@example.com")
 
-	api.adminUserDelete(ctx, w, req)
+	ts.API.adminUserDelete(ctx, w, req)
 
 	resp := w.Result()
 
-	if resp.StatusCode != 200 {
-		t.Log(resp)
-		t.Fail()
-	}
+	assert.Equal(ts.T(), resp.StatusCode, 200)
+}
+
+func TestAdmin(t *testing.T) {
+	suite.Run(t, new(AdminTestSuite))
 }
