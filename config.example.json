@@ -1,7 +1,8 @@
 {
   "jwt": {
     "secret": "CHANGE-THIS! VERY IMPORTANT!",
-    "exp": 3600
+    "exp": 3600,
+    "aud": "api.netlify.com"
   },
   "db": {
     "driver": "sqlite3",

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/netlify/gotrue/models"
 )
@@ -29,18 +30,20 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	if params.Email == "" || params.Password == "" {
-		UnprocessableEntity(w, fmt.Sprintf("Signup requires a valid email and password"))
+		UnprocessableEntity(w, "Signup requires a valid email and password")
 		return
 	}
 
-	user, err := a.db.FindUserByEmail(params.Email)
+	aud := a.requestAud(ctx, r)
+
+	user, err := a.db.FindUserByEmailAndAudience(params.Email, aud)
 	if err != nil {
 		if !models.IsNotFoundError(err) {
 			InternalServerError(w, err.Error())
 			return
 		}
 
-		user, err = a.signupNewUser(params)
+		user, err = a.signupNewUser(params, aud)
 		if err != nil {
 			InternalServerError(w, err.Error())
 			return
@@ -53,16 +56,28 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	if err := a.mailer.ConfirmationMail(user); err != nil {
-		InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
+	if err = a.mailer.ValidateEmail(params.Email); err != nil {
+		UnprocessableEntity(w, "Unable to validate email address: "+err.Error())
 		return
 	}
+
+	if a.config.Mailer.Autoconfirm {
+		user.Confirm()
+	} else if user.ConfirmationSentAt.Add(time.Minute * 15).Before(time.Now()) {
+		if err := a.mailer.ConfirmationMail(user); err != nil {
+			InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
+			return
+		}
+	}
+
+	user.SetRole(a.config.JWT.DefaultGroupName)
+	a.db.UpdateUser(user)
 
 	sendJSON(w, 200, user)
 }
 
-func (a *API) signupNewUser(params *SignupParams) (*models.User, error) {
-	user, err := models.NewUser(params.Email, params.Password, params.Data)
+func (a *API) signupNewUser(params *SignupParams, aud string) (*models.User, error) {
+	user, err := models.NewUser(params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		return nil, err
 	}

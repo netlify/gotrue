@@ -3,9 +3,12 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 )
 
 // Error is an error with a message
@@ -33,6 +36,32 @@ func getToken(ctx context.Context) *jwt.Token {
 		return nil
 	}
 	return obj.(*jwt.Token)
+}
+
+func getUser(ctx context.Context, conn storage.Connection) (*models.User, error) {
+	token := getToken(ctx)
+	if token == nil {
+		return nil, errors.New("Invalid token")
+	}
+
+	_id, ok := token.Claims["id"]
+	if !ok {
+		return nil, errors.New("Invalid claim: id")
+	}
+
+	id, ok := _id.(string)
+	if !ok {
+		return nil, errors.New("Invalid value for claim: id")
+	}
+
+	return conn.FindUserByID(id)
+}
+
+func (api *API) isAdmin(u *models.User, aud string) bool {
+	if aud == "" {
+		aud = api.config.JWT.Aud
+	}
+	return u.IsSuperAdmin || (aud == u.Aud && u.HasRole(api.config.JWT.AdminGroupName))
 }
 
 // BadRequestError is simple Error Wrapper

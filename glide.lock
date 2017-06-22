@@ -1,6 +1,12 @@
-hash: 365950be2133f6a4e70e6200ba1d3c34a2fd78ca52fa6a111b85322fbf58ba70
-updated: 2017-02-15T21:17:32.721423091+01:00
+hash: ead637c5be598982bf300fce786ad6c7bebbb23a3801aae4219095b710009cad
+updated: 2017-06-09T19:05:33.200638072-07:00
 imports:
+- name: github.com/badoux/checkmail
+  version: d0a759655d62bcdc95c50a0676f3e9702ed59453
+- name: github.com/davecgh/go-spew
+  version: 2df174808ee097f90d259e432cc04442cf60be21
+  subpackages:
+  - spew
 - name: github.com/dgrijalva/jwt-go
   version: 268038b363c7a8d7306b8e35bf77a1fde4b0c402
 - name: github.com/dimfeld/httppath
@@ -62,6 +68,10 @@ imports:
   version: 17b591df37844cde689f4d5813e5cea0927d8dd2
 - name: github.com/pkg/sftp
   version: 8197a2e580736b78d704be0fc47b2324c0591a32
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
 - name: github.com/rs/cors
   version: a62a804a8a009876ca59105f7899938a1349f4b3
 - name: github.com/rs/xhandler
@@ -86,6 +96,7 @@ imports:
 - name: github.com/stretchr/testify
   version: f390dcf405f7b83c997eac1b06768bb9f44dec18
   subpackages:
+  - assert
   - require
   - suite
 - name: github.com/zenazn/goji

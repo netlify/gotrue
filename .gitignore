@@ -1,8 +1,10 @@
 config.json
+config.test.json
 gorm.db
 vendor/
 authlify
 netlify-auth
+test.db
 
 .DS_Store
 www/dist/

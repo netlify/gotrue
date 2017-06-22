@@ -29,7 +29,8 @@ func (a *API) Recover(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	user, err := a.db.FindUserByEmail(params.Email)
+	aud := a.requestAud(ctx, r)
+	user, err := a.db.FindUserByEmailAndAudience(params.Email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			NotFoundError(w, err.Error())

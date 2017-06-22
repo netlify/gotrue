@@ -29,6 +29,18 @@ func (a *API) UserGet(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	tokenAud, ok := token.Claims["aud"].(string)
+	if !ok {
+		BadRequestError(w, "Could not read User Aud claim")
+		return
+	}
+
+	aud := a.requestAud(ctx, r)
+	if aud != tokenAud {
+		BadRequestError(w, "Token audience doesn't match request audience")
+		return
+	}
+
 	user, err := a.db.FindUserByID(id)
 	if err != nil {
 		if models.IsNotFoundError(err) {
@@ -71,8 +83,8 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	var sendChangeEmailVerification bool
-	if params.Email != "" {
-		exists, err := a.db.IsDuplicatedEmail(params.Email, user.ID)
+	if err = a.mailer.ValidateEmail(params.Email); err == nil {
+		exists, err := a.db.IsDuplicatedEmail(params.Email, user.Aud)
 		if err != nil {
 			InternalServerError(w, err.Error())
 			return
@@ -85,6 +97,9 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 		user.GenerateEmailChange(params.Email)
 		sendChangeEmailVerification = true
+	} else {
+		UnprocessableEntity(w, "Unable to verify new email address: "+err.Error())
+		return
 	}
 
 	logrus.Debugf("Checking params for token %v", params)
@@ -112,7 +127,7 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	if params.AppData != nil {
-		if !user.HasRole(a.config.JWT.AdminGroupName) {
+		if a.isAdmin(user, a.config.JWT.Aud) {
 			UnauthorizedError(w, "Updating app_metadata requires admin privileges")
 			return
 		}

@@ -26,8 +26,10 @@ type DBConfiguration struct {
 type JWTConfiguration struct {
 	Secret             string `json:"secret"`
 	Exp                int    `json:"exp"`
+	Aud                string `json:"aud"`
 	AdminGroupName     string `json:"admin_group_name"`
 	AdminGroupDisabled bool   `json:"admin_group_disabled"`
+	DefaultGroupName   string `json:"default_group_name"`
 }
 
 // Configuration holds all the confiruation for gotrue
@@ -39,6 +41,7 @@ type Configuration struct {
 		Port int    `json:"port"`
 	} `json:"api"`
 	Mailer struct {
+		Autoconfirm    bool   `json:"autoconfirm"`
 		SiteURL        string `json:"site_url"`
 		Host           string `json:"host"`
 		Port           int    `json:"port"`
@@ -59,6 +62,14 @@ type Configuration struct {
 		} `json:"templates"`
 	} `json:"mailer"`
 	Logging LogConfiguration `json:"logging"`
+}
+
+func LoadConfigFile(name string) (*Configuration, error) {
+	cmd := &cobra.Command{}
+	config := ""
+	cmd.Flags().StringVar(&config, "config", "config.test.json", "Config file")
+
+	return LoadConfig(cmd)
 }
 
 func LoadConfig(cmd *cobra.Command) (*Configuration, error) {

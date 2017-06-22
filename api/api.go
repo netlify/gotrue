@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/textproto"
 	"regexp"
 
 	"github.com/dgrijalva/jwt-go"
@@ -11,10 +12,14 @@ import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
+	"github.com/netlify/gotrue/storage/dial"
 	"github.com/rs/cors"
 )
 
-const defaultVersion = "unknown version"
+const (
+	audHeaderName  = "X-JWT-AUD"
+	defaultVersion = "unknown version"
+)
 
 var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 
@@ -22,11 +27,12 @@ var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 type API struct {
 	handler http.Handler
 	db      storage.Connection
-	mailer  *mailer.Mailer
+	mailer  mailer.Mailer
 	config  *conf.Configuration
 	version string
 }
 
+// requireAuthentication checks incoming requests for tokens presented using the Authorization header
 func (a *API) requireAuthentication(ctx context.Context, w http.ResponseWriter, r *http.Request) context.Context {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -54,22 +60,46 @@ func (a *API) requireAuthentication(ctx context.Context, w http.ResponseWriter, 
 	return context.WithValue(ctx, "jwt", token)
 }
 
+func (a *API) requestAud(ctx context.Context, r *http.Request) string {
+
+	// First check for an audience in the header
+	p := textproto.MIMEHeader(r.Header)
+	if h, exist := p[textproto.CanonicalMIMEHeaderKey(audHeaderName)]; exist && len(h) > 0 {
+		return h[0]
+	}
+
+	// Then check the token
+	token := getToken(ctx)
+	if token != nil {
+		if _aud, ok := token.Claims["aud"]; ok {
+			if aud, ok := _aud.(string); ok && aud != "" {
+				return aud
+			}
+		}
+	}
+
+	// Finally, return the default of none of the above methods are successful
+	return a.config.JWT.Aud
+}
+
 // ListenAndServe starts the REST API
 func (a *API) ListenAndServe(hostAndPort string) error {
 	return http.ListenAndServe(hostAndPort, a.handler)
 }
 
 // NewAPI instantiates a new REST API
-func NewAPI(config *conf.Configuration, db storage.Connection, mailer *mailer.Mailer) *API {
+func NewAPI(config *conf.Configuration, db storage.Connection, mailer mailer.Mailer) *API {
 	return NewAPIWithVersion(config, db, mailer, defaultVersion)
 }
 
-func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer *mailer.Mailer, version string) *API {
+func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer mailer.Mailer, version string) *API {
 	api := &API{config: config, db: db, mailer: mailer, version: version}
 	mux := kami.New()
 
 	mux.Use("/user", api.requireAuthentication)
 	mux.Use("/logout", api.requireAuthentication)
+	mux.Use("/admin/user", api.requireAuthentication)
+	mux.Use("/admin/users", api.requireAuthentication)
 
 	mux.Get("/", api.Index)
 	mux.Post("/signup", api.Signup)
@@ -80,6 +110,13 @@ func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer
 	mux.Post("/token", api.Token)
 	mux.Post("/logout", api.Logout)
 
+	// Admin API
+	mux.Get("/admin/users", api.adminUsers)
+	mux.Put("/admin/user", api.adminUserUpdate)
+	mux.Post("/admin/user", api.adminUserCreate)
+	mux.Delete("/admin/user", api.adminUserDelete)
+	mux.Get("/admin/user", api.adminUserGet)
+
 	corsHandler := cors.New(cors.Options{
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "PUT", "DELETE"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
@@ -88,4 +125,25 @@ func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer
 
 	api.handler = corsHandler.Handler(mux)
 	return api
+}
+
+func NewAPIFromConfigFile(filename string, version string) (*API, error) {
+	config, err := conf.LoadConfigFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := dial.Dial(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if config.DB.Automigrate {
+		if err := db.Automigrate(); err != nil {
+			return nil, err
+		}
+	}
+
+	mailer := mailer.NewMailer(config)
+	return NewAPIWithVersion(config, db, mailer, version), nil
 }
