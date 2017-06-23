@@ -18,6 +18,7 @@ type User struct {
 	Role              string    `json:"role" bson:"role"`
 	Email             string    `json:"email" bson:"email"`
 	EncryptedPassword string    `json:"-" bson:"encrypted_password"`
+	ExternalProvider  string    `json:"external_provider" bson:"external_provider"`
 	ConfirmedAt       time.Time `json:"confirmed_at" bson:"confirmed_at"`
 
 	ConfirmationToken  string    `json:"-" bson:"confirmation_token,omitempty"`

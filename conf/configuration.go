@@ -61,6 +61,11 @@ type Configuration struct {
 			EmailChange  string `json:"email_change"`
 		} `json:"templates"`
 	} `json:"mailer"`
+	External struct {
+		GithubKey    string `json:"github_key"`
+		GithubSecret string `json:"github_secret"`
+		CallbackHost string `json:"callback_host"`
+	}
 	Logging LogConfiguration `json:"logging"`
 }
 

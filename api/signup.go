@@ -13,9 +13,67 @@ import (
 
 // SignupParams are the parameters the Signup endpoint accepts
 type SignupParams struct {
-	Email    string                 `json:"email"`
-	Password string                 `json:"password"`
-	Data     map[string]interface{} `json:"data"`
+	Email        string                 `json:"email"`
+	Password     string                 `json:"password"`
+	Data         map[string]interface{} `json:"data"`
+	Provider     string                 `json:"external_provider"`
+	ProviderCode string                 `json:"external_provider_code"`
+}
+
+func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter, r *http.Request, params *SignupParams) {
+	var provider Provider
+	if params.Provider == "github" {
+		provider = NewGithubProvider(a.config.External.GithubKey, a.config.External.GithubSecret)
+	} else {
+		BadRequestError(w, "Unsupported provider: "+params.Provider)
+	}
+
+	tok, err := provider.GetOAuthToken(ctx, params.ProviderCode)
+	if err != nil {
+		InternalServerError(w, fmt.Sprintf("Unable to exchange external code: %+v", err.Error()))
+		return
+	}
+
+	aud := a.requestAud(ctx, r)
+	params.Email, err = provider.GetUserEmail(ctx, tok)
+	if err != nil {
+		InternalServerError(w, fmt.Sprintf("Error getting user email: %+v", err.Error()))
+		return
+	}
+
+	if isDup, _ := a.db.IsDuplicatedEmail(params.Email, aud); isDup {
+		user, err := a.db.FindUserByEmailAndAudience(params.Email, aud)
+		if err != nil {
+			InternalServerError(w, fmt.Sprintf("Error fetching existing user: %+v", err.Error()))
+			return
+		}
+		sendJSON(w, 200, user)
+		return
+	}
+
+	user, err := a.signupNewUser(params, aud)
+	if err != nil {
+		InternalServerError(w, err.Error())
+		return
+	}
+
+	if a.config.Mailer.Autoconfirm {
+		user.Confirm()
+	} else if user.ConfirmationSentAt.Add(time.Minute * 15).Before(time.Now()) {
+		if err := a.mailer.ConfirmationMail(user); err != nil {
+			InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
+			return
+		}
+	}
+
+	user.SetRole(a.config.JWT.DefaultGroupName)
+	if err := a.db.UpdateUser(user); err != nil {
+		InternalServerError(w, fmt.Sprintf("Error updating user in database: %v", err))
+		return
+
+	}
+
+	sendJSON(w, 200, user)
 }
 
 // Signup is the endpoint for registering a new user
@@ -26,6 +84,11 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 	err := jsonDecoder.Decode(params)
 	if err != nil {
 		BadRequestError(w, fmt.Sprintf("Could not read Signup params: %v", err))
+		return
+	}
+
+	if params.Provider != "" && params.ProviderCode != "" {
+		a.signupExternalProvider(ctx, w, r, params)
 		return
 	}
 
@@ -81,6 +144,8 @@ func (a *API) signupNewUser(params *SignupParams, aud string) (*models.User, err
 	if err != nil {
 		return nil, err
 	}
+
+	user.ExternalProvider = params.Provider
 
 	if err := a.db.CreateUser(user); err != nil {
 		return nil, err

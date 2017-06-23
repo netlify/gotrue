@@ -28,6 +28,8 @@ func (a *API) Token(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		a.ResourceOwnerPasswordGrant(ctx, w, r)
 	case "refresh_token":
 		a.RefreshTokenGrant(ctx, w, r)
+	case "authorization_code":
+		a.AuthorizationCodeGrant(ctx, w, r)
 	default:
 		sendJSON(w, 400, &OAuthError{Error: "unsupported_grant_type"})
 	}
@@ -56,6 +58,51 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 
 	if !user.Authenticate(password) {
 		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Password"})
+		return
+	}
+
+	user.LastSignInAt = time.Now()
+	a.issueRefreshToken(user, w)
+}
+
+// AuthorizationCodeGrant implements the authorization_code grant for use with external OAuth providers
+func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	code := r.FormValue("code")
+	providerName := r.FormValue("provider")
+
+	if code == "" {
+		sendJSON(w, 400, &OAuthError{Error: "invalid_request", Description: "Authorization code required"})
+		return
+	}
+
+	var provider Provider
+	if providerName == "github" {
+		provider = NewGithubProvider(a.config.External.GithubKey, a.config.External.GithubSecret)
+	} else {
+		BadRequestError(w, "Unsupported provider: "+providerName)
+	}
+
+	tok, err := provider.GetOAuthToken(ctx, code)
+	if err != nil {
+		InternalServerError(w, fmt.Sprintf("Unable to exchange external code: %+v", err.Error()))
+		return
+	}
+
+	email, err := provider.GetUserEmail(ctx, tok)
+	if err != nil {
+		InternalServerError(w, fmt.Sprintf("Error getting user email: %+v", err.Error()))
+		return
+	}
+
+	aud := a.requestAud(ctx, r)
+	user, err := a.db.FindUserByEmailAndAudience(email, aud)
+	if err != nil {
+		InternalServerError(w, err.Error())
+		return
+	}
+
+	if !user.IsRegistered() {
+		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Email not confirmed"})
 		return
 	}
 
