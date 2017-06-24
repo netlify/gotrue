@@ -13,11 +13,11 @@ import (
 
 // SignupParams are the parameters the Signup endpoint accepts
 type SignupParams struct {
-	Email        string                 `json:"email"`
-	Password     string                 `json:"password"`
-	Data         map[string]interface{} `json:"data"`
-	Provider     string                 `json:"external_provider"`
-	ProviderCode string                 `json:"external_provider_code"`
+	Email    string                 `json:"email"`
+	Password string                 `json:"password"`
+	Data     map[string]interface{} `json:"data"`
+	Provider string                 `json:"provider"`
+	Code     string                 `json:"code"`
 }
 
 func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter, r *http.Request, params *SignupParams) {
@@ -28,7 +28,7 @@ func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter,
 		BadRequestError(w, "Unsupported provider: "+params.Provider)
 	}
 
-	tok, err := provider.GetOAuthToken(ctx, params.ProviderCode)
+	tok, err := provider.GetOAuthToken(ctx, params.Code)
 	if err != nil {
 		InternalServerError(w, fmt.Sprintf("Unable to exchange external code: %+v", err.Error()))
 		return
@@ -37,17 +37,15 @@ func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter,
 	aud := a.requestAud(ctx, r)
 	params.Email, err = provider.GetUserEmail(ctx, tok)
 	if err != nil {
-		InternalServerError(w, fmt.Sprintf("Error getting user email: %+v", err.Error()))
+		InternalServerError(w, fmt.Sprintf("Error getting user email: %+v", err))
 		return
 	}
 
-	if isDup, _ := a.db.IsDuplicatedEmail(params.Email, aud); isDup {
-		user, err := a.db.FindUserByEmailAndAudience(params.Email, aud)
-		if err != nil {
-			InternalServerError(w, fmt.Sprintf("Error fetching existing user: %+v", err.Error()))
-			return
-		}
-		sendJSON(w, 200, user)
+	if exists, err := a.db.IsDuplicatedEmail(params.Email, aud); exists {
+		BadRequestError(w, "User already exists")
+		return
+	} else if err != nil {
+		InternalServerError(w, fmt.Sprintf("Error checking for duplicate users: %+v", err))
 		return
 	}
 
@@ -87,7 +85,7 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if params.Provider != "" && params.ProviderCode != "" {
+	if params.Provider != "" && params.Code != "" {
 		a.signupExternalProvider(ctx, w, r, params)
 		return
 	}
