@@ -21,16 +21,15 @@ type SignupParams struct {
 }
 
 func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter, r *http.Request, params *SignupParams) {
-	var provider Provider
-	if params.Provider == "github" {
-		provider = NewGithubProvider(a.config.External.GithubKey, a.config.External.GithubSecret)
-	} else {
-		BadRequestError(w, "Unsupported provider: "+params.Provider)
+	provider, err := a.Provider(params.Provider)
+	if err != nil {
+		BadRequestError(w, fmt.Sprintf("Unsupported provider: %+v", err))
+		return
 	}
 
 	tok, err := provider.GetOAuthToken(ctx, params.Code)
 	if err != nil {
-		InternalServerError(w, fmt.Sprintf("Unable to exchange external code: %+v", err.Error()))
+		InternalServerError(w, fmt.Sprintf("Unable to exchange external code: %+v", err))
 		return
 	}
 

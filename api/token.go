@@ -70,16 +70,15 @@ func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter,
 	code := r.FormValue("code")
 	providerName := r.FormValue("provider")
 
-	if code == "" {
+	if code == "" || providerName == "" {
 		sendJSON(w, 400, &OAuthError{Error: "invalid_request", Description: "Authorization code required"})
 		return
 	}
 
-	var provider Provider
-	if providerName == "github" {
-		provider = NewGithubProvider(a.config.External.GithubKey, a.config.External.GithubSecret)
-	} else {
-		BadRequestError(w, "Unsupported provider: "+providerName)
+	provider, err := a.Provider(providerName)
+	if err != nil {
+		BadRequestError(w, fmt.Sprintf("Unsupported provider: %+v", err))
+		return
 	}
 
 	tok, err := provider.GetOAuthToken(ctx, code)

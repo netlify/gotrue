@@ -16,6 +16,11 @@ type LogConfiguration struct {
 	File  string `json:"file"`
 }
 
+type ExternalConfiguration struct {
+	Key    string `json:"key"`
+	Secret string `json:"secret"`
+}
+
 type DBConfiguration struct {
 	Driver      string `json:"driver"`
 	ConnURL     string `json:"url"`
@@ -62,10 +67,9 @@ type Configuration struct {
 		} `json:"templates"`
 	} `json:"mailer"`
 	External struct {
-		GithubKey    string `json:"github_key"`
-		GithubSecret string `json:"github_secret"`
-		CallbackHost string `json:"callback_host"`
-	}
+		Github    ExternalConfiguration `json:"github"`
+		Bitbucket ExternalConfiguration `json:"bitbucket"`
+	} `json:external`
 	Logging LogConfiguration `json:"logging"`
 }
 
