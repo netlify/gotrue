@@ -59,7 +59,7 @@ func (ts *SignupTestSuite) TestSignup() {
 	assert.Equal(ts.T(), data["email"], "test@example.com")
 	assert.Equal(ts.T(), data["aud"], ts.API.config.JWT.Aud)
 	assert.Equal(ts.T(), data["user_metadata"].(map[string]interface{})["a"], 1.0)
-	assert.Len(ts.T(), data, 13)
+	assert.Len(ts.T(), data, 12)
 }
 
 // TestSignupTwice checks to make sure the same email cannot be registered twice

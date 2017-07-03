@@ -142,8 +142,6 @@ func (a *API) signupNewUser(params *SignupParams, aud string) (*models.User, err
 		return nil, err
 	}
 
-	user.ExternalProvider = params.Provider
-
 	if err := a.db.CreateUser(user); err != nil {
 		return nil, err
 	}
