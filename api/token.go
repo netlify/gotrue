@@ -89,7 +89,7 @@ func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter,
 
 	tok, err := provider.GetOAuthToken(ctx, code)
 	if err != nil {
-		log.Printf("Error exchanging code with external provider (%s) %+v", err)
+		log.Printf("Error exchanging code with external provider %+v", err.Error())
 		InternalServerError(w, fmt.Sprintf("Unable to authenticate via %s", providerName))
 		return
 	}
