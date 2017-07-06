@@ -62,6 +62,29 @@ func (ts *SignupTestSuite) TestSignup() {
 	assert.Len(ts.T(), data, 12)
 }
 
+// TestSignupExternalUnsupported tests API /signup for an unsupported external provider
+func (ts *SignupTestSuite) TestSignupExternalUnsupported() {
+	// Request body
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"provider": "test+external@example.com",
+		"code":     "123456789",
+	}))
+
+	// Setup request
+	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup response recorder
+	w := httptest.NewRecorder()
+	ctx := req.Context()
+
+	ts.API.Signup(ctx, w, req)
+
+	// Bad request expected for invalid external provider
+	assert.Equal(ts.T(), w.Code, 400)
+}
+
 // TestSignupTwice checks to make sure the same email cannot be registered twice
 func (ts *SignupTestSuite) TestSignupTwice() {
 	// Request body

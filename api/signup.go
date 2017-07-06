@@ -29,14 +29,14 @@ func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter,
 
 	tok, err := provider.GetOAuthToken(ctx, params.Code)
 	if err != nil {
-		InternalServerError(w, fmt.Sprintf("Unable to exchange external code: %+v", err))
+		InternalServerError(w, fmt.Sprintf("Unable to exchange external code"))
 		return
 	}
 
 	aud := a.requestAud(ctx, r)
 	params.Email, err = provider.GetUserEmail(ctx, tok)
 	if err != nil {
-		InternalServerError(w, fmt.Sprintf("Error getting user email: %+v", err))
+		InternalServerError(w, fmt.Sprintf("Error getting user email from external provider"))
 		return
 	}
 
@@ -84,7 +84,11 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if params.Provider != "" && params.Code != "" {
+	if params.Provider != "" {
+		if params.Code == "" {
+			UnprocessableEntity(w, "Invalid code from OAuth provider")
+			return
+		}
 		a.signupExternalProvider(ctx, w, r, params)
 		return
 	}
