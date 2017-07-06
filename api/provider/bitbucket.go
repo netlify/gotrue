@@ -30,10 +30,6 @@ func (g bitbucketProvider) GetOAuthToken(ctx context.Context, code string) (*oau
 	return g.Exchange(ctx, code)
 }
 
-type bitbucketProviderUser struct {
-	User map[string]interface{} `json:"user"`
-}
-
 func (g bitbucketProvider) GetUserEmail(ctx context.Context, tok *oauth2.Token) (string, error) {
 	client := g.Client(ctx, tok)
 	userRes, err := client.Get("https://api.bitbucket.org/1.0/user")
@@ -62,28 +58,5 @@ func (g bitbucketProvider) GetUserEmail(ctx context.Context, tok *oauth2.Token) 
 		}
 	}
 
-	res, err := client.Get(fmt.Sprintf("https://api.bitbucket.org/1.0/users/%s/emails", username))
-	if err != nil {
-		return "", err
-
-	}
-	defer res.Body.Close()
-
-	emails := []struct {
-		Primary bool   `json:"primary"`
-		Email   string `json:"email"`
-	}{}
-
-	if err := json.NewDecoder(res.Body).Decode(&emails); err != nil {
-		return "", err
-	}
-
-	for _, v := range emails {
-		if !v.Primary {
-			continue
-		}
-		return v.Email, nil
-	}
-
-	return "", errors.New("No email address returned by API call to bitbucket")
+	return getUserEmail(ctx, tok, fmt.Sprintf("https://api.bitbucket.org/1.0/users/%s/emails", username), g.Config)
 }
