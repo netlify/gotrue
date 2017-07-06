@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"net/textproto"
 	"regexp"
+	"strings"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/guregu/kami"
+	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
@@ -146,4 +148,18 @@ func NewAPIFromConfigFile(filename string, version string) (*API, error) {
 
 	mailer := mailer.NewMailer(config)
 	return NewAPIWithVersion(config, db, mailer, version), nil
+}
+
+// Provider returns a Provider inerface for the given name
+func (a *API) Provider(name string) (provider.Provider, error) {
+	name = strings.ToLower(name)
+
+	switch name {
+	case "github":
+		return provider.NewGithubProvider(a.config.External.Github.Key, a.config.External.Github.Secret), nil
+	case "bitbucket":
+		return provider.NewBitbucketProvider(a.config.External.Bitbucket.Key, a.config.External.Bitbucket.Secret), nil
+	default:
+		return nil, fmt.Errorf("Provider %s could not be found", name)
+	}
 }

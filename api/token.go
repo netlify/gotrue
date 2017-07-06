@@ -70,26 +70,34 @@ func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter,
 	code := r.FormValue("code")
 	providerName := r.FormValue("provider")
 
-	if code == "" || providerName == "" {
+	if code == "" {
+		log.Printf("No authorization code found: %v", r)
 		sendJSON(w, 400, &OAuthError{Error: "invalid_request", Description: "Authorization code required"})
+		return
+	} else if providerName == "" {
+		log.Printf("No provider name found: %v", r)
+		sendJSON(w, 400, &OAuthError{Error: "invalid_request", Description: "External provider name required"})
 		return
 	}
 
 	provider, err := a.Provider(providerName)
 	if err != nil {
+		log.Printf("Unsupported provider: %+v", err)
 		BadRequestError(w, fmt.Sprintf("Unsupported provider: %+v", err))
 		return
 	}
 
 	tok, err := provider.GetOAuthToken(ctx, code)
 	if err != nil {
-		InternalServerError(w, fmt.Sprintf("Unable to exchange external code: %+v", err.Error()))
+		log.Printf("Error exchanging code with external provider (%s) %+v", err)
+		InternalServerError(w, fmt.Sprintf("Unable to authenticate via %s", providerName))
 		return
 	}
 
 	email, err := provider.GetUserEmail(ctx, tok)
 	if err != nil {
-		InternalServerError(w, fmt.Sprintf("Error getting user email: %+v", err.Error()))
+		log.Printf("Unable to get email address for external token: %+v", err)
+		InternalServerError(w, fmt.Sprintf("Error getting user email: %+v", err))
 		return
 	}
 
