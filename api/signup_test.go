@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/netlify/gotrue/models"
@@ -67,7 +68,7 @@ func (ts *SignupTestSuite) TestSignupExternalUnsupported() {
 	// Request body
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"provider": "test+external@example.com",
+		"provider": "external provider",
 		"code":     "123456789",
 	}))
 
@@ -83,6 +84,95 @@ func (ts *SignupTestSuite) TestSignupExternalUnsupported() {
 
 	// Bad request expected for invalid external provider
 	assert.Equal(ts.T(), w.Code, 400)
+}
+
+// TestSignupExternalGithub tests API /signup for github
+func (ts *SignupTestSuite) TestSignupExternalGithub() {
+
+	code := os.Getenv("GOTRUE_GITHUB_OAUTH_CODE")
+	if code == "" || ts.API.config.External.Github.Secret == "" {
+		ts.T().Skip("GOTRUE_GITHUB_OAUTH_CODE or Github external provider config not set")
+		return
+	}
+
+	// Request body
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"provider": "github",
+		"code":     code,
+	}))
+
+	// Setup request
+	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup response recorder
+	w := httptest.NewRecorder()
+	ctx := req.Context()
+
+	ts.API.Signup(ctx, w, req)
+
+	assert.Equal(ts.T(), w.Code, 200)
+}
+
+// TestSignupExternalBitbucket tests API /signup for bitbucket
+func (ts *SignupTestSuite) TestSignupExternalBitbucket() {
+
+	code := os.Getenv("GOTRUE_BITBUCKET_OAUTH_CODE")
+	if code == "" || ts.API.config.External.Bitbucket.Secret == "" {
+		ts.T().Skip("GOTRUE_BITBUCKET_OAUTH_CODE or Bitbucket external provider config not set")
+		return
+
+	}
+
+	// Request body
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"provider": "bitbucket",
+		"code":     code,
+	}))
+
+	// Setup request
+	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup response recorder
+	w := httptest.NewRecorder()
+	ctx := req.Context()
+
+	ts.API.Signup(ctx, w, req)
+
+	assert.Equal(ts.T(), w.Code, 200)
+}
+
+// TestSignupExternalGitlab tests API /signup for gitlab
+func (ts *SignupTestSuite) TestSignupExternalGitlab() {
+
+	code := os.Getenv("GOTRUE_GITLAB_OAUTH_CODE")
+	if code == "" || ts.API.config.External.Gitlab.Secret == "" {
+		ts.T().Skip("GOTRUE_GITLAB_OAUTH_CODE or Gitlab external provider config not set")
+		return
+
+	}
+
+	// Request body
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"provider": "gitlab",
+		"code":     code,
+	}))
+
+	// Setup request
+	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup response recorder
+	w := httptest.NewRecorder()
+	ctx := req.Context()
+
+	ts.API.Signup(ctx, w, req)
+
+	assert.Equal(ts.T(), w.Code, 200)
 }
 
 // TestSignupTwice checks to make sure the same email cannot be registered twice
