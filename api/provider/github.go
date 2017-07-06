@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 )
@@ -13,11 +14,11 @@ type githubProvider struct {
 	*oauth2.Config
 }
 
-func NewGithubProvider(key, secret string) Provider {
+func NewGithubProvider(ext conf.ExternalConfiguration) Provider {
 	return &githubProvider{
 		&oauth2.Config{
-			ClientID:     key,
-			ClientSecret: secret,
+			ClientID:     ext.Key,
+			ClientSecret: ext.Secret,
 			Endpoint:     github.Endpoint,
 		},
 	}

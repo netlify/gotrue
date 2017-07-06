@@ -17,8 +17,10 @@ type LogConfiguration struct {
 }
 
 type ExternalConfiguration struct {
-	Key    string `json:"key"`
-	Secret string `json:"secret"`
+	Key         string `json:"key"`
+	Secret      string `json:"secret"`
+	RedirectURI string `json:"redirect_uri"`
+	URL         string `json:"url"`
 }
 
 type DBConfiguration struct {
@@ -69,6 +71,7 @@ type Configuration struct {
 	External struct {
 		Github    ExternalConfiguration `json:"github"`
 		Bitbucket ExternalConfiguration `json:"bitbucket"`
+		Gitlab    ExternalConfiguration `json:"gitlab"`
 	} `json:external`
 	Logging LogConfiguration `json:"logging"`
 }

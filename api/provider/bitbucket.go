@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/bitbucket"
 )
@@ -16,11 +17,11 @@ type bitbucketProvider struct {
 	*oauth2.Config
 }
 
-func NewBitbucketProvider(key, secret string) Provider {
+func NewBitbucketProvider(ext conf.ExternalConfiguration) Provider {
 	return &bitbucketProvider{
 		&oauth2.Config{
-			ClientID:     key,
-			ClientSecret: secret,
+			ClientID:     ext.Key,
+			ClientSecret: ext.Secret,
 			Endpoint:     bitbucket.Endpoint,
 		},
 	}
