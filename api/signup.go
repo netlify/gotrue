@@ -142,6 +142,10 @@ func (a *API) signupNewUser(params *SignupParams, aud string) (*models.User, err
 		return nil, err
 	}
 
+	if params.Password == "" {
+		user.EncryptedPassword = ""
+	}
+
 	if err := a.db.CreateUser(user); err != nil {
 		return nil, err
 	}

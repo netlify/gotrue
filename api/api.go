@@ -159,6 +159,8 @@ func (a *API) Provider(name string) (provider.Provider, error) {
 		return provider.NewGithubProvider(a.config.External.Github.Key, a.config.External.Github.Secret), nil
 	case "bitbucket":
 		return provider.NewBitbucketProvider(a.config.External.Bitbucket.Key, a.config.External.Bitbucket.Secret), nil
+	case "gitlab":
+		return provider.NewGitlabProvider(a.config.External.Gitlab.Key, a.config.External.Gitlab.Secret), nil
 	default:
 		return nil, fmt.Errorf("Provider %s could not be found", name)
 	}

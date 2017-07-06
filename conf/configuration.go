@@ -69,6 +69,7 @@ type Configuration struct {
 	External struct {
 		Github    ExternalConfiguration `json:"github"`
 		Bitbucket ExternalConfiguration `json:"bitbucket"`
+		Gitlab    ExternalConfiguration `json:"gitlab"`
 	} `json:external`
 	Logging LogConfiguration `json:"logging"`
 }
