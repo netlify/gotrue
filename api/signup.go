@@ -56,7 +56,7 @@ func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter,
 
 	if a.config.Mailer.Autoconfirm {
 		user.Confirm()
-	} else if user.ConfirmationSentAt.Add(time.Minute * 15).Before(time.Now()) {
+	} else if user.ConfirmationSentAt.Add(a.config.Mailer.MaxFrequency).Before(time.Now()) {
 		if err := a.mailer.ConfirmationMail(user); err != nil {
 			InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
 			return
@@ -127,7 +127,7 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	if a.config.Mailer.Autoconfirm {
 		user.Confirm()
-	} else if user.ConfirmationSentAt.Add(time.Minute * 15).Before(time.Now()) {
+	} else if user.ConfirmationSentAt.Add(a.config.Mailer.MaxFrequency).Before(time.Now()) {
 		if err := a.mailer.ConfirmationMail(user); err != nil {
 			InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
 			return

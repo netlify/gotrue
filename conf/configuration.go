@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
@@ -48,15 +49,16 @@ type Configuration struct {
 		Port int    `json:"port"`
 	} `json:"api"`
 	Mailer struct {
-		Autoconfirm    bool   `json:"autoconfirm"`
-		SiteURL        string `json:"site_url"`
-		Host           string `json:"host"`
-		Port           int    `json:"port"`
-		User           string `json:"user"`
-		Pass           string `json:"pass"`
-		TemplateFolder string `json:"template_folder"`
-		MemberFolder   string `json:"member_folder"`
-		AdminEmail     string `json:"admin_email"`
+		MaxFrequency   time.Duration `json:"max_frequency"`
+		Autoconfirm    bool          `json:"autoconfirm"`
+		SiteURL        string        `json:"site_url"`
+		Host           string        `json:"host"`
+		Port           int           `json:"port"`
+		User           string        `json:"user"`
+		Pass           string        `json:"pass"`
+		TemplateFolder string        `json:"template_folder"`
+		MemberFolder   string        `json:"member_folder"`
+		AdminEmail     string        `json:"admin_email"`
 		Subjects       struct {
 			Confirmation string `json:"confirmation"`
 			Recovery     string `json:"recovery"`
@@ -127,6 +129,10 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 
 	if config.JWT.Exp == 0 {
 		config.JWT.Exp = 3600
+	}
+
+	if config.Mailer.MaxFrequency == 0 {
+		config.Mailer.MaxFrequency = 15 * time.Minute
 	}
 
 	return config, nil
