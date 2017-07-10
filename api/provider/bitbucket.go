@@ -2,8 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/netlify/gotrue/conf"
@@ -31,24 +29,16 @@ func (g bitbucketProvider) GetOAuthToken(ctx context.Context, code string) (*oau
 	return g.Exchange(ctx, code)
 }
 
-type bitbucketUser struct {
-	User struct {
-		Username string `json:"username"`
-	}
-}
-
 func (g bitbucketProvider) GetUserEmail(ctx context.Context, tok *oauth2.Token) (string, error) {
-	client := g.Client(ctx, tok)
-	userRes, err := client.Get("https://api.bitbucket.org/1.0/user")
-	if err != nil {
+	u := struct {
+		User struct {
+			Username string `json:"username"`
+		}
+	}{}
+
+	if err := makeRequest(ctx, tok, g.Config, "https://api.bitbucket.org/1.0/user", &u); err != nil {
 		return "", err
 	}
-	defer userRes.Body.Close()
 
-	u := bitbucketUser{}
-	if err := json.NewDecoder(userRes.Body).Decode(&u); err != nil {
-		return "", errors.New("Invalid response when requesting email address from bitbucket")
-	}
-
-	return getUserEmail(ctx, tok, fmt.Sprintf("https://api.bitbucket.org/1.0/users/%s/emails", u.User.Username), g.Config)
+	return getUserEmail(ctx, tok, g.Config, fmt.Sprintf("https://api.bitbucket.org/1.0/users/%s/emails", u.User.Username))
 }

@@ -85,19 +85,11 @@ func (g gitlabProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2
 }
 
 func (g gitlabProvider) GetUserEmail(ctx context.Context, tok *oauth2.Token) (string, error) {
-	client := g.Client(ctx, tok)
-	res, err := client.Get("https://gitlab.com/api/v4/user")
-	if err != nil {
-		log.Printf("Error decoding request to gitlab for user email: %v", err)
-		return "", err
-	}
-	defer res.Body.Close()
-
 	user := struct {
 		Email string `json:"email"`
 	}{}
 
-	if err := json.NewDecoder(res.Body).Decode(&user); err != nil {
+	if err := makeRequest(ctx, tok, g.Config, "https://gitlab.com/api/v4/user", &user); err != nil {
 		return "", err
 	}
 

@@ -29,5 +29,5 @@ func (g githubProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2
 }
 
 func (g githubProvider) GetUserEmail(ctx context.Context, tok *oauth2.Token) (string, error) {
-	return getUserEmail(ctx, tok, "https://api.github.com/user/emails", g.Config)
+	return getUserEmail(ctx, tok, g.Config, "https://api.github.com/user/emails")
 }
