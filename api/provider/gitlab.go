@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"net/url"
 
@@ -77,7 +76,6 @@ func (g gitlabProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2
 
 	dst := &oauth2.Token{}
 	if err := json.NewDecoder(res.Body).Decode(dst); err != nil {
-		log.Println("Error response from gitlab: %v", err)
 		return nil, err
 	}
 

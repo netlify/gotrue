@@ -3,10 +3,10 @@ package api
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/models"
 )
@@ -71,33 +71,33 @@ func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter,
 	providerName := r.FormValue("provider")
 
 	if code == "" {
-		log.Printf("No authorization code found: %v", r)
+		logrus.Warnf("No authorization code found: %v", r)
 		sendJSON(w, 400, &OAuthError{Error: "invalid_request", Description: "Authorization code required"})
 		return
 	} else if providerName == "" {
-		log.Printf("No provider name found: %v", r)
+		logrus.Warnf("No provider name found: %v", r)
 		sendJSON(w, 400, &OAuthError{Error: "invalid_request", Description: "External provider name required"})
 		return
 	}
 
 	provider, err := a.Provider(providerName)
 	if err != nil {
-		log.Printf("Unsupported provider: %+v", err)
-		BadRequestError(w, fmt.Sprintf("Unsupported provider: %+v", err))
+		logrus.Warnf("Error finding provider: %+v", err)
+		BadRequestError(w, fmt.Sprintf("Invalid provider: %s", providerName))
 		return
 	}
 
 	tok, err := provider.GetOAuthToken(ctx, code)
 	if err != nil {
-		log.Printf("Error exchanging code with external provider %+v", err.Error())
+		logrus.Warnf("Error exchanging code with external provider %+v", err.Error())
 		InternalServerError(w, fmt.Sprintf("Unable to authenticate via %s", providerName))
 		return
 	}
 
 	email, err := provider.GetUserEmail(ctx, tok)
 	if err != nil {
-		log.Printf("Unable to get email address for external token: %+v", err)
-		InternalServerError(w, fmt.Sprintf("Error getting user email: %+v", err))
+		logrus.Warnf("Error getting email address from external provider: %+v", err)
+		InternalServerError(w, fmt.Sprintf("Error getting user email from %s", providerName))
 		return
 	}
 
@@ -137,7 +137,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	if token.Revoked {
-		log.Printf("Possible abuse attempt: %v", r)
+		logrus.Warnf("Possible abuse attempt: %v", r)
 		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Refresh Token"})
 		return
 	}
