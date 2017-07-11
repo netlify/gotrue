@@ -27,3 +27,4 @@ import:
   - suite
   - require
 - package: github.com/badoux/checkmail
+- package: golang.org/x/oauth2

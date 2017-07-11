@@ -1,5 +1,5 @@
-hash: ead637c5be598982bf300fce786ad6c7bebbb23a3801aae4219095b710009cad
-updated: 2017-06-09T19:05:33.200638072-07:00
+hash: 98a2cd247c4b7806bf340a9ddf1b2ec80dab4923f5fae3f7b210daa349960f32
+updated: 2017-06-23T16:17:35.424699654-07:00
 imports:
 - name: github.com/badoux/checkmail
   version: d0a759655d62bcdc95c50a0676f3e9702ed59453
@@ -119,6 +119,11 @@ imports:
   version: de35ec43e7a9aabd6a9c54d2898220ea7e44de7d
   subpackages:
   - context
+- name: golang.org/x/oauth2
+  version: f047394b6d14284165300fd82dad67edb3a4d7f6
+  subpackages:
+  - github
+  - internal
 - name: golang.org/x/sys
   version: 30de6d19a3bd89a5f38ae4028e23aaa5582648af
   subpackages:
@@ -138,6 +143,8 @@ imports:
   - internal/log
   - internal/modules
   - internal/remote_api
+  - internal/urlfetch
+  - urlfetch
 - name: gopkg.in/alexcesaro/quotedprintable.v3
   version: 2caba252f4dc53eaf6b553000885530023f54623
 - name: gopkg.in/gomail.v2

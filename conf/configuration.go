@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
@@ -14,6 +15,13 @@ import (
 type LogConfiguration struct {
 	Level string `json:"level"`
 	File  string `json:"file"`
+}
+
+type ExternalConfiguration struct {
+	Key         string `json:"key"`
+	Secret      string `json:"secret"`
+	RedirectURI string `json:"redirect_uri"`
+	URL         string `json:"url"`
 }
 
 type DBConfiguration struct {
@@ -41,15 +49,16 @@ type Configuration struct {
 		Port int    `json:"port"`
 	} `json:"api"`
 	Mailer struct {
-		Autoconfirm    bool   `json:"autoconfirm"`
-		SiteURL        string `json:"site_url"`
-		Host           string `json:"host"`
-		Port           int    `json:"port"`
-		User           string `json:"user"`
-		Pass           string `json:"pass"`
-		TemplateFolder string `json:"template_folder"`
-		MemberFolder   string `json:"member_folder"`
-		AdminEmail     string `json:"admin_email"`
+		MaxFrequency   time.Duration `json:"max_frequency"`
+		Autoconfirm    bool          `json:"autoconfirm"`
+		SiteURL        string        `json:"site_url"`
+		Host           string        `json:"host"`
+		Port           int           `json:"port"`
+		User           string        `json:"user"`
+		Pass           string        `json:"pass"`
+		TemplateFolder string        `json:"template_folder"`
+		MemberFolder   string        `json:"member_folder"`
+		AdminEmail     string        `json:"admin_email"`
 		Subjects       struct {
 			Confirmation string `json:"confirmation"`
 			Recovery     string `json:"recovery"`
@@ -61,6 +70,11 @@ type Configuration struct {
 			EmailChange  string `json:"email_change"`
 		} `json:"templates"`
 	} `json:"mailer"`
+	External struct {
+		Github    ExternalConfiguration `json:"github"`
+		Bitbucket ExternalConfiguration `json:"bitbucket"`
+		Gitlab    ExternalConfiguration `json:"gitlab"`
+	} `json:external`
 	Logging LogConfiguration `json:"logging"`
 }
 
@@ -115,6 +129,10 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 
 	if config.JWT.Exp == 0 {
 		config.JWT.Exp = 3600
+	}
+
+	if config.Mailer.MaxFrequency == 0 {
+		config.Mailer.MaxFrequency = 15 * time.Minute
 	}
 
 	return config, nil

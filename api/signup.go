@@ -16,6 +16,61 @@ type SignupParams struct {
 	Email    string                 `json:"email"`
 	Password string                 `json:"password"`
 	Data     map[string]interface{} `json:"data"`
+	Provider string                 `json:"provider"`
+	Code     string                 `json:"code"`
+}
+
+func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter, r *http.Request, params *SignupParams) {
+	provider, err := a.Provider(params.Provider)
+	if err != nil {
+		BadRequestError(w, fmt.Sprintf("Unsupported provider: %+v", err))
+		return
+	}
+
+	tok, err := provider.GetOAuthToken(ctx, params.Code)
+	if err != nil {
+		InternalServerError(w, fmt.Sprintf("Unable to exchange external code"))
+		return
+	}
+
+	aud := a.requestAud(ctx, r)
+	params.Email, err = provider.GetUserEmail(ctx, tok)
+	if err != nil {
+		InternalServerError(w, fmt.Sprintf("Error getting user email from external provider"))
+		return
+	}
+
+	if exists, err := a.db.IsDuplicatedEmail(params.Email, aud); exists {
+		BadRequestError(w, "User already exists")
+		return
+	} else if err != nil {
+		InternalServerError(w, fmt.Sprintf("Error checking for duplicate users: %+v", err))
+		return
+	}
+
+	user, err := a.signupNewUser(params, aud)
+	if err != nil {
+		InternalServerError(w, err.Error())
+		return
+	}
+
+	if a.config.Mailer.Autoconfirm {
+		user.Confirm()
+	} else if user.ConfirmationSentAt.Add(a.config.Mailer.MaxFrequency).Before(time.Now()) {
+		if err := a.mailer.ConfirmationMail(user); err != nil {
+			InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
+			return
+		}
+	}
+
+	user.SetRole(a.config.JWT.DefaultGroupName)
+	if err := a.db.UpdateUser(user); err != nil {
+		InternalServerError(w, fmt.Sprintf("Error updating user in database: %v", err))
+		return
+
+	}
+
+	sendJSON(w, 200, user)
 }
 
 // Signup is the endpoint for registering a new user
@@ -26,6 +81,15 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 	err := jsonDecoder.Decode(params)
 	if err != nil {
 		BadRequestError(w, fmt.Sprintf("Could not read Signup params: %v", err))
+		return
+	}
+
+	if params.Provider != "" {
+		if params.Code == "" {
+			UnprocessableEntity(w, "Invalid code from OAuth provider")
+			return
+		}
+		a.signupExternalProvider(ctx, w, r, params)
 		return
 	}
 
@@ -63,7 +127,7 @@ func (a *API) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	if a.config.Mailer.Autoconfirm {
 		user.Confirm()
-	} else if user.ConfirmationSentAt.Add(time.Minute * 15).Before(time.Now()) {
+	} else if user.ConfirmationSentAt.Add(a.config.Mailer.MaxFrequency).Before(time.Now()) {
 		if err := a.mailer.ConfirmationMail(user); err != nil {
 			InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
 			return
@@ -80,6 +144,10 @@ func (a *API) signupNewUser(params *SignupParams, aud string) (*models.User, err
 	user, err := models.NewUser(params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		return nil, err
+	}
+
+	if params.Password == "" {
+		user.EncryptedPassword = ""
 	}
 
 	if err := a.db.CreateUser(user); err != nil {

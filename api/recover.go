@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/netlify/gotrue/models"
 )
@@ -40,15 +41,16 @@ func (a *API) Recover(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	user.GenerateRecoveryToken()
-	if err := a.db.UpdateUser(user); err != nil {
-		InternalServerError(w, err.Error())
-		return
-	}
-
-	if err := a.mailer.RecoveryMail(user); err != nil {
-		InternalServerError(w, fmt.Sprintf("Error sending confirmation mail: %v", err))
-		return
+	if user.RecoverySentAt.Add(a.config.Mailer.MaxFrequency).After(time.Now()) {
+		user.GenerateRecoveryToken()
+		if err := a.db.UpdateUser(user); err != nil {
+			InternalServerError(w, err.Error())
+			return
+		}
+		if err := a.mailer.RecoveryMail(user); err != nil {
+			InternalServerError(w, fmt.Sprintf("Error sending recovery mail: %v", err))
+			return
+		}
 	}
 
 	sendJSON(w, 200, &map[string]string{})

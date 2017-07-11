@@ -3,10 +3,10 @@ package api
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/models"
 )
@@ -28,6 +28,8 @@ func (a *API) Token(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		a.ResourceOwnerPasswordGrant(ctx, w, r)
 	case "refresh_token":
 		a.RefreshTokenGrant(ctx, w, r)
+	case "authorization_code":
+		a.AuthorizationCodeGrant(ctx, w, r)
 	default:
 		sendJSON(w, 400, &OAuthError{Error: "unsupported_grant_type"})
 	}
@@ -63,6 +65,58 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	a.issueRefreshToken(user, w)
 }
 
+// AuthorizationCodeGrant implements the authorization_code grant for use with external OAuth providers
+func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	code := r.FormValue("code")
+	providerName := r.FormValue("provider")
+
+	if code == "" {
+		logrus.Warnf("No authorization code found: %v", r)
+		sendJSON(w, 400, &OAuthError{Error: "invalid_request", Description: "Authorization code required"})
+		return
+	} else if providerName == "" {
+		logrus.Warnf("No provider name found: %v", r)
+		sendJSON(w, 400, &OAuthError{Error: "invalid_request", Description: "External provider name required"})
+		return
+	}
+
+	provider, err := a.Provider(providerName)
+	if err != nil {
+		logrus.Warnf("Error finding provider: %+v", err)
+		BadRequestError(w, fmt.Sprintf("Invalid provider: %s", providerName))
+		return
+	}
+
+	tok, err := provider.GetOAuthToken(ctx, code)
+	if err != nil {
+		logrus.Warnf("Error exchanging code with external provider %+v", err.Error())
+		InternalServerError(w, fmt.Sprintf("Unable to authenticate via %s", providerName))
+		return
+	}
+
+	email, err := provider.GetUserEmail(ctx, tok)
+	if err != nil {
+		logrus.Warnf("Error getting email address from external provider: %+v", err)
+		InternalServerError(w, fmt.Sprintf("Error getting user email from %s", providerName))
+		return
+	}
+
+	aud := a.requestAud(ctx, r)
+	user, err := a.db.FindUserByEmailAndAudience(email, aud)
+	if err != nil {
+		InternalServerError(w, err.Error())
+		return
+	}
+
+	if !user.IsRegistered() {
+		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Email not confirmed"})
+		return
+	}
+
+	user.LastSignInAt = time.Now()
+	a.issueRefreshToken(user, w)
+}
+
 // RefreshTokenGrant implements the refresh_token grant type flow
 func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	tokenStr := r.FormValue("refresh_token")
@@ -83,7 +137,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	if token.Revoked {
-		log.Printf("Possible abuse attempt: %v", r)
+		logrus.Warnf("Possible abuse attempt: %v", r)
 		sendJSON(w, 400, &OAuthError{Error: "invalid_grant", Description: "Invalid Refresh Token"})
 		return
 	}
