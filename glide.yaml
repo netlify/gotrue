@@ -21,6 +21,7 @@ import:
   - txn
   - bson
 - package: github.com/stretchr/testify
+  version: v1.1.4
   subpackages:
   - suite
   - require
