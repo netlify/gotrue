@@ -6,7 +6,7 @@ import (
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/crypto"

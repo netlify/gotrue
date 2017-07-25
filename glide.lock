@@ -1,5 +1,5 @@
-hash: 98a2cd247c4b7806bf340a9ddf1b2ec80dab4923f5fae3f7b210daa349960f32
-updated: 2017-06-23T16:17:35.424699654-07:00
+hash: ecb250fdb8ab9865caec1a59648fe782d37ec90b3a123f18f42351428d0f1927
+updated: 2017-07-25T14:47:08.162119591-04:00
 imports:
 - name: github.com/badoux/checkmail
   version: d0a759655d62bcdc95c50a0676f3e9702ed59453
@@ -76,8 +76,8 @@ imports:
   version: a62a804a8a009876ca59105f7899938a1349f4b3
 - name: github.com/rs/xhandler
   version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
-- name: github.com/Sirupsen/logrus
-  version: d26492970760ca5d33129d2d799e34be5c4782eb
+- name: github.com/sirupsen/logrus
+  version: a3f95b5c423586578a4e099b11a46c2479628cac
 - name: github.com/spf13/afero
   version: 20500e2abd0d1f4564a499e83d11d6c73cd58c27
   subpackages:
@@ -122,6 +122,7 @@ imports:
 - name: golang.org/x/oauth2
   version: f047394b6d14284165300fd82dad67edb3a4d7f6
   subpackages:
+  - bitbucket
   - github
   - internal
 - name: golang.org/x/sys
