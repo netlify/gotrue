@@ -17,7 +17,6 @@ import:
   - bcrypt
 - package: gopkg.in/gomail.v2
   version: 2.0.0
-- package: github.com/Sirupsen/logrus
 - package: github.com/netlify/mailme
 - package: gopkg.in/mgo.v2
   subpackages:
@@ -28,3 +27,5 @@ import:
   - require
 - package: github.com/badoux/checkmail
 - package: golang.org/x/oauth2
+- package: github.com/sirupsen/logrus
+  version: 1.0.2
