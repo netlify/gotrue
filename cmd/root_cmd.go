@@ -16,7 +16,7 @@ var rootCmd = cobra.Command{
 
 // RootCommand will setup and return the root command
 func RootCommand() *cobra.Command {
-	rootCmd.AddCommand(&serveCmd, &migrateCmd, &versionCmd, AdminCmd())
+	rootCmd.AddCommand(&serveCmd, &migrateCmd, &versionCmd, adminCmd())
 	rootCmd.PersistentFlags().StringP("config", "c", "", "the config file to use")
 
 	return &rootCmd

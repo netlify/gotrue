@@ -59,7 +59,7 @@ func (a *API) requireAuthentication(ctx context.Context, w http.ResponseWriter, 
 		return nil
 	}
 
-	return context.WithValue(ctx, "jwt", token)
+	return withToken(ctx, token)
 }
 
 func (a *API) requestAud(ctx context.Context, r *http.Request) string {
@@ -94,6 +94,7 @@ func NewAPI(config *conf.Configuration, db storage.Connection, mailer mailer.Mai
 	return NewAPIWithVersion(config, db, mailer, defaultVersion)
 }
 
+// NewAPIWithVersion creates a new REST API using the specified version
 func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer mailer.Mailer, version string) *API {
 	api := &API{config: config, db: db, mailer: mailer, version: version}
 	mux := kami.New()
@@ -129,6 +130,7 @@ func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer
 	return api
 }
 
+// NewAPIFromConfigFile creates a new REST API using the provided configuration file.
 func NewAPIFromConfigFile(filename string, version string) (*API, error) {
 	config, err := conf.LoadConfigFile(filename)
 	if err != nil {
@@ -150,7 +152,7 @@ func NewAPIFromConfigFile(filename string, version string) (*API, error) {
 	return NewAPIWithVersion(config, db, mailer, version), nil
 }
 
-// Provider returns a Provider inerface for the given name
+// Provider returns a Provider interface for the given name.
 func (a *API) Provider(name string) (provider.Provider, error) {
 	name = strings.ToLower(name)
 

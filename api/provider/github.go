@@ -14,6 +14,7 @@ type githubProvider struct {
 	*oauth2.Config
 }
 
+// NewGithubProvider creates a Github account provider.
 func NewGithubProvider(ext conf.ExternalConfiguration) Provider {
 	return &githubProvider{
 		&oauth2.Config{

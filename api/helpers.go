@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 )
@@ -28,14 +27,6 @@ func sendJSON(w http.ResponseWriter, status int, obj interface{}) {
 	w.WriteHeader(status)
 	encoder := json.NewEncoder(w)
 	encoder.Encode(obj)
-}
-
-func getToken(ctx context.Context) *jwt.Token {
-	obj := ctx.Value("jwt")
-	if obj == nil {
-		return nil
-	}
-	return obj.(*jwt.Token)
 }
 
 func getUser(ctx context.Context, conn storage.Connection) (*models.User, error) {

@@ -19,7 +19,7 @@ func getAudience(c *conf.Configuration) string {
 	return audience
 }
 
-func AdminCmd() *cobra.Command {
+func adminCmd() *cobra.Command {
 	var adminCmd = &cobra.Command{
 		Use: "admin",
 	}

@@ -31,6 +31,7 @@ func defaultBase(base string) string {
 	return base
 }
 
+// NewGitlabProvider creates a Gitlab account provider.
 func NewGitlabProvider(ext conf.ExternalConfiguration) Provider {
 	base := defaultBase(ext.URL)
 	return &gitlabProvider{

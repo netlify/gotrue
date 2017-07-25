@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type UserObj struct {
-	FirstRoleName  string `json:"-" sql:"-"`
-	AutoAsignRoles bool   `json:"-" sql:"-"`
+type userObj struct {
+	FirstRoleName   string `json:"-" sql:"-"`
+	AutoAssignRoles bool   `json:"-" sql:"-"`
 
 	*models.User
 
@@ -18,8 +18,8 @@ type UserObj struct {
 	RawUserMetaData string `json:"-" bson:"-"`
 }
 
-func (u *UserObj) BeforeCreate(tx *gorm.DB) error {
-	if !u.AutoAsignRoles {
+func (u *userObj) BeforeCreate(tx *gorm.DB) error {
+	if !u.AutoAssignRoles {
 		return nil
 	}
 
@@ -35,7 +35,7 @@ func (u *UserObj) BeforeCreate(tx *gorm.DB) error {
 	return u.BeforeUpdate()
 }
 
-func (u *UserObj) AfterFind() (err error) {
+func (u *userObj) AfterFind() (err error) {
 	if u.RawAppMetaData != "" {
 		err = json.Unmarshal([]byte(u.RawAppMetaData), &u.AppMetaData)
 	}
@@ -47,7 +47,7 @@ func (u *UserObj) AfterFind() (err error) {
 	return err
 }
 
-func (u *UserObj) BeforeUpdate() (err error) {
+func (u *userObj) BeforeUpdate() (err error) {
 	if u.AppMetaData != nil {
 		data, err := json.Marshal(u.AppMetaData)
 		if err == nil {
@@ -64,10 +64,10 @@ func (u *UserObj) BeforeUpdate() (err error) {
 	return err
 }
 
-func (conn *Connection) newUserObj(user *models.User) *UserObj {
-	return &UserObj{
-		User:           user,
-		FirstRoleName:  conn.config.JWT.AdminGroupName,
-		AutoAsignRoles: !conn.config.JWT.AdminGroupDisabled,
+func (conn *Connection) newUserObj(user *models.User) *userObj {
+	return &userObj{
+		User:            user,
+		FirstRoleName:   conn.config.JWT.AdminGroupName,
+		AutoAssignRoles: !conn.config.JWT.AdminGroupDisabled,
 	}
 }

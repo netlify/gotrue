@@ -2,12 +2,12 @@ package sql
 
 import (
 	// this is where we do the connections
-
-	"github.com/Sirupsen/logrus"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/jinzhu/gorm"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/models"
@@ -22,20 +22,24 @@ func (l logger) Print(v ...interface{}) {
 	l.entry.Print(v...)
 }
 
+// Connection represents a sql connection.
 type Connection struct {
 	db     *gorm.DB
 	config *conf.Configuration
 }
 
+// Automigrate creates any missing tables and/or columns.
 func (conn *Connection) Automigrate() error {
-	conn.db = conn.db.AutoMigrate(&UserObj{}, &models.RefreshToken{})
+	conn.db = conn.db.AutoMigrate(&userObj{}, &models.RefreshToken{})
 	return conn.db.Error
 }
 
+// Close closes the database connection.
 func (conn *Connection) Close() error {
 	return conn.db.Close()
 }
 
+// CreateUser creates a user.
 func (conn *Connection) CreateUser(user *models.User) error {
 	tx := conn.db.Begin()
 	if _, err := conn.createUserWithTransaction(tx, user); err != nil {
@@ -45,7 +49,7 @@ func (conn *Connection) CreateUser(user *models.User) error {
 	return nil
 }
 
-func (conn *Connection) createUserWithTransaction(tx *gorm.DB, user *models.User) (*UserObj, error) {
+func (conn *Connection) createUserWithTransaction(tx *gorm.DB, user *models.User) (*userObj, error) {
 	obj := conn.newUserObj(user)
 	if result := tx.Create(obj); result.Error != nil {
 		tx.Rollback()
@@ -56,7 +60,7 @@ func (conn *Connection) createUserWithTransaction(tx *gorm.DB, user *models.User
 }
 
 func (conn *Connection) findUser(query string, args ...interface{}) (*models.User, error) {
-	obj := &UserObj{
+	obj := &userObj{
 		User: &models.User{},
 	}
 	values := append([]interface{}{query}, args...)
@@ -64,48 +68,53 @@ func (conn *Connection) findUser(query string, args ...interface{}) (*models.Use
 	if result := conn.db.First(obj, values...); result.Error != nil {
 		if result.RecordNotFound() {
 			return nil, models.UserNotFoundError{}
-		} else {
-			return nil, errors.Wrap(result.Error, "error finding user")
 		}
+		return nil, errors.Wrap(result.Error, "error finding user")
 	}
 
 	return obj.User, nil
 }
 
+// DeleteUser deletes a user.
 func (conn *Connection) DeleteUser(u *models.User) error {
 	return conn.db.Delete(u).Error
 }
 
+// FindUsersInAudience finds users with the matching audience.
 func (conn *Connection) FindUsersInAudience(aud string) ([]*models.User, error) {
 	users := []*models.User{}
 	db := conn.db.Find(&users, "aud = ?", aud)
 	return users, db.Error
 }
 
+// FindUserByConfirmationToken finds users with the matching confirmation token.
 func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User, error) {
 	return conn.findUser("confirmation_token = ?", token)
 }
 
+// FindUserByEmailAndAudience finds a user with the matching email and audience.
 func (conn *Connection) FindUserByEmailAndAudience(email, aud string) (*models.User, error) {
 	return conn.findUser("email = ? and aud = ?", email, aud)
 }
 
+// FindUserByID finds a user matching the provided ID.
 func (conn *Connection) FindUserByID(id string) (*models.User, error) {
 	return conn.findUser("id = ?", id)
 }
 
+// FindUserByRecoveryToken finds a user with the matching recovery token.
 func (conn *Connection) FindUserByRecoveryToken(token string) (*models.User, error) {
 	return conn.findUser("recovery_token = ?", token)
 }
 
+// FindUserWithRefreshToken finds a user from the provided refresh token.
 func (conn *Connection) FindUserWithRefreshToken(token, aud string) (*models.User, *models.RefreshToken, error) {
 	refreshToken := &models.RefreshToken{}
 	if result := conn.db.First(refreshToken, "token = ?", token); result.Error != nil {
 		if result.RecordNotFound() {
 			return nil, nil, models.RefreshTokenNotFoundError{}
-		} else {
-			return nil, nil, errors.Wrap(result.Error, "error finding refresh token")
 		}
+		return nil, nil, errors.Wrap(result.Error, "error finding refresh token")
 	}
 
 	user, err := conn.findUser("id = ? and aud = ?", refreshToken.UserID, aud)
@@ -116,6 +125,7 @@ func (conn *Connection) FindUserWithRefreshToken(token, aud string) (*models.Use
 	return user, refreshToken, nil
 }
 
+// GrantAuthenticatedUser creates a refresh token for the provided user.
 func (conn *Connection) GrantAuthenticatedUser(user *models.User) (*models.RefreshToken, error) {
 	tx := conn.db.Begin()
 
@@ -131,6 +141,7 @@ func (conn *Connection) GrantAuthenticatedUser(user *models.User) (*models.Refre
 	return token, nil
 }
 
+// GrantRefreshTokenSwap swaps a refresh token for a new one, revoking the provided token.
 func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.RefreshToken) (*models.RefreshToken, error) {
 	tx := conn.db.Begin()
 
@@ -150,6 +161,7 @@ func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.R
 	return newToken, nil
 }
 
+// IsDuplicatedEmail returns whether a user exists with a matching email and audience.
 func (conn *Connection) IsDuplicatedEmail(email, aud string) (bool, error) {
 	_, err := conn.findUser("email = ? and aud = ?", email, aud)
 	if err != nil {
@@ -162,10 +174,12 @@ func (conn *Connection) IsDuplicatedEmail(email, aud string) (bool, error) {
 	return true, nil
 }
 
+// Logout deletes all refresh tokens for a user.
 func (conn *Connection) Logout(id string) {
 	conn.db.Where("user_id = ?", id).Delete(&models.RefreshToken{})
 }
 
+// RevokeToken revokes a refresh token.
 func (conn *Connection) RevokeToken(token *models.RefreshToken) error {
 	token.Revoked = true
 	if err := conn.db.Save(token).Error; err != nil {
@@ -175,6 +189,8 @@ func (conn *Connection) RevokeToken(token *models.RefreshToken) error {
 	return nil
 }
 
+// RollbackRefreshTokenSwap rolls back a refresh token swap by revoking the new
+// token, and un-revoking the old token.
 func (conn *Connection) RollbackRefreshTokenSwap(newToken, oldToken *models.RefreshToken) error {
 	tx := conn.db.Begin()
 
@@ -194,6 +210,7 @@ func (conn *Connection) RollbackRefreshTokenSwap(newToken, oldToken *models.Refr
 	return nil
 }
 
+// UpdateUser updates a user.
 func (conn *Connection) UpdateUser(user *models.User) error {
 	tx := conn.db.Begin()
 	if err := conn.updateUserWithTransaction(tx, user); err != nil {
@@ -204,7 +221,7 @@ func (conn *Connection) UpdateUser(user *models.User) error {
 }
 
 func (conn *Connection) updateUserWithTransaction(tx *gorm.DB, user *models.User) error {
-	obj := &UserObj{
+	obj := &userObj{
 		User: user,
 	}
 	if result := tx.Save(obj); result.Error != nil {

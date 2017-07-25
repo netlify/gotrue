@@ -14,7 +14,7 @@ go:
   - 1.8
 
 env:
-  - NETLIFY_AUTH_MONGODB_TEST_CONN_URL=127.0.0.1
+  - GOTRUE_MONGODB_TEST_CONN_URL=127.0.0.1
 
 install: make deps
 script: make all

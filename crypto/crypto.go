@@ -7,6 +7,7 @@ import (
 	"github.com/pborman/uuid"
 )
 
+// SecureToken creates a new random token
 func SecureToken() string {
 	token := uuid.NewRandom()
 	return removePadding(base64.URLEncoding.EncodeToString([]byte(token)))
