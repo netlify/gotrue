@@ -8,21 +8,22 @@ import (
 	"github.com/badoux/checkmail"
 )
 
-const DefaultConfirmationMail = `<h2>Confirm your signup</h2>
+const defaultConfirmationMail = `<h2>Confirm your signup</h2>
 
 <p>Follow this link to confirm your account:</p>
 <p><a href="{{ .ConfirmationURL }}">Confirm your mail</a></p>`
 
-const DefaultRecoveryMail = `<h2>Reset Password</h2>
+const defaultRecoveryMail = `<h2>Reset Password</h2>
 
 <p>Follow this link to reset the password for your account:</p>
 <p><a href="{{ .ConfirmationURL }}">Reset Password</a></p>`
 
-const DefaultEmailChangeMail = `<h2>Confirm Change of Email</h2>
+const defaultEmailChangeMail = `<h2>Confirm Change of Email</h2>
 
 <p>Follow this link to confirm the update of your email from {{ .Email }} to {{ .NewEmail }}:</p>
 <p><a href="{{ .ConfirmationURL }}">Change Email</a></p>`
 
+// Mailer defines the interface a mailer must implement.
 type Mailer interface {
 	Send(user *models.User, subject, body string, data map[string]interface{}) error
 	ConfirmationMail(user *models.User) error
@@ -39,7 +40,7 @@ type TemplateMailer struct {
 	TemplateMailer *mailme.Mailer
 }
 
-type NoOpMailer struct {
+type noopMailer struct {
 }
 
 // MailSubjects holds the subject lines for the emails
@@ -51,7 +52,7 @@ type MailSubjects struct {
 // NewMailer returns a new gotrue mailer
 func NewMailer(conf *conf.Configuration) Mailer {
 	if conf.Mailer.Host == "" {
-		return &NoOpMailer{}
+		return &noopMailer{}
 	}
 
 	mailConf := conf.Mailer
@@ -90,7 +91,7 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
 		user.Email,
 		withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Signup"),
 		m.Config.Mailer.Templates.Confirmation,
-		DefaultConfirmationMail,
+		defaultConfirmationMail,
 		mailData("Confirmation", m.Config, user),
 	)
 }
@@ -101,7 +102,7 @@ func (m *TemplateMailer) EmailChangeMail(user *models.User) error {
 		user.EmailChange,
 		withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change"),
 		m.Config.Mailer.Templates.EmailChange,
-		DefaultEmailChangeMail,
+		defaultEmailChangeMail,
 		mailData("EmailChange", m.Config, user),
 	)
 }
@@ -112,7 +113,7 @@ func (m *TemplateMailer) RecoveryMail(user *models.User) error {
 		user.Email,
 		withDefault(m.Config.Mailer.Subjects.Recovery, "Reset Your Password"),
 		m.Config.Mailer.Templates.Recovery,
-		DefaultRecoveryMail,
+		defaultRecoveryMail,
 		mailData("Recovery", m.Config, user),
 	)
 }
@@ -159,23 +160,22 @@ func (m TemplateMailer) Send(user *models.User, subject, body string, data map[s
 	)
 }
 
-func (m NoOpMailer) ValidateEmail(email string) error {
+func (m noopMailer) ValidateEmail(email string) error {
 	return nil
 }
 
-func (m *NoOpMailer) ConfirmationMail(user *models.User) error {
+func (m *noopMailer) ConfirmationMail(user *models.User) error {
 	return nil
 }
 
-func (m NoOpMailer) RecoveryMail(user *models.User) error {
+func (m noopMailer) RecoveryMail(user *models.User) error {
 	return nil
 }
 
-func (m *NoOpMailer) EmailChangeMail(user *models.User) error {
+func (m *noopMailer) EmailChangeMail(user *models.User) error {
 	return nil
 }
 
-// Send does nothing for NoOpMailer
-func (m NoOpMailer) Send(user *models.User, subject, body string, data map[string]interface{}) error {
+func (m noopMailer) Send(user *models.User, subject, body string, data map[string]interface{}) error {
 	return nil
 }

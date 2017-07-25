@@ -2,6 +2,7 @@ package storage
 
 import "github.com/netlify/gotrue/models"
 
+// Connection is the interface a storage provider must implement.
 type Connection interface {
 	Close() error
 	Automigrate() error

@@ -2,8 +2,7 @@ config.json
 config.test.json
 gorm.db
 vendor/
-authlify
-netlify-auth
+gotrue
 test.db
 
 .DS_Store

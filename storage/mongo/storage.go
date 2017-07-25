@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"fmt"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/crypto"
@@ -21,21 +22,25 @@ func (l logger) Output(depth int, s string) error {
 	return nil
 }
 
+// Connection represents a MongoDB connection.
 type Connection struct {
 	session *mgo.Session
 	db      *mgo.Database
 	config  *conf.Configuration
 }
 
+// Close closes the mongo connection.
 func (conn *Connection) Close() error {
 	conn.session.Close()
 	return nil
 }
 
+// Automigrate is not necessary for mongo.
 func (conn *Connection) Automigrate() error {
 	return nil
 }
 
+// CreateUser creates a user in mongo.
 func (conn *Connection) CreateUser(user *models.User) error {
 	c := conn.db.C(user.TableName())
 	if err := c.Insert(user); err != nil {
@@ -45,6 +50,7 @@ func (conn *Connection) CreateUser(user *models.User) error {
 	return conn.makeUserAdmin(c, user)
 }
 
+// DeleteUser deletes a user from mongo.
 func (conn *Connection) DeleteUser(user *models.User) error {
 	u, err := conn.FindUserByID(user.ID)
 	if err != nil {
@@ -55,6 +61,7 @@ func (conn *Connection) DeleteUser(user *models.User) error {
 	return c.Remove(bson.M{"_id": user.ID})
 }
 
+// FindUsersInAudience finds users that belong to the provided audience.
 func (conn *Connection) FindUsersInAudience(aud string) ([]*models.User, error) {
 	user := &models.User{}
 	users := []*models.User{}
@@ -70,29 +77,33 @@ func (conn *Connection) findUser(query bson.M) (*models.User, error) {
 	if err := c.Find(query).One(user); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, models.UserNotFoundError{}
-		} else {
-			return nil, errors.Wrap(err, "error finding user")
 		}
+		return nil, errors.Wrap(err, "error finding user")
 	}
 	return user, nil
 }
 
+// FindUserByConfirmationToken finds a user with the specified confirmation token.
 func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User, error) {
 	return conn.findUser(bson.M{"confirmation_token": token})
 }
 
+// FindUserByEmailAndAudience finds a user with the specified email and audience.
 func (conn *Connection) FindUserByEmailAndAudience(email, aud string) (*models.User, error) {
 	return conn.findUser(bson.M{"email": email, "aud": aud})
 }
 
+// FindUserByID finds a user with specified ID.
 func (conn *Connection) FindUserByID(id string) (*models.User, error) {
 	return conn.findUser(bson.M{"_id": id})
 }
 
+// FindUserByRecoveryToken finds a user with the specified recovery token.
 func (conn *Connection) FindUserByRecoveryToken(token string) (*models.User, error) {
 	return conn.findUser(bson.M{"recovery_token": token})
 }
 
+// FindUserWithRefreshToken finds a user with the specified refresh token.
 func (conn *Connection) FindUserWithRefreshToken(token, aud string) (*models.User, *models.RefreshToken, error) {
 	refreshToken := &models.RefreshToken{}
 	rc := conn.db.C(refreshToken.TableName())
@@ -100,9 +111,8 @@ func (conn *Connection) FindUserWithRefreshToken(token, aud string) (*models.Use
 	if err := rc.Find(bson.M{"token": token}).One(refreshToken); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, nil, models.RefreshTokenNotFoundError{}
-		} else {
-			return nil, nil, errors.Wrap(err, "error finding refresh token")
 		}
+		return nil, nil, errors.Wrap(err, "error finding refresh token")
 	}
 
 	user, err := conn.findUser(bson.M{"_id": refreshToken.UserID, "aud": aud})
@@ -113,6 +123,7 @@ func (conn *Connection) FindUserWithRefreshToken(token, aud string) (*models.Use
 	return user, refreshToken, nil
 }
 
+// GrantAuthenticatedUser issues a new refresh token for a user.
 func (conn *Connection) GrantAuthenticatedUser(user *models.User) (*models.RefreshToken, error) {
 	runner := conn.newTxRunner()
 
@@ -140,6 +151,7 @@ func (conn *Connection) GrantAuthenticatedUser(user *models.User) (*models.Refre
 	return token, nil
 }
 
+// GrantRefreshTokenSwap swaps an issued refresh token for a new one.
 func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.RefreshToken) (*models.RefreshToken, error) {
 	runner := conn.newTxRunner()
 
@@ -169,19 +181,20 @@ func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.R
 	return newToken, nil
 }
 
+// IsDuplicatedEmail returns whether an email and audience are already in use.
 func (conn *Connection) IsDuplicatedEmail(email, aud string) (bool, error) {
 	_, err := conn.findUser(bson.M{"email": email, "aud": aud})
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return false, nil
-		} else {
-			return false, err
 		}
+		return false, err
 	}
 
 	return true, nil
 }
 
+// Logout removes all refresh tokens for a user
 func (conn *Connection) Logout(id string) {
 	t := &models.RefreshToken{}
 	c := conn.db.C(t.TableName())
@@ -209,6 +222,7 @@ func (conn *Connection) makeUserAdmin(c *mgo.Collection, user *models.User) erro
 	return nil
 }
 
+// RevokeToken revokes a refresh token.
 func (conn *Connection) RevokeToken(token *models.RefreshToken) error {
 	token.Revoked = true
 
@@ -219,6 +233,8 @@ func (conn *Connection) RevokeToken(token *models.RefreshToken) error {
 	return nil
 }
 
+// RollbackRefreshTokenSwap rolls back a refresh token swap by revoking the new
+// token and un-revoking the old token.
 func (conn *Connection) RollbackRefreshTokenSwap(newToken, oldToken *models.RefreshToken) error {
 	runner := conn.newTxRunner()
 
@@ -242,6 +258,7 @@ func (conn *Connection) RollbackRefreshTokenSwap(newToken, oldToken *models.Refr
 	return nil
 }
 
+// UpdateUser updates a user document.
 func (conn *Connection) UpdateUser(user *models.User) error {
 	c := conn.db.C(user.TableName())
 	if err := c.Update(bson.M{"_id": user.ID}, bson.M{"$set": user}); err != nil {

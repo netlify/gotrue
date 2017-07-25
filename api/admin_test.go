@@ -66,7 +66,7 @@ func (ts *AdminTestSuite) makeSuperAdmin(req *http.Request, email string) (conte
 	w := httptest.NewRecorder()
 	ctx := req.Context()
 
-	return context.WithValue(ctx, "jwt", tok), w
+	return withToken(ctx, tok), w
 }
 
 // TestAdminUsers tests API /admin/users route

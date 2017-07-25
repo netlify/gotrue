@@ -14,16 +14,16 @@ import (
 var conn *Connection
 
 func TestMongoDBTestSuite(t *testing.T) {
-	connURL := os.Getenv("NETLIFY_AUTH_MONGODB_TEST_CONN_URL")
+	connURL := os.Getenv("GOTRUE_MONGODB_TEST_CONN_URL")
 
 	if connURL == "" {
 		t.Skip(`MongoDB test suite disabled.
-Set the environment variable NETLIFY_AUTH_MONGODB_TEST_CONN_URL with the connection URL to enable them.`)
+Set the environment variable GOTRUE_MONGODB_TEST_CONN_URL with the connection URL to enable them.`)
 	}
 
 	config := &conf.Configuration{
 		DB: conf.DBConfiguration{
-			Namespace: "netlify_auth",
+			Namespace: "gotrue",
 			Driver:    "mongodb",
 			ConnURL:   connURL,
 		},
