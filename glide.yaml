@@ -6,8 +6,6 @@ import:
   version: v2.1
 - package: github.com/jinzhu/gorm
   version: 0f2ceb5a775714a46bc344976324e3e439f8cdcc
-  subpackages:
-  - dialects/sqlite
 - package: github.com/pborman/uuid
   version: v1.0
 - package: github.com/rs/cors
@@ -17,14 +15,30 @@ import:
   - bcrypt
 - package: gopkg.in/gomail.v2
   version: 2.0.0
-- package: github.com/Sirupsen/logrus
 - package: github.com/netlify/mailme
 - package: gopkg.in/mgo.v2
   subpackages:
   - txn
+  - bson
 - package: github.com/stretchr/testify
+  version: v1.1.4
   subpackages:
   - suite
   - require
+  - assert
 - package: github.com/badoux/checkmail
 - package: golang.org/x/oauth2
+  subpackages:
+  - bitbucket
+  - github
+- package: github.com/sirupsen/logrus
+  version: 1.0.2
+- package: github.com/spf13/cobra
+- package: github.com/pkg/errors
+  version: v0.8.0
+- package: github.com/go-sql-driver/mysql
+  version: v1.3
+- package: github.com/lib/pq
+- package: github.com/mattn/go-sqlite3
+  version: v1.1.0
+- package: github.com/spf13/viper

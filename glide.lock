@@ -1,10 +1,10 @@
-hash: 98a2cd247c4b7806bf340a9ddf1b2ec80dab4923f5fae3f7b210daa349960f32
-updated: 2017-06-23T16:17:35.424699654-07:00
+hash: e837cc27062b452ad36c376184b9b8119283b47a1260e671de3a51bcbebd2b88
+updated: 2017-07-25T15:18:33.368271455-04:00
 imports:
 - name: github.com/badoux/checkmail
   version: d0a759655d62bcdc95c50a0676f3e9702ed59453
 - name: github.com/davecgh/go-spew
-  version: 2df174808ee097f90d259e432cc04442cf60be21
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
 - name: github.com/dgrijalva/jwt-go
@@ -16,7 +16,7 @@ imports:
 - name: github.com/fsnotify/fsnotify
   version: f12c6236fe7b5cf6bcf30e5935d08cb079d78334
 - name: github.com/go-sql-driver/mysql
-  version: a732e14c62dde3285440047bba97581bc472ae18
+  version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/golang/protobuf
   version: 1f49d83d9aa00e6ce4fc8258c71cc7786aec968a
   subpackages:
@@ -40,8 +40,6 @@ imports:
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jinzhu/gorm
   version: 0f2ceb5a775714a46bc344976324e3e439f8cdcc
-  subpackages:
-  - dialects/sqlite
 - name: github.com/jinzhu/inflection
   version: 74387dc39a75e970e7a3ae6a3386b5bd2e5c5cff
 - name: github.com/kr/fs
@@ -65,7 +63,7 @@ imports:
 - name: github.com/pelletier/go-toml
   version: 31055c2ff0bb0c7f9095aec0d220aed21108121e
 - name: github.com/pkg/errors
-  version: 17b591df37844cde689f4d5813e5cea0927d8dd2
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/pkg/sftp
   version: 8197a2e580736b78d704be0fc47b2324c0591a32
 - name: github.com/pmezard/go-difflib
@@ -76,8 +74,8 @@ imports:
   version: a62a804a8a009876ca59105f7899938a1349f4b3
 - name: github.com/rs/xhandler
   version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
-- name: github.com/Sirupsen/logrus
-  version: d26492970760ca5d33129d2d799e34be5c4782eb
+- name: github.com/sirupsen/logrus
+  version: a3f95b5c423586578a4e099b11a46c2479628cac
 - name: github.com/spf13/afero
   version: 20500e2abd0d1f4564a499e83d11d6c73cd58c27
   subpackages:
@@ -94,7 +92,7 @@ imports:
 - name: github.com/spf13/viper
   version: 16990631d4aa7e38f73dbbbf37fa13e67c648531
 - name: github.com/stretchr/testify
-  version: f390dcf405f7b83c997eac1b06768bb9f44dec18
+  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
   subpackages:
   - assert
   - require
@@ -122,6 +120,7 @@ imports:
 - name: golang.org/x/oauth2
   version: f047394b6d14284165300fd82dad67edb3a4d7f6
   subpackages:
+  - bitbucket
   - github
   - internal
 - name: golang.org/x/sys
