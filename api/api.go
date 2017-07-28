@@ -122,7 +122,7 @@ func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer
 
 	corsHandler := cors.New(cors.Options{
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "PUT", "DELETE"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-JWT-AUD"},
 		AllowCredentials: true,
 	})
 
