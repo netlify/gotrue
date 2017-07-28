@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -44,16 +45,15 @@ func (ts *SignupTestSuite) TestSignup() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Setup response recorder
 	w := httptest.NewRecorder()
-	ctx := req.Context()
 
-	ts.API.Signup(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, 200)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 
 	data := make(map[string]interface{})
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
@@ -73,22 +73,20 @@ func (ts *SignupTestSuite) TestSignupExternalUnsupported() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Setup response recorder
 	w := httptest.NewRecorder()
-	ctx := req.Context()
 
-	ts.API.Signup(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
 	// Bad request expected for invalid external provider
-	assert.Equal(ts.T(), w.Code, 400)
+	assert.Equal(ts.T(), w.Code, http.StatusBadRequest)
 }
 
 // TestSignupExternalGithub tests API /signup for github
 func (ts *SignupTestSuite) TestSignupExternalGithub() {
-
 	code := os.Getenv("GOTRUE_GITHUB_OAUTH_CODE")
 	if code == "" || ts.API.config.External.Github.Secret == "" {
 		ts.T().Skip("GOTRUE_GITHUB_OAUTH_CODE or Github external provider config not set")
@@ -103,26 +101,23 @@ func (ts *SignupTestSuite) TestSignupExternalGithub() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Setup response recorder
 	w := httptest.NewRecorder()
-	ctx := req.Context()
 
-	ts.API.Signup(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, 200)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 }
 
 // TestSignupExternalBitbucket tests API /signup for bitbucket
 func (ts *SignupTestSuite) TestSignupExternalBitbucket() {
-
 	code := os.Getenv("GOTRUE_BITBUCKET_OAUTH_CODE")
 	if code == "" || ts.API.config.External.Bitbucket.Secret == "" {
 		ts.T().Skip("GOTRUE_BITBUCKET_OAUTH_CODE or Bitbucket external provider config not set")
 		return
-
 	}
 
 	// Request body
@@ -133,21 +128,19 @@ func (ts *SignupTestSuite) TestSignupExternalBitbucket() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Setup response recorder
 	w := httptest.NewRecorder()
-	ctx := req.Context()
 
-	ts.API.Signup(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, 200)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 }
 
 // TestSignupExternalGitlab tests API /signup for gitlab
 func (ts *SignupTestSuite) TestSignupExternalGitlab() {
-
 	code := os.Getenv("GOTRUE_GITLAB_OAUTH_CODE")
 	if code == "" || ts.API.config.External.Gitlab.Secret == "" {
 		ts.T().Skip("GOTRUE_GITLAB_OAUTH_CODE or Gitlab external provider config not set")
@@ -163,16 +156,14 @@ func (ts *SignupTestSuite) TestSignupExternalGitlab() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Setup response recorder
 	w := httptest.NewRecorder()
-	ctx := req.Context()
 
-	ts.API.Signup(ctx, w, req)
-
-	assert.Equal(ts.T(), w.Code, 200)
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 }
 
 // TestSignupTwice checks to make sure the same email cannot be registered twice
@@ -193,15 +184,14 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 	encode()
 
 	// Setup request
-	req := httptest.NewRequest("POST", "http://localhost/signup", &buffer)
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Setup response recorder
 	w := httptest.NewRecorder()
 	y := httptest.NewRecorder()
-	ctx := req.Context()
 
-	ts.API.Signup(ctx, y, req)
+	ts.API.handler.ServeHTTP(y, req)
 	u, err := ts.API.db.FindUserByEmailAndAudience("test1@example.com", ts.API.config.JWT.Aud)
 	if err == nil {
 		u.Confirm()
@@ -209,13 +199,13 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 	}
 
 	encode()
-	ts.API.Signup(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
 	data := make(map[string]interface{})
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
-	assert.Equal(ts.T(), w.Code, 500)
-	assert.Equal(ts.T(), data["code"], 500.0)
+	assert.Equal(ts.T(), w.Code, http.StatusBadRequest)
+	assert.Equal(ts.T(), data["code"], float64(http.StatusBadRequest))
 }
 
 func (ts *SignupTestSuite) TestVerifySignup() {
@@ -236,16 +226,15 @@ func (ts *SignupTestSuite) TestVerifySignup() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest("POST", "http://localhost/verify", &buffer)
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Setup response recorder
 	w := httptest.NewRecorder()
-	ctx := req.Context()
 
-	ts.API.Verify(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, 200)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 }
 
 func TestSignup(t *testing.T) {

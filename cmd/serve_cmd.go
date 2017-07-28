@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	"github.com/netlify/gotrue/api"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage/dial"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +34,7 @@ func serve(config *conf.Configuration) {
 	}
 
 	mailer := mailer.NewMailer(config)
-	api := api.NewAPIWithVersion(config, db, mailer, Version)
+	api := api.NewAPIWithVersion(context.Background(), config, db, mailer, Version)
 
 	l := fmt.Sprintf("%v:%v", config.API.Host, config.API.Port)
 	logrus.Infof("GoTrue API started on: %s", l)

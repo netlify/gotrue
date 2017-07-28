@@ -1,9 +1,7 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
@@ -21,17 +19,15 @@ type VerifyParams struct {
 }
 
 // Verify exchanges a confirmation or recovery token to a refresh token
-func (a *API) Verify(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	params := &VerifyParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
 	if err := jsonDecoder.Decode(params); err != nil {
-		BadRequestError(w, fmt.Sprintf("Could not read verification params: %v", err))
-		return
+		return badRequestError("Could not read verification params: %v", err)
 	}
 
 	if params.Token == "" {
-		UnprocessableEntity(w, "Verify requires a token")
-		return
+		return unprocessableEntityError("Verify requires a token")
 	}
 
 	var (
@@ -48,19 +44,16 @@ func (a *API) Verify(ctx context.Context, w http.ResponseWriter, r *http.Request
 		user, err = a.db.FindUserByRecoveryToken(params.Token)
 		verifyFunc = func(user *models.User) { user.Recover() }
 	default:
-		UnprocessableEntity(w, "Verify requires a verification type")
-		return
+		return unprocessableEntityError("Verify requires a verification type")
 	}
 
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			NotFoundError(w, err.Error())
-		} else {
-			InternalServerError(w, err.Error())
+			return notFoundError(err.Error())
 		}
-		return
+		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
 	verifyFunc(user)
-	a.issueRefreshToken(user, w)
+	return a.issueRefreshToken(user, w)
 }

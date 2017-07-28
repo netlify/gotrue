@@ -1,9 +1,7 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -16,42 +14,37 @@ type RecoverParams struct {
 }
 
 // Recover sends a recovery email
-func (a *API) Recover(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 	params := &RecoverParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
 	err := jsonDecoder.Decode(params)
 	if err != nil {
-		BadRequestError(w, fmt.Sprintf("Could not read verification params: %v", err))
-		return
+		return badRequestError("Could not read verification params: %v", err)
 	}
 
 	if params.Email == "" {
-		UnprocessableEntity(w, fmt.Sprintf("Password recovery requires an email"))
-		return
+		return unprocessableEntityError("Password recovery requires an email")
 	}
 
 	aud := a.requestAud(ctx, r)
 	user, err := a.db.FindUserByEmailAndAudience(params.Email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			NotFoundError(w, err.Error())
-		} else {
-			InternalServerError(w, err.Error())
+			return notFoundError(err.Error())
 		}
-		return
+		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
 	if user.RecoverySentAt.Add(a.config.Mailer.MaxFrequency).After(time.Now()) {
 		user.GenerateRecoveryToken()
 		if err := a.db.UpdateUser(user); err != nil {
-			InternalServerError(w, err.Error())
-			return
+			return internalServerError("Database error updating user").WithInternalError(err)
 		}
 		if err := a.mailer.RecoveryMail(user); err != nil {
-			InternalServerError(w, fmt.Sprintf("Error sending recovery mail: %v", err))
-			return
+			return internalServerError("Error sending recovery mail").WithInternalError(err)
 		}
 	}
 
-	sendJSON(w, 200, &map[string]string{})
+	return sendJSON(w, http.StatusOK, &map[string]string{})
 }
