@@ -73,20 +73,22 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var sendChangeEmailVerification bool
-	if err = a.mailer.ValidateEmail(params.Email); err == nil {
-		exists, err := a.db.IsDuplicatedEmail(params.Email, user.Aud)
-		if err != nil {
-			return internalServerError("Database error checking email").WithInternalError(err)
-		}
+	if params.Email != "" {
+		if err = a.mailer.ValidateEmail(params.Email); err == nil {
+			exists, err := a.db.IsDuplicatedEmail(params.Email, user.Aud)
+			if err != nil {
+				return internalServerError("Database error checking email").WithInternalError(err)
+			}
 
-		if exists {
-			return unprocessableEntityError("Email address already registered by another user")
-		}
+			if exists {
+				return unprocessableEntityError("Email address already registered by another user")
+			}
 
-		user.GenerateEmailChange(params.Email)
-		sendChangeEmailVerification = true
-	} else {
-		return unprocessableEntityError("Unable to verify new email address: " + err.Error())
+			user.GenerateEmailChange(params.Email)
+			sendChangeEmailVerification = true
+		} else {
+			return unprocessableEntityError("Unable to verify new email address: " + err.Error())
+		}
 	}
 
 	log := getLogEntry(r)
