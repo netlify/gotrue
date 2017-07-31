@@ -41,7 +41,7 @@ func (a *API) Recover(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if user.RecoverySentAt.Add(a.config.Mailer.MaxFrequency).After(time.Now()) {
+	if user.RecoverySentAt.Add(a.config.Mailer.MaxFrequency).Before(time.Now()) {
 		user.GenerateRecoveryToken()
 		if err := a.db.UpdateUser(user); err != nil {
 			InternalServerError(w, err.Error())
