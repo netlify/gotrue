@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -24,12 +25,11 @@ func (ts *IndexTestSuite) SetupTest() {
 // TestIndex tests API / route
 func (ts *IndexTestSuite) TestIndex() {
 	// Setup request and response reader
-	req := httptest.NewRequest("GET", "http://localhost/", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/", nil)
 	w := httptest.NewRecorder()
-	ctx := req.Context()
-	ts.API.Index(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, 200)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 
 	// Check response data
 	data := make(map[string]string)

@@ -3,30 +3,31 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
+	"github.com/pborman/uuid"
+	"github.com/pkg/errors"
 )
 
-// Error is an error with a message
-type Error struct {
-	Code    int    `json:"code"`
-	Message string `json:"msg"`
+func addRequestID(w http.ResponseWriter, r *http.Request) (context.Context, error) {
+	id := uuid.NewRandom().String()
+	ctx := r.Context()
+	ctx = withRequestID(ctx, id)
+	return ctx, nil
 }
 
-// OAuthError is the JSON handler for OAuth2 error responses
-type OAuthError struct {
-	Error       string `json:"error"`
-	Description string `json:"description,omitempty"`
-}
-
-func sendJSON(w http.ResponseWriter, status int, obj interface{}) {
+func sendJSON(w http.ResponseWriter, status int, obj interface{}) error {
 	w.Header().Set("Content-Type", "application/json")
+	b, err := json.Marshal(obj)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Error encoding json response: %v", obj))
+	}
 	w.WriteHeader(status)
-	encoder := json.NewEncoder(w)
-	encoder.Encode(obj)
+	_, err = w.Write(b)
+	return err
 }
 
 func getUser(ctx context.Context, conn storage.Connection) (*models.User, error) {
@@ -55,27 +56,22 @@ func (api *API) isAdmin(u *models.User, aud string) bool {
 	return u.IsSuperAdmin || (aud == u.Aud && u.HasRole(api.config.JWT.AdminGroupName))
 }
 
-// BadRequestError is simple Error Wrapper
-func BadRequestError(w http.ResponseWriter, message string) {
-	sendJSON(w, 400, &Error{Code: 400, Message: message})
-}
+func (api *API) requestAud(ctx context.Context, r *http.Request) string {
+	// First check for an audience in the header
+	if aud := r.Header.Get(audHeaderName); aud != "" {
+		return aud
+	}
 
-// UnprocessableEntity is simple Error Wrapper
-func UnprocessableEntity(w http.ResponseWriter, message string) {
-	sendJSON(w, 422, &Error{Code: 422, Message: message})
-}
+	// Then check the token
+	token := getToken(ctx)
+	if token != nil {
+		if _aud, ok := token.Claims["aud"]; ok {
+			if aud, ok := _aud.(string); ok && aud != "" {
+				return aud
+			}
+		}
+	}
 
-// InternalServerError is simple Error Wrapper
-func InternalServerError(w http.ResponseWriter, message string) {
-	sendJSON(w, 500, &Error{Code: 500, Message: message})
-}
-
-// NotFoundError is simple Error Wrapper
-func NotFoundError(w http.ResponseWriter, message string) {
-	sendJSON(w, 404, &Error{Code: 404, Message: message})
-}
-
-// UnauthorizedError is simple Error Wrapper
-func UnauthorizedError(w http.ResponseWriter, message string) {
-	sendJSON(w, 401, &Error{Code: 401, Message: message})
+	// Finally, return the default of none of the above methods are successful
+	return api.config.JWT.Aud
 }

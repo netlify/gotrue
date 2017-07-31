@@ -1,9 +1,7 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
@@ -17,97 +15,89 @@ import (
 //
 // And to authenticate as another user as an administrator you would send:
 //     {"user": {"email": "email@provider.com", "aud": "myaudience"}}
+type adminTargetUser struct {
+	Aud   string `json:"aud"`
+	Email string `json:"email"`
+	ID    string `json:"id"`
+}
+
 type adminUserParams struct {
 	Role     string                 `json:"role"`
 	Email    string                 `json:"email"`
 	Password string                 `json:"password"`
 	Confirm  bool                   `json:"confirm"`
 	Data     map[string]interface{} `json:"data"`
-	User     struct {
-		Aud   string `json:"aud"`
-		Email string `json:"email"`
-		ID    string `json:"_id"`
-	} `json:"user"`
+	User     adminTargetUser        `json:"user"`
 }
 
-// Check the request to make sure the token is associated with an administrator
-// Returns the admin user, the target user, the adminUserParams, audience name and a boolean designating whether or not the prior values are valid
-func (api *API) checkAdmin(ctx context.Context, w http.ResponseWriter, r *http.Request, requireUser bool) (*models.User, *models.User, *adminUserParams, string, bool) {
+func (api *API) getAdminParams(r *http.Request) (*adminUserParams, error) {
 	params := adminUserParams{}
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&params)
+	err := json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
-		BadRequestError(w, fmt.Sprintf("Could not decode admin user params: %v", err))
-		return nil, nil, nil, "", false
+		return nil, badRequestError("Could not decode admin user params: %v", err)
 	}
+	return &params, nil
+}
 
-	// Find the administrative user
-	adminUser, err := getUser(ctx, api.db)
-	if err != nil {
-		UnauthorizedError(w, "Invalid admin user")
-		return nil, nil, nil, "", false
-	}
-
-	aud := api.requestAud(ctx, r)
-	if params.User.Aud != "" {
-		aud = params.User.Aud
-	}
-
-	// Make sure user is admin
-	if !api.isAdmin(adminUser, aud) {
-		UnauthorizedError(w, "User not allowed")
-		return nil, nil, nil, aud, false
-	}
-
+// Returns the the target user
+func (api *API) getAdminTargetUser(params *adminUserParams) (*models.User, error) {
 	user, err := api.db.FindUserByEmailAndAudience(params.User.Email, params.User.Aud)
 	if err != nil {
-		if user, err = api.db.FindUserByID(params.User.ID); err != nil && requireUser {
-			BadRequestError(w, fmt.Sprintf("Unable to find user by email: %s and id: %s in audience: %s", params.User.Email, params.User.ID, params.User.Aud))
-			return nil, nil, nil, aud, false
+		if models.IsNotFoundError(err) {
+			if user, err = api.db.FindUserByID(params.User.ID); err != nil {
+				if models.IsNotFoundError(err) {
+					return nil, badRequestError("Unable to find user by email: %s and id: %s in audience: %s", params.User.Email, params.User.ID, params.User.Aud)
+				}
+				return nil, internalServerError("Database error finding user").WithInternalError(err)
+			}
+		} else {
+			return nil, internalServerError("Database error finding user").WithInternalError(err)
 		}
 	}
 
-	return adminUser, user, &params, aud, true
+	return user, nil
 }
 
 // adminUsers responds with a list of all users in a given audience
-func (api *API) adminUsers(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	adminUser, err := getUser(ctx, api.db)
-	if err != nil {
-		UnauthorizedError(w, "Invalid admin user")
-		return
-	}
-
+func (api *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 	aud := api.requestAud(ctx, r)
-	if !api.isAdmin(adminUser, aud) {
-		UnauthorizedError(w, "User not allowed")
-		return
-	}
-
 	users, err := api.db.FindUsersInAudience(aud)
 	if err != nil {
-		InternalServerError(w, err.Error())
+		return internalServerError("Database error finding users").WithInternalError(err)
 	}
 
-	sendJSON(w, http.StatusOK, map[string]interface{}{
+	return sendJSON(w, http.StatusOK, map[string]interface{}{
 		"users": users,
 		"aud":   aud,
 	})
 }
 
 // adminUserGet returns information about a single user
-func (api *API) adminUserGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	_, user, _, _, allowed := api.checkAdmin(ctx, w, r, true)
-	if allowed {
-		sendJSON(w, http.StatusOK, user)
+func (api *API) adminUserGet(w http.ResponseWriter, r *http.Request) error {
+	params := &adminUserParams{
+		User: adminTargetUser{
+			ID:    r.FormValue("id"),
+			Email: r.FormValue("email"),
+			Aud:   r.FormValue("aud"),
+		},
 	}
+	user, err := api.getAdminTargetUser(params)
+	if err != nil {
+		return err
+	}
+	return sendJSON(w, http.StatusOK, user)
 }
 
 // adminUserUpdate updates a single user object
-func (api *API) adminUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	_, user, params, _, allowed := api.checkAdmin(ctx, w, r, true)
-	if !allowed {
-		return
+func (api *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
+	params, err := api.getAdminParams(r)
+	if err != nil {
+		return err
+	}
+	user, err := api.getAdminTargetUser(params)
+	if err != nil {
+		return err
 	}
 
 	if params.Role != "" {
@@ -127,29 +117,32 @@ func (api *API) adminUserUpdate(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	if err := api.db.UpdateUser(user); err != nil {
-		InternalServerError(w, fmt.Sprintf("Error updating user %v", err))
-		return
+		return internalServerError("Error updating user").WithInternalError(err)
 	}
 
-	sendJSON(w, http.StatusOK, user)
+	return sendJSON(w, http.StatusOK, user)
 }
 
 // adminUserCreate creates a new user based on the provided data
-func (api *API) adminUserCreate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	_, _, params, aud, allowed := api.checkAdmin(ctx, w, r, false)
-	if !allowed {
-		return
+func (api *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
+	params, err := api.getAdminParams(r)
+	if err != nil {
+		return err
 	}
 
 	if err := api.mailer.ValidateEmail(params.Email); err != nil {
-		BadRequestError(w, fmt.Sprintf("Invalid email address: %s", params.Email))
-		return
+		return badRequestError("Invalid email address: %s", params.Email).WithInternalError(err)
+	}
+
+	aud := api.requestAud(ctx, r)
+	if params.User.Aud != "" {
+		aud = params.User.Aud
 	}
 
 	user, err := models.NewUser(params.Email, params.Password, aud, params.Data)
 	if err != nil {
-		InternalServerError(w, err.Error())
-		return
+		return internalServerError("Error creating user").WithInternalError(err)
 	}
 
 	if params.Role != "" {
@@ -163,24 +156,26 @@ func (api *API) adminUserCreate(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	if err = api.db.CreateUser(user); err != nil {
-		InternalServerError(w, fmt.Sprintf("Error creating new user: %v", err))
-		return
+		return internalServerError("Database error creating new user").WithInternalError(err)
 	}
 
-	sendJSON(w, http.StatusOK, user)
+	return sendJSON(w, http.StatusOK, user)
 }
 
 // adminUserDelete delete a user
-func (api *API) adminUserDelete(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	_, user, _, _, allowed := api.checkAdmin(ctx, w, r, true)
-	if !allowed {
-		return
+func (api *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
+	params, err := api.getAdminParams(r)
+	if err != nil {
+		return err
+	}
+	user, err := api.getAdminTargetUser(params)
+	if err != nil {
+		return err
 	}
 
 	if err := api.db.DeleteUser(user); err != nil {
-		InternalServerError(w, err.Error())
-		return
+		return internalServerError("Database error deleting user").WithInternalError(err)
 	}
 
-	sendJSON(w, http.StatusOK, map[string]interface{}{})
+	return sendJSON(w, http.StatusOK, map[string]interface{}{})
 }

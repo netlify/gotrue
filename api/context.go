@@ -13,7 +13,8 @@ func (c contextKey) String() string {
 }
 
 const (
-	tokenKey = contextKey("jwt")
+	tokenKey     = contextKey("jwt")
+	requestIDKey = contextKey("request_id")
 )
 
 // WithToken adds the JWT token to the context.
@@ -29,4 +30,19 @@ func getToken(ctx context.Context) *jwt.Token {
 	}
 
 	return obj.(*jwt.Token)
+}
+
+// withRequestID adds the provided request ID to the context.
+func withRequestID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, requestIDKey, id)
+}
+
+// getRequestID reads the request ID from the context.
+func getRequestID(ctx context.Context) string {
+	obj := ctx.Value(requestIDKey)
+	if obj == nil {
+		return ""
+	}
+
+	return obj.(string)
 }

@@ -1,5 +1,5 @@
-hash: e837cc27062b452ad36c376184b9b8119283b47a1260e671de3a51bcbebd2b88
-updated: 2017-07-25T15:18:33.368271455-04:00
+hash: 28e84a36eb57cd1f026a1661439d4bc98dc07f85ee7736b4d69ae092732ef651
+updated: 2017-07-28T17:59:52.673025273-04:00
 imports:
 - name: github.com/badoux/checkmail
   version: d0a759655d62bcdc95c50a0676f3e9702ed59453
@@ -9,24 +9,20 @@ imports:
   - spew
 - name: github.com/dgrijalva/jwt-go
   version: 268038b363c7a8d7306b8e35bf77a1fde4b0c402
-- name: github.com/dimfeld/httppath
-  version: c8e499c3ef3c3e272ed8bdcc1ccf39f73c88debc
-- name: github.com/dimfeld/httptreemux
-  version: 96acf0909c0b45ebf4a25a816cedc6d317e63679
 - name: github.com/fsnotify/fsnotify
-  version: f12c6236fe7b5cf6bcf30e5935d08cb079d78334
+  version: 7d7316ed6e1ed2de075aab8dfc76de5d158d66e1
+- name: github.com/go-chi/chi
+  version: b8567b6442e27704bfeb725095091581cbe82a00
+  subpackages:
+  - middleware
 - name: github.com/go-sql-driver/mysql
   version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/golang/protobuf
-  version: 1f49d83d9aa00e6ce4fc8258c71cc7786aec968a
+  version: 69b215d01a5606c843240eab4937eab3acee6530
   subpackages:
   - proto
-- name: github.com/guregu/kami
-  version: 556ef16b10fbac3cec79e38bbf26ce4af543608f
-  subpackages:
-  - treemux
 - name: github.com/hashicorp/hcl
-  version: 99df0eb941dd8ddbc83d3f3605a34f6a686ac85e
+  version: 630949a3c5fa3c613328e1b8256052cbc2327c9b
   subpackages:
   - hcl/ast
   - hcl/parser
@@ -39,108 +35,95 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jinzhu/gorm
-  version: 0f2ceb5a775714a46bc344976324e3e439f8cdcc
+  version: 5b8c0dd6b92d9caa8036c31dcb117f2df7cceefa
 - name: github.com/jinzhu/inflection
-  version: 74387dc39a75e970e7a3ae6a3386b5bd2e5c5cff
-- name: github.com/kr/fs
-  version: 2788f0dbd16903de03cb8186e5c7d97b69ad387b
+  version: 1c35d901db3da928c72a72d8458480cc9ade058f
 - name: github.com/lib/pq
-  version: 50761b0867bd1d9d069276790bcd4a3bccf2324a
+  version: ca5bc43047f2138703da0f3d3ca89a59f3d597f1
   subpackages:
   - oid
 - name: github.com/magiconair/properties
-  version: 0723e352fa358f9322c938cc2dadda874e9151a9
+  version: b3b15ef068fd0b17ddf408a23669f20811d194d2
 - name: github.com/mattn/go-sqlite3
   version: 3b3f1d01b2696af5501697c35629048c227586ab
 - name: github.com/mitchellh/mapstructure
-  version: ca63d7c062ee3c9f34db231e352b60012b4fd0c1
+  version: db1efb556f84b25a0a13a04aad883943538ad2e0
 - name: github.com/netlify/mailme
   version: 3b136431fdebea1d886bbd1a30b23c43e2d8b4d0
+- name: github.com/netlify/netlify-commons
+  version: 4718f946da99640f4ba377c5d0b0a4917a92c591
+  subpackages:
+  - graceful
 - name: github.com/pborman/uuid
   version: a97ce2ca70fa5a848076093f05e639a89ca34d06
 - name: github.com/pelletier/go-buffruneio
-  version: df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d
+  version: c37440a7cf42ac63b919c752ca73a85067e05992
 - name: github.com/pelletier/go-toml
-  version: 31055c2ff0bb0c7f9095aec0d220aed21108121e
+  version: 13d49d4606eb801b8f01ae542b4afc4c6ee3d84a
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
-- name: github.com/pkg/sftp
-  version: 8197a2e580736b78d704be0fc47b2324c0591a32
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
   - difflib
 - name: github.com/rs/cors
-  version: a62a804a8a009876ca59105f7899938a1349f4b3
+  version: 8dd4211afb5d08dbb39a533b9bb9e4b486351df6
 - name: github.com/rs/xhandler
   version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
 - name: github.com/sirupsen/logrus
   version: a3f95b5c423586578a4e099b11a46c2479628cac
 - name: github.com/spf13/afero
-  version: 20500e2abd0d1f4564a499e83d11d6c73cd58c27
+  version: 9be650865eab0c12963d8753212f4f9c66cdcf12
   subpackages:
   - mem
-  - sftp
 - name: github.com/spf13/cast
-  version: e31f36ffc91a2ba9ddb72a4b6a607ff9b3d3cb63
+  version: ce135a4ebeee6cfe9a26c93ee0d37825f26113c7
 - name: github.com/spf13/cobra
-  version: 9c28e4bbd74e5c3ed7aacbc552b2cab7cfdfe744
+  version: fcd0c5a1df88f5d6784cb4feead962c3f3d0b66c
 - name: github.com/spf13/jwalterweatherman
-  version: 33c24e77fb80341fe7130ee7c594256ff08ccc46
+  version: fa7ca7e836cf3a8bb4ebf799f472c12d7e903d66
 - name: github.com/spf13/pflag
-  version: c7e63cf4530bcd3ba943729cee0efeff2ebea63f
+  version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/spf13/viper
-  version: 16990631d4aa7e38f73dbbbf37fa13e67c648531
+  version: 7538d73b4eb9511d85a9f1dfef202eeb8ac260f4
 - name: github.com/stretchr/testify
   version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
   subpackages:
   - assert
   - require
   - suite
-- name: github.com/zenazn/goji
-  version: 4d7077956293261309684d3cf1af673f773c6819
-  subpackages:
-  - bind
-  - graceful
-  - graceful/listener
-  - web/mutil
 - name: golang.org/x/crypto
-  version: 81372b2fc2f10bef2a7f338da115c315a56b2726
+  version: 558b6879de74bc843225cde5686419267ff707ca
   subpackages:
   - bcrypt
   - blowfish
-  - curve25519
-  - ed25519
-  - ed25519/internal/edwards25519
-  - ssh
 - name: golang.org/x/net
-  version: de35ec43e7a9aabd6a9c54d2898220ea7e44de7d
+  version: d379faa25cbdc04d653984913a2ceb43b0bc46d7
   subpackages:
   - context
+  - context/ctxhttp
 - name: golang.org/x/oauth2
-  version: f047394b6d14284165300fd82dad67edb3a4d7f6
+  version: b53b38ad8a6435bd399ea76d0fa74f23149cca4e
   subpackages:
   - bitbucket
   - github
   - internal
 - name: golang.org/x/sys
-  version: 30de6d19a3bd89a5f38ae4028e23aaa5582648af
+  version: e48874b42435b4347fc52bdee0424a52abc974d7
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 04b8648d973c126ae60143b3e1473bc1576c7597
+  version: f28f36722d5ef2f9655ad3de1f248e3e52ad5ebd
   subpackages:
   - transform
   - unicode/norm
 - name: google.golang.org/appengine
-  version: 78199dcb0669fc381c22e919e1e97eba879e8f60
+  version: 5403c08c6e8fb3b2dc1209d2d833d8e8ac8240de
   subpackages:
   - internal
-  - internal/app_identity
   - internal/base
   - internal/datastore
   - internal/log
-  - internal/modules
   - internal/remote_api
   - internal/urlfetch
   - urlfetch
@@ -157,5 +140,5 @@ imports:
   - internal/scram
   - txn
 - name: gopkg.in/yaml.v2
-  version: 31c299268d302dd0aa9a0dcf765a3d58971ac83f
+  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
 testImports: []

@@ -12,5 +12,8 @@
   "api": {
     "host": "localhost",
     "port": 9999
+  },
+  "logging": {
+    "level": "error"
   }
 }

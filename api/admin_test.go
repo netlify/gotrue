@@ -2,8 +2,8 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,19 +29,14 @@ func (ts *AdminTestSuite) SetupTest() {
 
 // TestAdminUsersUnauthorized tests API /admin/users route without authentication
 func (ts *AdminTestSuite) TestAdminUsersUnauthorized() {
-	// Setup request
-	req := httptest.NewRequest("GET", "/admin/users", nil)
-
-	// Setup response recorder
+	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
 	w := httptest.NewRecorder()
-	ctx := req.Context()
 
-	ts.API.adminUsers(ctx, w, req)
-
-	assert.Equal(ts.T(), w.Code, 401)
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), w.Code, http.StatusUnauthorized)
 }
 
-func (ts *AdminTestSuite) makeSuperAdmin(req *http.Request, email string) (context.Context, *httptest.ResponseRecorder) {
+func (ts *AdminTestSuite) makeSuperAdmin(req *http.Request, email string) {
 	// Cleanup existing user, if they already exist
 	if u, _ := ts.API.db.FindUserByEmailAndAudience(email, ts.API.config.JWT.Aud); u != nil {
 		require.NoError(ts.T(), ts.API.db.DeleteUser(u), "Error deleting user")
@@ -56,33 +51,30 @@ func (ts *AdminTestSuite) makeSuperAdmin(req *http.Request, email string) (conte
 	token, err := ts.API.generateAccessToken(u)
 	require.NoError(ts.T(), err, "Error generating access token")
 
-	tok, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		assert.Equal(ts.T(), token.Header["alg"], "HS256")
+	_, err = jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		assert.Equal(ts.T(), token.Method.Alg(), jwt.SigningMethodHS256.Name)
 		return []byte(ts.API.config.JWT.Secret), nil
 	})
 	require.NoError(ts.T(), err, "Error parsing token")
 
-	// Setup response recorder
-	w := httptest.NewRecorder()
-	ctx := req.Context()
-
-	return withToken(ctx, tok), w
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 }
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers() {
 	// Setup request
-	req := httptest.NewRequest("GET", "/admin/users", nil)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := ts.makeSuperAdmin(req, "test@example.com")
+	ts.makeSuperAdmin(req, "test@example.com")
 
-	ts.API.adminUsers(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
 	data := make(map[string]interface{})
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
-	assert.Equal(ts.T(), w.Code, 200)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 	for _, user := range data["users"].([]interface{}) {
 		assert.NotEmpty(ts.T(), user)
 	}
@@ -97,14 +89,15 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest("POST", "/admin/user", &buffer)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := ts.makeSuperAdmin(req, "test@example.com")
+	ts.makeSuperAdmin(req, "test@example.com")
 
-	ts.API.adminUserCreate(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, 200)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 
 	u, err := ts.API.db.FindUserByEmailAndAudience("test1@example.com", ts.API.config.JWT.Aud)
 	require.NoError(ts.T(), err)
@@ -117,27 +110,20 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 
 // TestAdminUserGet tests API /admin/user route (GET)
 func (ts *AdminTestSuite) TestAdminUserGet() {
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"user": map[string]interface{}{
-			"email": "test1@example.com",
-			"aud":   ts.API.config.JWT.Aud,
-		},
-	}))
-
 	u, err := models.NewUser("test1@example.com", "test", ts.API.config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
 	// Setup request
-	req := httptest.NewRequest("GET", "/admin/user", &buffer)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/user?email=test1@example.com&aud=%s", ts.API.config.JWT.Aud), nil)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := ts.makeSuperAdmin(req, "test@example.com")
+	ts.makeSuperAdmin(req, "test@example.com")
 
-	ts.API.adminUserGet(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, 200)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 
 	data := make(map[string]interface{})
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
@@ -157,14 +143,15 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest("UPDATE", "/admin/user", &buffer)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := ts.makeSuperAdmin(req, "test@example.com")
+	ts.makeSuperAdmin(req, "test@example.com")
 
-	ts.API.adminUserUpdate(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, 200)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 
 	data := make(map[string]interface{})
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
@@ -187,14 +174,15 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest("DELETE", "/admin/user", &buffer)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/admin/user", &buffer)
 
 	// Setup response recorder with super admin privileges
-	ctx, w := ts.makeSuperAdmin(req, "test@example.com")
+	ts.makeSuperAdmin(req, "test@example.com")
 
-	ts.API.adminUserDelete(ctx, w, req)
+	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, 200)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
 }
 
 func TestAdmin(t *testing.T) {

@@ -1,13 +1,10 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
-	"github.com/sirupsen/logrus"
 )
 
 // UserUpdateParams parameters for updating a user
@@ -20,66 +17,59 @@ type UserUpdateParams struct {
 }
 
 // UserGet returns a user
-func (a *API) UserGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 	token := getToken(ctx)
 
 	id, ok := token.Claims["id"].(string)
 	if !ok {
-		BadRequestError(w, "Could not read User ID claim")
-		return
+		return badRequestError("Could not read User ID claim")
 	}
 
 	tokenAud, ok := token.Claims["aud"].(string)
 	if !ok {
-		BadRequestError(w, "Could not read User Aud claim")
-		return
+		return badRequestError("Could not read User Aud claim")
 	}
 
 	aud := a.requestAud(ctx, r)
 	if aud != tokenAud {
-		BadRequestError(w, "Token audience doesn't match request audience")
-		return
+		return badRequestError("Token audience doesn't match request audience")
 	}
 
 	user, err := a.db.FindUserByID(id)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			NotFoundError(w, err.Error())
-		} else {
-			InternalServerError(w, err.Error())
+			return notFoundError(err.Error())
 		}
-		return
+		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	sendJSON(w, 200, user)
+	return sendJSON(w, http.StatusOK, user)
 }
 
 // UserUpdate updates fields on a user
-func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 	token := getToken(ctx)
 
 	params := &UserUpdateParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
 	err := jsonDecoder.Decode(params)
 	if err != nil {
-		BadRequestError(w, fmt.Sprintf("Could not read User Update params: %v", err))
-		return
+		return badRequestError("Could not read User Update params: %v", err)
 	}
 
 	id, ok := token.Claims["id"].(string)
 	if !ok {
-		BadRequestError(w, "Could not read User ID claim")
-		return
+		return badRequestError("Could not read User ID claim")
 	}
 
 	user, err := a.db.FindUserByID(id)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			NotFoundError(w, err.Error())
-		} else {
-			InternalServerError(w, err.Error())
+			return notFoundError(err.Error())
 		}
-		return
+		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
 	var sendChangeEmailVerification bool
@@ -87,31 +77,28 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 		if err = a.mailer.ValidateEmail(params.Email); err == nil {
 			exists, err := a.db.IsDuplicatedEmail(params.Email, user.Aud)
 			if err != nil {
-				InternalServerError(w, err.Error())
-				return
+				return internalServerError("Database error checking email").WithInternalError(err)
 			}
 
 			if exists {
-				UnprocessableEntity(w, "Email address already registered by another user")
-				return
+				return unprocessableEntityError("Email address already registered by another user")
 			}
 
 			user.GenerateEmailChange(params.Email)
 			sendChangeEmailVerification = true
 		} else {
-			UnprocessableEntity(w, "Unable to verify new email address: "+err.Error())
-			return
+			return unprocessableEntityError("Unable to verify new email address: " + err.Error())
 		}
 	}
 
-	logrus.Debugf("Checking params for token %v", params)
+	log := getLogEntry(r)
+	log.Debugf("Checking params for token %v", params)
 
 	if params.EmailChangeToken != "" {
-		logrus.Debugf("Got change token %v", params.EmailChangeToken)
+		log.Debugf("Got change token %v", params.EmailChangeToken)
 
 		if params.EmailChangeToken != user.EmailChangeToken {
-			UnauthorizedError(w, "Email Change Token didn't match token on file")
-			return
+			return unauthorizedError("Email Change Token didn't match token on file")
 		}
 
 		user.ConfirmEmailChange()
@@ -119,8 +106,7 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	if params.Password != "" {
 		if err = user.EncryptPassword(params.Password); err != nil {
-			InternalServerError(w, fmt.Sprintf("Error during password encryption: %v", err))
-			return
+			return internalServerError("Error during password encryption").WithInternalError(err)
 		}
 	}
 
@@ -130,21 +116,22 @@ func (a *API) UserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	if params.AppData != nil {
 		if a.isAdmin(user, a.config.JWT.Aud) {
-			UnauthorizedError(w, "Updating app_metadata requires admin privileges")
-			return
+			return unauthorizedError("Updating app_metadata requires admin privileges")
 		}
 
 		user.UpdateAppMetaData(params.AppData)
 	}
 
 	if err := a.db.UpdateUser(user); err != nil {
-		InternalServerError(w, err.Error())
-		return
+		return internalServerError("Database error updating user").WithInternalError(err)
 	}
 
 	if sendChangeEmailVerification {
-		a.mailer.EmailChangeMail(user)
+		if err = a.mailer.EmailChangeMail(user); err != nil {
+			log := getLogEntry(r)
+			log.WithError(err).Error("Error sending change email")
+		}
 	}
 
-	sendJSON(w, 200, user)
+	return sendJSON(w, http.StatusOK, user)
 }

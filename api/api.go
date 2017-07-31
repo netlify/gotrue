@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/textproto"
 	"regexp"
 	"strings"
 
-	"github.com/dgrijalva/jwt-go"
-	"github.com/guregu/kami"
+	"github.com/go-chi/chi"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/dial"
+	"github.com/netlify/netlify-commons/graceful"
 	"github.com/rs/cors"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -34,99 +34,65 @@ type API struct {
 	version string
 }
 
-// requireAuthentication checks incoming requests for tokens presented using the Authorization header
-func (a *API) requireAuthentication(ctx context.Context, w http.ResponseWriter, r *http.Request) context.Context {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		UnauthorizedError(w, "This endpoint requires a Bearer token")
-		return nil
-	}
-
-	matches := bearerRegexp.FindStringSubmatch(authHeader)
-	if len(matches) != 2 {
-		UnauthorizedError(w, "This endpoint requires a Bearer token")
-		return nil
-	}
-
-	token, err := jwt.Parse(matches[1], func(token *jwt.Token) (interface{}, error) {
-		if token.Header["alg"] != "HS256" {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(a.config.JWT.Secret), nil
-	})
-	if err != nil {
-		UnauthorizedError(w, fmt.Sprintf("Invalid token: %v", err))
-		return nil
-	}
-
-	return withToken(ctx, token)
-}
-
-func (a *API) requestAud(ctx context.Context, r *http.Request) string {
-
-	// First check for an audience in the header
-	p := textproto.MIMEHeader(r.Header)
-	if h, exist := p[textproto.CanonicalMIMEHeaderKey(audHeaderName)]; exist && len(h) > 0 {
-		return h[0]
-	}
-
-	// Then check the token
-	token := getToken(ctx)
-	if token != nil {
-		if _aud, ok := token.Claims["aud"]; ok {
-			if aud, ok := _aud.(string); ok && aud != "" {
-				return aud
-			}
-		}
-	}
-
-	// Finally, return the default of none of the above methods are successful
-	return a.config.JWT.Aud
-}
-
 // ListenAndServe starts the REST API
-func (a *API) ListenAndServe(hostAndPort string) error {
-	return http.ListenAndServe(hostAndPort, a.handler)
+func (a *API) ListenAndServe(hostAndPort string) {
+	log := logrus.WithField("component", "api")
+	server := graceful.NewGracefulServer(a.handler, log)
+	if err := server.Bind(hostAndPort); err != nil {
+		log.WithError(err).Fatal("http server bind failed")
+	}
+
+	if err := server.Listen(); err != nil {
+		log.WithError(err).Fatal("http server listen failed")
+	}
 }
 
 // NewAPI instantiates a new REST API
 func NewAPI(config *conf.Configuration, db storage.Connection, mailer mailer.Mailer) *API {
-	return NewAPIWithVersion(config, db, mailer, defaultVersion)
+	return NewAPIWithVersion(context.Background(), config, db, mailer, defaultVersion)
 }
 
 // NewAPIWithVersion creates a new REST API using the specified version
-func NewAPIWithVersion(config *conf.Configuration, db storage.Connection, mailer mailer.Mailer, version string) *API {
+func NewAPIWithVersion(ctx context.Context, config *conf.Configuration, db storage.Connection, mailer mailer.Mailer, version string) *API {
 	api := &API{config: config, db: db, mailer: mailer, version: version}
-	mux := kami.New()
 
-	mux.Use("/user", api.requireAuthentication)
-	mux.Use("/logout", api.requireAuthentication)
-	mux.Use("/admin/user", api.requireAuthentication)
-	mux.Use("/admin/users", api.requireAuthentication)
+	r := newRouter()
+	r.Use(addRequestID)
+	r.UseBypass(newStructuredLogger(logrus.StandardLogger()))
+	r.Use(recoverer)
 
-	mux.Get("/", api.Index)
-	mux.Post("/signup", api.Signup)
-	mux.Post("/recover", api.Recover)
-	mux.Post("/verify", api.Verify)
-	mux.Get("/user", api.UserGet)
-	mux.Put("/user", api.UserUpdate)
-	mux.Post("/token", api.Token)
-	mux.Post("/logout", api.Logout)
+	r.Get("/", api.Index)
+	r.Post("/signup", api.Signup)
+	r.Post("/recover", api.Recover)
+	r.Post("/verify", api.Verify)
+	r.Post("/token", api.Token)
+	r.With(api.requireAuthentication).Post("/logout", api.Logout)
 
-	// Admin API
-	mux.Get("/admin/users", api.adminUsers)
-	mux.Put("/admin/user", api.adminUserUpdate)
-	mux.Post("/admin/user", api.adminUserCreate)
-	mux.Delete("/admin/user", api.adminUserDelete)
-	mux.Get("/admin/user", api.adminUserGet)
+	r.Route("/user", func(r *router) {
+		r.Use(api.requireAuthentication)
+		r.Get("/", api.UserGet)
+		r.Put("/", api.UserUpdate)
+	})
+
+	r.Route("/admin", func(r *router) {
+		r.Use(addGetBody)
+		r.Use(api.requireAuthentication)
+		r.Use(api.requireAdmin)
+		r.Get("/users", api.adminUsers)
+
+		r.Post("/user", api.adminUserCreate)
+		r.Get("/user", api.adminUserGet)
+		r.Put("/user", api.adminUserUpdate)
+		r.Delete("/user", api.adminUserDelete)
+	})
 
 	corsHandler := cors.New(cors.Options{
-		AllowedMethods:   []string{"GET", "POST", "PATCH", "PUT", "DELETE"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-JWT-AUD"},
+		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", audHeaderName},
 		AllowCredentials: true,
 	})
 
-	api.handler = corsHandler.Handler(mux)
+	api.handler = corsHandler.Handler(chi.ServerBaseContext(r, ctx))
 	return api
 }
 
@@ -149,7 +115,7 @@ func NewAPIFromConfigFile(filename string, version string) (*API, error) {
 	}
 
 	mailer := mailer.NewMailer(config)
-	return NewAPIWithVersion(config, db, mailer, version), nil
+	return NewAPIWithVersion(context.Background(), config, db, mailer, version), nil
 }
 
 // Provider returns a Provider interface for the given name.

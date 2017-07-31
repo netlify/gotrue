@@ -2,14 +2,12 @@ package: github.com/netlify/gotrue
 import:
 - package: github.com/dgrijalva/jwt-go
   version: v2.7.0
-- package: github.com/guregu/kami
-  version: v2.1
 - package: github.com/jinzhu/gorm
-  version: 0f2ceb5a775714a46bc344976324e3e439f8cdcc
+  version: 5b8c0dd6b92d9caa8036c31dcb117f2df7cceefa
 - package: github.com/pborman/uuid
   version: v1.0
 - package: github.com/rs/cors
-  version: v1.0
+  version: v1.1
 - package: golang.org/x/crypto
   subpackages:
   - bcrypt
@@ -42,3 +40,9 @@ import:
 - package: github.com/mattn/go-sqlite3
   version: v1.1.0
 - package: github.com/spf13/viper
+- package: github.com/go-chi/chi
+  version: v3.1.4
+- package: github.com/netlify/netlify-commons
+  version: v0.4.3
+  subpackages:
+  - graceful
