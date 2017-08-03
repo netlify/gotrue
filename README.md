@@ -14,7 +14,7 @@ uppercase the setting name, replace all `.` with `_`, and add a prefix of `GOTRU
 
 ### Top-Level
 
-```json
+```
 {
   "site_url": "https://example.netlify.com/",
   ...
@@ -27,7 +27,7 @@ The base URL your site is located at. Currently used in combination with other s
 
 ### API
 
-```json
+```
 {
   ...
   "api": {
@@ -52,7 +52,7 @@ Controls what endpoint Netlify can access this API on.
 
 ### Database
 
-```json
+```
 {
   ...
   "db": {
@@ -81,7 +81,7 @@ If enabled, creates missing tables and columns upon startup.
 
 ### Logging
 
-```json
+```
 {
   ...
   "log_conf": {
@@ -101,7 +101,7 @@ If you wish logs to be written to a file, set `log_file` to a valid file path.
 
 ### JSON Web Tokens (JWT)
 
-```json
+```
 {
   ...
   "jwt": {
@@ -144,7 +144,7 @@ The default group to assign all new users to.
 We support `github`, `gitlab`, and `bitbucket` for external authentication.
 Use the names as the keys underneath `external` to configure each separately.
 
-```json
+```
 {
   ...
   "external": {
@@ -181,7 +181,7 @@ The base URL used for constructing the URLs to request authorization and access 
 Sending email is not required, but highly recommended for password recovery.
 If enabled, you must provide the required values below.
 
-```json
+```
 {
   ...
   "mailer": {
