@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage/dial"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -15,8 +15,8 @@ var migrateCmd = cobra.Command{
 	},
 }
 
-func migrate(config *conf.Configuration) {
-	db, err := dial.Dial(config)
+func migrate(globalConfig *conf.GlobalConfiguration, config *conf.Configuration) {
+	db, err := dial.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}

@@ -2,16 +2,19 @@ package sql
 
 import (
 	// this is where we do the connections
+	"net/url"
+
+	// import drivers we might need
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/models"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type logger struct {
@@ -24,13 +27,12 @@ func (l logger) Print(v ...interface{}) {
 
 // Connection represents a sql connection.
 type Connection struct {
-	db     *gorm.DB
-	config *conf.Configuration
+	db *gorm.DB
 }
 
 // Automigrate creates any missing tables and/or columns.
 func (conn *Connection) Automigrate() error {
-	conn.db = conn.db.AutoMigrate(&userObj{}, &models.RefreshToken{})
+	conn.db = conn.db.AutoMigrate(&userObj{}, &models.RefreshToken{}, &models.Instance{})
 	return conn.db.Error
 }
 
@@ -47,6 +49,16 @@ func (conn *Connection) CreateUser(user *models.User) error {
 	}
 	tx.Commit()
 	return nil
+}
+
+// CountOtherUsers counts how many other users exist besides the one provided
+func (conn *Connection) CountOtherUsers(instanceID string, id string) (int, error) {
+	u := models.User{}
+	var userCount int
+	if result := conn.db.Table(u.TableName()).Where("instance_id = ? and id != ?", instanceID, id).Count(&userCount); result.Error != nil {
+		return 0, errors.Wrap(result.Error, "error finding registered users")
+	}
+	return userCount, nil
 }
 
 func (conn *Connection) createUserWithTransaction(tx *gorm.DB, user *models.User) (*userObj, error) {
@@ -81,9 +93,9 @@ func (conn *Connection) DeleteUser(u *models.User) error {
 }
 
 // FindUsersInAudience finds users with the matching audience.
-func (conn *Connection) FindUsersInAudience(aud string) ([]*models.User, error) {
+func (conn *Connection) FindUsersInAudience(instanceID string, aud string) ([]*models.User, error) {
 	users := []*models.User{}
-	db := conn.db.Find(&users, "aud = ?", aud)
+	db := conn.db.Find(&users, "instance_id = ? and aud = ?", instanceID, aud)
 	return users, db.Error
 }
 
@@ -93,8 +105,8 @@ func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User,
 }
 
 // FindUserByEmailAndAudience finds a user with the matching email and audience.
-func (conn *Connection) FindUserByEmailAndAudience(email, aud string) (*models.User, error) {
-	return conn.findUser("email = ? and aud = ?", email, aud)
+func (conn *Connection) FindUserByEmailAndAudience(instanceID string, email, aud string) (*models.User, error) {
+	return conn.findUser("instance_id = ? and email = ? and aud = ?", instanceID, email, aud)
 }
 
 // FindUserByID finds a user matching the provided ID.
@@ -108,7 +120,7 @@ func (conn *Connection) FindUserByRecoveryToken(token string) (*models.User, err
 }
 
 // FindUserWithRefreshToken finds a user from the provided refresh token.
-func (conn *Connection) FindUserWithRefreshToken(token, aud string) (*models.User, *models.RefreshToken, error) {
+func (conn *Connection) FindUserWithRefreshToken(token string) (*models.User, *models.RefreshToken, error) {
 	refreshToken := &models.RefreshToken{}
 	if result := conn.db.First(refreshToken, "token = ?", token); result.Error != nil {
 		if result.RecordNotFound() {
@@ -117,7 +129,7 @@ func (conn *Connection) FindUserWithRefreshToken(token, aud string) (*models.Use
 		return nil, nil, errors.Wrap(result.Error, "error finding refresh token")
 	}
 
-	user, err := conn.findUser("id = ? and aud = ?", refreshToken.UserID, aud)
+	user, err := conn.findUser("id = ?", refreshToken.UserID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -162,8 +174,8 @@ func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.R
 }
 
 // IsDuplicatedEmail returns whether a user exists with a matching email and audience.
-func (conn *Connection) IsDuplicatedEmail(email, aud string) (bool, error) {
-	_, err := conn.findUser("email = ? and aud = ?", email, aud)
+func (conn *Connection) IsDuplicatedEmail(instanceID string, email, aud string) (bool, error) {
+	_, err := conn.FindUserByEmailAndAudience(instanceID, email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return false, nil
@@ -231,8 +243,57 @@ func (conn *Connection) updateUserWithTransaction(tx *gorm.DB, user *models.User
 	return nil
 }
 
+// GetInstance finds an instance by ID
+func (conn *Connection) GetInstance(instanceID string) (*models.Instance, error) {
+	instance := models.Instance{}
+	if rsp := conn.db.Where("id = ?", instanceID).First(&instance); rsp.Error != nil {
+		if rsp.RecordNotFound() {
+			return nil, models.InstanceNotFoundError{}
+		}
+		return nil, errors.Wrap(rsp.Error, "error finding instance")
+	}
+	return &instance, nil
+}
+
+func (conn *Connection) GetInstanceByUUID(uuid string) (*models.Instance, error) {
+	instance := models.Instance{}
+	if rsp := conn.db.Where("uuid = ?", uuid).First(&instance); rsp.Error != nil {
+		if rsp.RecordNotFound() {
+			return nil, models.InstanceNotFoundError{}
+		}
+		return nil, errors.Wrap(rsp.Error, "error finding instance")
+	}
+	return &instance, nil
+}
+
+func (conn *Connection) CreateInstance(instance *models.Instance) error {
+	if result := conn.db.Create(instance); result.Error != nil {
+		return errors.Wrap(result.Error, "Error creating instance")
+	}
+	return nil
+}
+
+func (conn *Connection) UpdateInstance(instance *models.Instance) error {
+	if result := conn.db.Save(instance); result.Error != nil {
+		return errors.Wrap(result.Error, "Error updating instance record")
+	}
+	return nil
+}
+
+func (conn *Connection) DeleteInstance(instance *models.Instance) error {
+	return conn.db.Delete(instance).Error
+}
+
 // Dial will connect to that storage engine
-func Dial(config *conf.Configuration) (*Connection, error) {
+func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
+	if config.DB.Driver == "" && config.DB.ConnURL != "" {
+		u, err := url.Parse(config.DB.ConnURL)
+		if err != nil {
+			return nil, errors.Wrap(err, "parsing db connection url")
+		}
+		config.DB.Driver = u.Scheme
+	}
+
 	db, err := gorm.Open(config.DB.Driver, config.DB.ConnURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "opening database connection")
@@ -244,13 +305,12 @@ func Dial(config *conf.Configuration) (*Connection, error) {
 
 	db.SetLogger(logger{logrus.WithField("db-connection", config.DB.Driver)})
 
-	if config.Logging.IsDebugEnabled() {
+	if logrus.StandardLogger().Level == logrus.DebugLevel {
 		db.LogMode(true)
 	}
 
 	conn := &Connection{
-		db:     db,
-		config: config,
+		db: db,
 	}
 
 	return conn, nil
@@ -258,9 +318,10 @@ func Dial(config *conf.Configuration) (*Connection, error) {
 
 func createRefreshToken(tx *gorm.DB, user *models.User) (*models.RefreshToken, error) {
 	token := &models.RefreshToken{
-		User:   *user,
-		UserID: user.ID,
-		Token:  crypto.SecureToken(),
+		InstanceID: user.InstanceID,
+		User:       *user,
+		UserID:     user.ID,
+		Token:      crypto.SecureToken(),
 	}
 
 	if err := tx.Create(token).Error; err != nil {

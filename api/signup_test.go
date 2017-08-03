@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,7 +17,8 @@ import (
 
 type SignupTestSuite struct {
 	suite.Suite
-	API *API
+	API    *API
+	Config *conf.Configuration
 }
 
 func (ts *SignupTestSuite) SetupTest() {
@@ -25,8 +27,12 @@ func (ts *SignupTestSuite) SetupTest() {
 
 	ts.API = api
 
+	config, err := conf.LoadConfigFromFile("config.test.json")
+	require.NoError(ts.T(), err)
+	ts.Config = config
+
 	// Cleanup existing user
-	u, err := ts.API.db.FindUserByEmailAndAudience("test@example.com", api.config.JWT.Aud)
+	u, err := ts.API.db.FindUserByEmailAndAudience("", "test@example.com", config.JWT.Aud)
 	if err == nil {
 		require.NoError(ts.T(), api.db.DeleteUser(u))
 	}
@@ -58,7 +64,7 @@ func (ts *SignupTestSuite) TestSignup() {
 	data := make(map[string]interface{})
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 	assert.Equal(ts.T(), data["email"], "test@example.com")
-	assert.Equal(ts.T(), data["aud"], ts.API.config.JWT.Aud)
+	assert.Equal(ts.T(), data["aud"], ts.Config.JWT.Aud)
 	assert.Equal(ts.T(), data["user_metadata"].(map[string]interface{})["a"], 1.0)
 	assert.Len(ts.T(), data, 12)
 }
@@ -88,7 +94,7 @@ func (ts *SignupTestSuite) TestSignupExternalUnsupported() {
 // TestSignupExternalGithub tests API /signup for github
 func (ts *SignupTestSuite) TestSignupExternalGithub() {
 	code := os.Getenv("GOTRUE_GITHUB_OAUTH_CODE")
-	if code == "" || ts.API.config.External.Github.Secret == "" {
+	if code == "" || ts.Config.External.Github.Secret == "" {
 		ts.T().Skip("GOTRUE_GITHUB_OAUTH_CODE or Github external provider config not set")
 		return
 	}
@@ -115,7 +121,7 @@ func (ts *SignupTestSuite) TestSignupExternalGithub() {
 // TestSignupExternalBitbucket tests API /signup for bitbucket
 func (ts *SignupTestSuite) TestSignupExternalBitbucket() {
 	code := os.Getenv("GOTRUE_BITBUCKET_OAUTH_CODE")
-	if code == "" || ts.API.config.External.Bitbucket.Secret == "" {
+	if code == "" || ts.Config.External.Bitbucket.Secret == "" {
 		ts.T().Skip("GOTRUE_BITBUCKET_OAUTH_CODE or Bitbucket external provider config not set")
 		return
 	}
@@ -142,7 +148,7 @@ func (ts *SignupTestSuite) TestSignupExternalBitbucket() {
 // TestSignupExternalGitlab tests API /signup for gitlab
 func (ts *SignupTestSuite) TestSignupExternalGitlab() {
 	code := os.Getenv("GOTRUE_GITLAB_OAUTH_CODE")
-	if code == "" || ts.API.config.External.Gitlab.Secret == "" {
+	if code == "" || ts.Config.External.Gitlab.Secret == "" {
 		ts.T().Skip("GOTRUE_GITLAB_OAUTH_CODE or Gitlab external provider config not set")
 		return
 
@@ -192,7 +198,7 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 	y := httptest.NewRecorder()
 
 	ts.API.handler.ServeHTTP(y, req)
-	u, err := ts.API.db.FindUserByEmailAndAudience("test1@example.com", ts.API.config.JWT.Aud)
+	u, err := ts.API.db.FindUserByEmailAndAudience("", "test1@example.com", ts.Config.JWT.Aud)
 	if err == nil {
 		u.Confirm()
 		require.NoError(ts.T(), ts.API.db.UpdateUser(u))
@@ -210,12 +216,12 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 
 func (ts *SignupTestSuite) TestVerifySignup() {
 
-	user, err := models.NewUser("test@example.com", "testing", ts.API.config.JWT.Aud, nil)
+	user, err := models.NewUser("", "test@example.com", "testing", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err)
 	require.NoError(ts.T(), ts.API.db.CreateUser(user))
 
 	// Find test user
-	u, err := ts.API.db.FindUserByEmailAndAudience("test@example.com", ts.API.config.JWT.Aud)
+	u, err := ts.API.db.FindUserByEmailAndAudience("", "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// Request body

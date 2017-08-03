@@ -49,14 +49,16 @@ func getUser(ctx context.Context, conn storage.Connection) (*models.User, error)
 	return conn.FindUserByID(id)
 }
 
-func (api *API) isAdmin(u *models.User, aud string) bool {
+func (api *API) isAdmin(ctx context.Context, u *models.User, aud string) bool {
+	config := getConfig(ctx)
 	if aud == "" {
-		aud = api.config.JWT.Aud
+		aud = config.JWT.Aud
 	}
-	return u.IsSuperAdmin || (aud == u.Aud && u.HasRole(api.config.JWT.AdminGroupName))
+	return u.IsSuperAdmin || (aud == u.Aud && u.HasRole(config.JWT.AdminGroupName))
 }
 
 func (api *API) requestAud(ctx context.Context, r *http.Request) string {
+	config := getConfig(ctx)
 	// First check for an audience in the header
 	if aud := r.Header.Get(audHeaderName); aud != "" {
 		return aud
@@ -73,5 +75,5 @@ func (api *API) requestAud(ctx context.Context, r *http.Request) string {
 	}
 
 	// Finally, return the default of none of the above methods are successful
-	return api.config.JWT.Aud
+	return config.JWT.Aud
 }

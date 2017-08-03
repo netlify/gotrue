@@ -20,6 +20,7 @@ type VerifyParams struct {
 
 // Verify exchanges a confirmation or recovery token to a refresh token
 func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 	params := &VerifyParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
 	if err := jsonDecoder.Decode(params); err != nil {
@@ -55,5 +56,5 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	verifyFunc(user)
-	return a.issueRefreshToken(user, w)
+	return a.issueRefreshToken(ctx, user, w)
 }

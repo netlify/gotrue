@@ -158,5 +158,3 @@ GoTrue exposes the following endpoints:
 ## TODO
 
 * Schema for custom user data in config file
-* Better logging
-* Email validation on email updates

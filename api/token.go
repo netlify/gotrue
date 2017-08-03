@@ -40,7 +40,8 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	password := r.FormValue("password")
 
 	aud := a.requestAud(ctx, r)
-	user, err := a.db.FindUserByEmailAndAudience(username, aud)
+	instanceID := getInstanceID(ctx)
+	user, err := a.db.FindUserByEmailAndAudience(instanceID, username, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", "No user found with this email")
@@ -57,7 +58,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	}
 
 	user.LastSignInAt = time.Now()
-	return a.issueRefreshToken(user, w)
+	return a.issueRefreshToken(ctx, user, w)
 }
 
 // AuthorizationCodeGrant implements the authorization_code grant for use with external OAuth providers
@@ -71,7 +72,7 @@ func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter,
 		return oauthError("invalid_request", "External provider name required").WithInternalMessage("No provider name found: %v", r)
 	}
 
-	provider, err := a.Provider(providerName)
+	provider, err := a.Provider(ctx, providerName)
 	if err != nil {
 		return badRequestError("Invalid provider: %s", providerName)
 	}
@@ -87,7 +88,8 @@ func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter,
 	}
 
 	aud := a.requestAud(ctx, r)
-	user, err := a.db.FindUserByEmailAndAudience(email, aud)
+	instanceID := getInstanceID(ctx)
+	user, err := a.db.FindUserByEmailAndAudience(instanceID, email, aud)
 	if err != nil {
 		return internalServerError(err.Error())
 	}
@@ -97,19 +99,19 @@ func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter,
 	}
 
 	user.LastSignInAt = time.Now()
-	return a.issueRefreshToken(user, w)
+	return a.issueRefreshToken(ctx, user, w)
 }
 
 // RefreshTokenGrant implements the refresh_token grant type flow
 func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	config := getConfig(ctx)
 	tokenStr := r.FormValue("refresh_token")
 
 	if tokenStr == "" {
 		return oauthError("invalid_request", "refresh_token required")
 	}
 
-	aud := a.requestAud(ctx, r)
-	user, token, err := a.db.FindUserWithRefreshToken(tokenStr, aud)
+	user, token, err := a.db.FindUserWithRefreshToken(tokenStr)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", "Invalid Refresh Token")
@@ -126,7 +128,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		return internalServerError(err.Error())
 	}
 
-	tokenString, err := a.generateAccessToken(user)
+	tokenString, err := generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
 	if err != nil {
 		a.db.RollbackRefreshTokenSwap(newToken, token)
 		return internalServerError("error generating jwt token").WithInternalError(err)
@@ -135,31 +137,32 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	return sendJSON(w, http.StatusOK, &AccessTokenResponse{
 		Token:        tokenString,
 		TokenType:    "bearer",
-		ExpiresIn:    a.config.JWT.Exp,
+		ExpiresIn:    config.JWT.Exp,
 		RefreshToken: newToken.Token,
 	})
 }
 
-func (a *API) generateAccessToken(user *models.User) (string, error) {
+func generateAccessToken(user *models.User, expiresIn time.Duration, secret string) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	token.Claims["id"] = user.ID
 	token.Claims["email"] = user.Email
 	token.Claims["aud"] = user.Aud
-	token.Claims["exp"] = time.Now().Add(time.Second * time.Duration(a.config.JWT.Exp)).Unix()
+	token.Claims["exp"] = time.Now().Add(expiresIn).Unix()
 	token.Claims["app_metadata"] = user.AppMetaData
 	token.Claims["user_metadata"] = user.UserMetaData
 
-	return token.SignedString([]byte(a.config.JWT.Secret))
+	return token.SignedString([]byte(secret))
 }
 
-func (a *API) issueRefreshToken(user *models.User, w http.ResponseWriter) error {
+func (a *API) issueRefreshToken(ctx context.Context, user *models.User, w http.ResponseWriter) error {
+	config := getConfig(ctx)
 	refreshToken, err := a.db.GrantAuthenticatedUser(user)
 	if err != nil {
 		return internalServerError("Database error granting user").WithInternalError(err)
 	}
 
-	tokenString, err := a.generateAccessToken(user)
+	tokenString, err := generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
 	if err != nil {
 		a.db.RevokeToken(refreshToken)
 		return internalServerError("error generating jwt token").WithInternalError(err)
@@ -168,7 +171,7 @@ func (a *API) issueRefreshToken(user *models.User, w http.ResponseWriter) error 
 	return sendJSON(w, http.StatusOK, &AccessTokenResponse{
 		Token:        tokenString,
 		TokenType:    "bearer",
-		ExpiresIn:    a.config.JWT.Exp,
+		ExpiresIn:    config.JWT.Exp,
 		RefreshToken: refreshToken.Token,
 	})
 }

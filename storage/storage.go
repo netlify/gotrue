@@ -6,19 +6,26 @@ import "github.com/netlify/gotrue/models"
 type Connection interface {
 	Close() error
 	Automigrate() error
+	CountOtherUsers(instanceID string, id string) (int, error)
 	CreateUser(user *models.User) error
 	DeleteUser(user *models.User) error
+	UpdateUser(user *models.User) error
 	FindUserByConfirmationToken(token string) (*models.User, error)
-	FindUserByEmailAndAudience(email, aud string) (*models.User, error)
+	FindUserByEmailAndAudience(instanceID string, email, aud string) (*models.User, error)
 	FindUserByID(id string) (*models.User, error)
 	FindUserByRecoveryToken(token string) (*models.User, error)
-	FindUserWithRefreshToken(token, aud string) (*models.User, *models.RefreshToken, error)
-	FindUsersInAudience(aud string) ([]*models.User, error)
+	FindUserWithRefreshToken(token string) (*models.User, *models.RefreshToken, error)
+	FindUsersInAudience(instanceID string, aud string) ([]*models.User, error)
 	GrantAuthenticatedUser(user *models.User) (*models.RefreshToken, error)
 	GrantRefreshTokenSwap(user *models.User, token *models.RefreshToken) (*models.RefreshToken, error)
-	IsDuplicatedEmail(email, aud string) (bool, error)
+	IsDuplicatedEmail(instanceID string, email, aud string) (bool, error)
 	Logout(id string)
 	RevokeToken(token *models.RefreshToken) error
 	RollbackRefreshTokenSwap(newToken, oldToken *models.RefreshToken) error
-	UpdateUser(user *models.User) error
+
+	GetInstanceByUUID(uuid string) (*models.Instance, error)
+	GetInstance(instanceID string) (*models.Instance, error)
+	CreateInstance(instance *models.Instance) error
+	DeleteInstance(instance *models.Instance) error
+	UpdateInstance(instance *models.Instance) error
 }

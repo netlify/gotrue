@@ -8,8 +8,9 @@ import (
 
 // RefreshToken is the database model for refresh tokens.
 type RefreshToken struct {
-	ID  int64         `bson:"seq_id,omitempty"`
-	BID bson.ObjectId `bson:"_id" sql:"-"`
+	InstanceID string        `json:"-" bson:"instance_id"`
+	ID         int64         `bson:"seq_id,omitempty"`
+	BID        bson.ObjectId `bson:"_id" sql:"-"`
 
 	Token string `bson:"token"`
 

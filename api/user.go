@@ -50,6 +50,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 // UserUpdate updates fields on a user
 func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
+	config := getConfig(ctx)
 	token := getToken(ctx)
 
 	params := &UserUpdateParams{}
@@ -72,23 +73,22 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	var sendChangeEmailVerification bool
+	sendChangeEmailVerification := false
 	if params.Email != "" {
-		if err = a.mailer.ValidateEmail(params.Email); err == nil {
-			exists, err := a.db.IsDuplicatedEmail(params.Email, user.Aud)
-			if err != nil {
-				return internalServerError("Database error checking email").WithInternalError(err)
-			}
-
-			if exists {
-				return unprocessableEntityError("Email address already registered by another user")
-			}
-
-			user.GenerateEmailChange(params.Email)
-			sendChangeEmailVerification = true
-		} else {
+		mailer := getMailer(ctx)
+		if err = mailer.ValidateEmail(params.Email); err != nil {
 			return unprocessableEntityError("Unable to verify new email address: " + err.Error())
 		}
+
+		instanceID := getInstanceID(ctx)
+		if exists, err := a.db.IsDuplicatedEmail(instanceID, params.Email, user.Aud); err != nil {
+			return internalServerError("Database error checking email").WithInternalError(err)
+		} else if exists {
+			return unprocessableEntityError("Email address already registered by another user")
+		}
+
+		user.GenerateEmailChange(params.Email)
+		sendChangeEmailVerification = true
 	}
 
 	log := getLogEntry(r)
@@ -115,7 +115,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.AppData != nil {
-		if a.isAdmin(user, a.config.JWT.Aud) {
+		if a.isAdmin(ctx, user, config.JWT.Aud) {
 			return unauthorizedError("Updating app_metadata requires admin privileges")
 		}
 
@@ -127,7 +127,8 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if sendChangeEmailVerification {
-		if err = a.mailer.EmailChangeMail(user); err != nil {
+		mailer := getMailer(ctx)
+		if err = mailer.EmailChangeMail(user); err != nil {
 			log := getLogEntry(r)
 			log.WithError(err).Error("Error sending change email")
 		}

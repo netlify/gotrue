@@ -1,22 +1,14 @@
 package conf
 
 import (
-	"bufio"
 	"os"
-	"strings"
+	"strconv"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/netlify/netlify-commons/nconf"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
-
-// LogConfiguration holds the configuration for logging.
-type LogConfiguration struct {
-	Level string `json:"level"`
-	File  string `json:"file"`
-}
 
 // ExternalConfiguration holds all config related to external account providers.
 type ExternalConfiguration struct {
@@ -36,26 +28,33 @@ type DBConfiguration struct {
 
 // JWTConfiguration holds all the JWT related configuration.
 type JWTConfiguration struct {
-	Secret             string `json:"secret"`
-	Exp                int    `json:"exp"`
-	Aud                string `json:"aud"`
-	AdminGroupName     string `json:"admin_group_name"`
-	AdminGroupDisabled bool   `json:"admin_group_disabled"`
-	DefaultGroupName   string `json:"default_group_name"`
+	Secret            string `json:"secret"`
+	Exp               int    `json:"exp"`
+	Aud               string `json:"aud"`
+	AdminGroupName    string `json:"admin_group_name"`
+	AdminGroupEnabled bool   `json:"admin_group_enabled"`
+	DefaultGroupName  string `json:"default_group_name"`
 }
 
-// Configuration holds all the configuration for gotrue.
-type Configuration struct {
-	JWT JWTConfiguration `json:"jwt"`
-	DB  DBConfiguration  `json:"db"`
+// GlobalConfiguration holds all the configuration that applies to all instances.
+type GlobalConfiguration struct {
 	API struct {
-		Host string `json:"host"`
-		Port int    `json:"port"`
+		Host     string `json:"host"`
+		Port     int    `json:"port"`
+		Endpoint string `json:"endpoint"`
 	} `json:"api"`
-	Mailer struct {
+	DB                DBConfiguration     `json:"db"`
+	Logging           nconf.LoggingConfig `json:"log_conf"`
+	MultiInstanceMode bool                `json:"-"`
+}
+
+// Configuration holds all the per-instance configuration.
+type Configuration struct {
+	SiteURL string           `json:"site_url"`
+	JWT     JWTConfiguration `json:"jwt"`
+	Mailer  struct {
 		MaxFrequency   time.Duration `json:"max_frequency"`
 		Autoconfirm    bool          `json:"autoconfirm"`
-		SiteURL        string        `json:"site_url"`
 		Host           string        `json:"host"`
 		Port           int           `json:"port"`
 		User           string        `json:"user"`
@@ -79,11 +78,47 @@ type Configuration struct {
 		Bitbucket ExternalConfiguration `json:"bitbucket"`
 		Gitlab    ExternalConfiguration `json:"gitlab"`
 	} `json:"external"`
-	Logging LogConfiguration `json:"logging"`
 }
 
-// LoadConfigFile loads configuration from the provided filename.
-func LoadConfigFile(name string) (*Configuration, error) {
+// LoadGlobalFromFile loads global configuration from the provided filename.
+func LoadGlobalFromFile(name string) (*GlobalConfiguration, error) {
+	cmd := &cobra.Command{}
+	config := ""
+	cmd.Flags().StringVar(&config, "config", "config.test.json", "Config file")
+	cmd.Flags().Set("config", name)
+	return LoadGlobal(cmd)
+}
+
+// LoadGlobal loads configuration from file and environment variables.
+func LoadGlobal(cmd *cobra.Command) (*GlobalConfiguration, error) {
+	config := new(GlobalConfiguration)
+
+	if err := nconf.LoadConfig(cmd, "gotrue", config); err != nil {
+		return nil, err
+	}
+
+	if config.DB.ConnURL == "" && os.Getenv("DATABASE_URL") != "" {
+		config.DB.ConnURL = os.Getenv("DATABASE_URL")
+	}
+
+	if config.API.Port == 0 && os.Getenv("PORT") != "" {
+		port, err := strconv.Atoi(os.Getenv("PORT"))
+		if err != nil {
+			return nil, errors.Wrap(err, "formatting PORT into int")
+		}
+
+		config.API.Port = port
+	}
+
+	if _, err := nconf.ConfigureLogging(&config.Logging); err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+// LoadConfigFromFile loads per-instance configuration from the provided filename.
+func LoadConfigFromFile(name string) (*Configuration, error) {
 	cmd := &cobra.Command{}
 	config := ""
 	cmd.Flags().StringVar(&config, "config", "config.test.json", "Config file")
@@ -91,41 +126,10 @@ func LoadConfigFile(name string) (*Configuration, error) {
 	return LoadConfig(cmd)
 }
 
-// LoadConfig loads configuration from file and environment variables.
+// LoadConfig loads per-instance configuration.
 func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
-	err := viper.BindPFlags(cmd.Flags())
-	if err != nil {
-		return nil, err
-	}
-
-	viper.SetEnvPrefix("GOTRUE")
-
-	viper.SetConfigType("json")
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AutomaticEnv()
-
-	if configFile, _ := cmd.Flags().GetString("config"); configFile != "" {
-		viper.SetConfigFile(configFile)
-	} else {
-		viper.SetConfigName("config")
-		viper.AddConfigPath("./")
-		viper.AddConfigPath("$HOME/.netlify/gotrue/") // keep backwards compatibility
-	}
-
-	if err := viper.ReadInConfig(); err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-
 	config := new(Configuration)
-	if err := viper.Unmarshal(config); err != nil {
-		return nil, err
-	}
-
-	if err := populateConfig(config); err != nil {
-		return nil, err
-	}
-
-	if err := configureLogging(config); err != nil {
+	if err := nconf.LoadConfig(cmd, "gotrue", config); err != nil {
 		return nil, err
 	}
 
@@ -142,54 +146,4 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 	}
 
 	return config, nil
-}
-
-func configureLogging(config *Configuration) error {
-	logConfig := config.Logging
-
-	if logConfig.File != "" {
-		f, errOpen := os.OpenFile(logConfig.File, os.O_RDWR|os.O_APPEND, 0660)
-		if errOpen != nil {
-			return errOpen
-		}
-		logrus.SetOutput(bufio.NewWriter(f))
-	}
-
-	level, err := logConfig.parseLevel()
-	if err != nil {
-		return err
-	}
-	if level != nil {
-		logrus.SetLevel(*level)
-	}
-
-	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:    true,
-		DisableTimestamp: false,
-	})
-
-	return nil
-}
-
-func (l LogConfiguration) parseLevel() (*logrus.Level, error) {
-	if l.Level == "" {
-		return nil, nil
-	}
-
-	level, err := logrus.ParseLevel(l.Level)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing log level information")
-	}
-
-	return &level, nil
-}
-
-// IsDebugEnabled returns whether the log level is set to Debug.
-func (l LogConfiguration) IsDebugEnabled() bool {
-	level, err := l.parseLevel()
-	if err != nil {
-		return false
-	}
-
-	return level != nil && *level == logrus.DebugLevel
 }

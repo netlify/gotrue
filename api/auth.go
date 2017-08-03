@@ -12,6 +12,7 @@ import (
 // requireAuthentication checks incoming requests for tokens presented using the Authorization header
 func (api *API) requireAuthentication(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	ctx := r.Context()
+	config := getConfig(ctx)
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, unauthorizedError("This endpoint requires a Bearer token")
@@ -26,7 +27,7 @@ func (api *API) requireAuthentication(w http.ResponseWriter, r *http.Request) (c
 		if token.Method.Alg() != jwt.SigningMethodHS256.Name {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Method.Alg())
 		}
-		return []byte(api.config.JWT.Secret), nil
+		return []byte(config.JWT.Secret), nil
 	})
 	if err != nil {
 		return nil, unauthorizedError("Invalid token: %v", err)
@@ -66,7 +67,7 @@ func (api *API) requireAdmin(w http.ResponseWriter, r *http.Request) (context.Co
 	}
 
 	// Make sure user is admin
-	if !api.isAdmin(adminUser, aud) {
+	if !api.isAdmin(ctx, adminUser, aud) {
 		return nil, unauthorizedError("User not allowed")
 	}
 	return ctx, nil

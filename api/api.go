@@ -29,8 +29,7 @@ var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 type API struct {
 	handler http.Handler
 	db      storage.Connection
-	mailer  mailer.Mailer
-	config  *conf.Configuration
+	config  *conf.GlobalConfiguration
 	version string
 }
 
@@ -48,43 +47,66 @@ func (a *API) ListenAndServe(hostAndPort string) {
 }
 
 // NewAPI instantiates a new REST API
-func NewAPI(config *conf.Configuration, db storage.Connection, mailer mailer.Mailer) *API {
-	return NewAPIWithVersion(context.Background(), config, db, mailer, defaultVersion)
+func NewAPI(globalConfig *conf.GlobalConfiguration, db storage.Connection) *API {
+	return NewAPIWithVersion(context.Background(), globalConfig, db, defaultVersion)
 }
 
 // NewAPIWithVersion creates a new REST API using the specified version
-func NewAPIWithVersion(ctx context.Context, config *conf.Configuration, db storage.Connection, mailer mailer.Mailer, version string) *API {
-	api := &API{config: config, db: db, mailer: mailer, version: version}
+func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, db storage.Connection, version string) *API {
+	api := &API{config: globalConfig, db: db, version: version}
 
 	r := newRouter()
 	r.Use(addRequestID)
 	r.UseBypass(newStructuredLogger(logrus.StandardLogger()))
 	r.Use(recoverer)
 
-	r.Get("/", api.Index)
-	r.Post("/signup", api.Signup)
-	r.Post("/recover", api.Recover)
-	r.Post("/verify", api.Verify)
-	r.Post("/token", api.Token)
-	r.With(api.requireAuthentication).Post("/logout", api.Logout)
+	r.Route("/", func(r *router) {
+		if globalConfig.MultiInstanceMode {
+			r.Use(api.loadInstanceConfig)
+		}
 
-	r.Route("/user", func(r *router) {
-		r.Use(api.requireAuthentication)
-		r.Get("/", api.UserGet)
-		r.Put("/", api.UserUpdate)
+		r.Post("/signup", api.Signup)
+		r.Post("/recover", api.Recover)
+		r.Post("/verify", api.Verify)
+		r.Post("/token", api.Token)
+		r.With(api.requireAuthentication).Post("/logout", api.Logout)
+
+		r.Route("/user", func(r *router) {
+			r.Use(api.requireAuthentication)
+			r.Get("/", api.UserGet)
+			r.Put("/", api.UserUpdate)
+		})
+
+		r.Route("/admin", func(r *router) {
+			r.Use(addGetBody)
+			r.Use(api.requireAuthentication)
+			r.Use(api.requireAdmin)
+
+			r.Get("/users", api.adminUsers)
+
+			r.Post("/user", api.adminUserCreate)
+			r.Get("/user", api.adminUserGet)
+			r.Put("/user", api.adminUserUpdate)
+			r.Delete("/user", api.adminUserDelete)
+		})
 	})
 
-	r.Route("/admin", func(r *router) {
-		r.Use(addGetBody)
-		r.Use(api.requireAuthentication)
-		r.Use(api.requireAdmin)
-		r.Get("/users", api.adminUsers)
+	if globalConfig.MultiInstanceMode {
+		// Netlify microservice API
+		r.With(verifyNetlifyRequest).Get("/", api.GetAppManifest)
+		r.Route("/instances", func(r *router) {
+			r.Use(verifyNetlifyRequest)
 
-		r.Post("/user", api.adminUserCreate)
-		r.Get("/user", api.adminUserGet)
-		r.Put("/user", api.adminUserUpdate)
-		r.Delete("/user", api.adminUserDelete)
-	})
+			r.Post("/", api.CreateInstance)
+			r.Route("/{instance_id}", func(r *router) {
+				r.With(api.loadInstance)
+
+				r.Get("/", api.GetInstance)
+				r.Put("/", api.UpdateInstance)
+				r.Delete("/", api.DeleteInstance)
+			})
+		})
+	}
 
 	corsHandler := cors.New(cors.Options{
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
@@ -98,38 +120,57 @@ func NewAPIWithVersion(ctx context.Context, config *conf.Configuration, db stora
 
 // NewAPIFromConfigFile creates a new REST API using the provided configuration file.
 func NewAPIFromConfigFile(filename string, version string) (*API, error) {
-	config, err := conf.LoadConfigFile(filename)
+	globalConfig, err := conf.LoadGlobalFromFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	config, err := conf.LoadConfigFromFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := dial.Dial(config)
+	db, err := dial.Dial(globalConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	if config.DB.Automigrate {
+	if globalConfig.DB.Automigrate {
 		if err := db.Automigrate(); err != nil {
 			return nil, err
 		}
 	}
 
-	mailer := mailer.NewMailer(config)
-	return NewAPIWithVersion(context.Background(), config, db, mailer, version), nil
+	ctx, err := WithInstanceConfig(context.Background(), config, "")
+	if err != nil {
+		logrus.Fatalf("Error loading instance config: %+v", err)
+	}
+
+	return NewAPIWithVersion(ctx, globalConfig, db, version), nil
 }
 
 // Provider returns a Provider interface for the given name.
-func (a *API) Provider(name string) (provider.Provider, error) {
+func (a *API) Provider(ctx context.Context, name string) (provider.Provider, error) {
+	config := getConfig(ctx)
 	name = strings.ToLower(name)
 
 	switch name {
 	case "github":
-		return provider.NewGithubProvider(a.config.External.Github), nil
+		return provider.NewGithubProvider(config.External.Github), nil
 	case "bitbucket":
-		return provider.NewBitbucketProvider(a.config.External.Bitbucket), nil
+		return provider.NewBitbucketProvider(config.External.Bitbucket), nil
 	case "gitlab":
-		return provider.NewGitlabProvider(a.config.External.Gitlab), nil
+		return provider.NewGitlabProvider(config.External.Gitlab), nil
 	default:
 		return nil, fmt.Errorf("Provider %s could not be found", name)
 	}
+}
+
+func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanceID string) (context.Context, error) {
+	ctx = withConfig(ctx, config)
+
+	mailer := mailer.NewMailer(config)
+	ctx = withMailer(ctx, mailer)
+	ctx = withInstanceID(ctx, instanceID)
+
+	return ctx, nil
 }
