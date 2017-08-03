@@ -75,7 +75,7 @@ Connection string for the database. See the [gorm examples](https://github.com/j
 
 Adds a prefix to all table names.
 
-`db.automigrate` - `bool`.
+`db.automigrate` - `bool`
 
 If enabled, creates missing tables and columns upon startup.
 
