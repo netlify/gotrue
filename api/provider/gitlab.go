@@ -36,7 +36,7 @@ func NewGitlabProvider(ext conf.ExternalConfiguration) Provider {
 	base := defaultBase(ext.URL)
 	return &gitlabProvider{
 		Config: &oauth2.Config{
-			ClientID:     ext.Key,
+			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint: oauth2.Endpoint{
 				AuthURL:  base + "/oauth/authorize",
@@ -49,7 +49,7 @@ func NewGitlabProvider(ext conf.ExternalConfiguration) Provider {
 
 func (g gitlabProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {
 	res, err := http.PostForm(g.Endpoint.TokenURL, url.Values{
-		"client_id":     {g.External.Key},
+		"client_id":     {g.External.ClientID},
 		"client_secret": {g.External.Secret},
 		"code":          {code},
 		"grant_type":    {"authorization_code"},

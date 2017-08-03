@@ -19,7 +19,7 @@ type bitbucketProvider struct {
 func NewBitbucketProvider(ext conf.ExternalConfiguration) Provider {
 	return &bitbucketProvider{
 		&oauth2.Config{
-			ClientID:     ext.Key,
+			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint:     bitbucket.Endpoint,
 		},

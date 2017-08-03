@@ -151,7 +151,7 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 	}
 
 	// first user automatically becomes admin
-	if userCount == 0 && config.JWT.AdminGroupEnabled {
+	if userCount == 0 && !config.JWT.AdminGroupDisabled {
 		user.SetRole(config.JWT.AdminGroupName)
 		if err = a.db.UpdateUser(user); err != nil {
 			return nil, internalServerError("Database error updating user").WithInternalError(err)

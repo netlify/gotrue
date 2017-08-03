@@ -18,7 +18,7 @@ type githubProvider struct {
 func NewGithubProvider(ext conf.ExternalConfiguration) Provider {
 	return &githubProvider{
 		&oauth2.Config{
-			ClientID:     ext.Key,
+			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint:     github.Endpoint,
 		},

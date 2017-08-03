@@ -12,7 +12,7 @@ import (
 
 // ExternalConfiguration holds all config related to external account providers.
 type ExternalConfiguration struct {
-	Key         string `json:"key"`
+	ClientID    string `json:"client_id"`
 	Secret      string `json:"secret"`
 	RedirectURI string `json:"redirect_uri"`
 	URL         string `json:"url"`
@@ -28,12 +28,12 @@ type DBConfiguration struct {
 
 // JWTConfiguration holds all the JWT related configuration.
 type JWTConfiguration struct {
-	Secret            string `json:"secret"`
-	Exp               int    `json:"exp"`
-	Aud               string `json:"aud"`
-	AdminGroupName    string `json:"admin_group_name"`
-	AdminGroupEnabled bool   `json:"admin_group_enabled"`
-	DefaultGroupName  string `json:"default_group_name"`
+	Secret             string `json:"secret"`
+	Exp                int    `json:"exp"`
+	Aud                string `json:"aud"`
+	AdminGroupName     string `json:"admin_group_name"`
+	AdminGroupDisabled bool   `json:"admin_group_disabled"`
+	DefaultGroupName   string `json:"default_group_name"`
 }
 
 // GlobalConfiguration holds all the configuration that applies to all instances.
@@ -53,16 +53,15 @@ type Configuration struct {
 	SiteURL string           `json:"site_url"`
 	JWT     JWTConfiguration `json:"jwt"`
 	Mailer  struct {
-		MaxFrequency   time.Duration `json:"max_frequency"`
-		Autoconfirm    bool          `json:"autoconfirm"`
-		Host           string        `json:"host"`
-		Port           int           `json:"port"`
-		User           string        `json:"user"`
-		Pass           string        `json:"pass"`
-		TemplateFolder string        `json:"template_folder"`
-		MemberFolder   string        `json:"member_folder"`
-		AdminEmail     string        `json:"admin_email"`
-		Subjects       struct {
+		MaxFrequency time.Duration `json:"max_frequency"`
+		Autoconfirm  bool          `json:"autoconfirm"`
+		Host         string        `json:"host"`
+		Port         int           `json:"port"`
+		User         string        `json:"user"`
+		Pass         string        `json:"pass"`
+		MemberFolder string        `json:"member_folder"`
+		AdminEmail   string        `json:"admin_email"`
+		Subjects     struct {
 			Confirmation string `json:"confirmation"`
 			Recovery     string `json:"recovery"`
 			EmailChange  string `json:"email_change"`
