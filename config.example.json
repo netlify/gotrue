@@ -18,10 +18,9 @@
     "port": 587,
     "user": "test@example.com",
     "pass": "super-secret-password",
-    "template_folder": "/mail_templates",
     "member_folder": "/users",
     "admin_email": "admin@example.com",
-    "mail_subjects": {
+    "subjects": {
       "confirmation": "Welcome to GoTrue!",
       "recovery": "Reset your GoTrue password!"
     }
