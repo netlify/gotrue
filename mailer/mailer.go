@@ -11,17 +11,17 @@ import (
 const defaultConfirmationMail = `<h2>Confirm your signup</h2>
 
 <p>Follow this link to confirm your account:</p>
-<p><a href="{{ .ConfirmationURL }}">Confirm your mail</a></p>`
+<p><a href="{{ .ConfirmationURL }}">Confirm your email address</a></p>`
 
-const defaultRecoveryMail = `<h2>Reset Password</h2>
+const defaultRecoveryMail = `<h2>Reset password</h2>
 
 <p>Follow this link to reset the password for your account:</p>
-<p><a href="{{ .ConfirmationURL }}">Reset Password</a></p>`
+<p><a href="{{ .ConfirmationURL }}">Reset password</a></p>`
 
-const defaultEmailChangeMail = `<h2>Confirm Change of Email</h2>
+const defaultEmailChangeMail = `<h2>Confirm email address change</h2>
 
-<p>Follow this link to confirm the update of your email from {{ .Email }} to {{ .NewEmail }}:</p>
-<p><a href="{{ .ConfirmationURL }}">Change Email</a></p>`
+<p>Follow this link to confirm the update of your email address from {{ .Email }} to {{ .NewEmail }}:</p>
+<p><a href="{{ .ConfirmationURL }}">Change email address</a></p>`
 
 // Mailer defines the interface a mailer must implement.
 type Mailer interface {
