@@ -10,6 +10,12 @@ import (
 	"github.com/netlify/gotrue/models"
 )
 
+const (
+	instanceIDHeaderName          = "x-nf-id"
+	instanceEnvironmentHeaderName = "x-nf-env"
+	siteURLHeaderName             = "x-nf-site-url"
+)
+
 func addGetBody(w http.ResponseWriter, req *http.Request) (context.Context, error) {
 	if req.Method == http.MethodGet {
 		return req.Context(), nil
@@ -33,7 +39,7 @@ func addGetBody(w http.ResponseWriter, req *http.Request) (context.Context, erro
 func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	ctx := r.Context()
 
-	instanceID := r.Header.Get("x-nf-id")
+	instanceID := r.Header.Get(instanceIDHeaderName)
 	if instanceID == "" {
 		return nil, badRequestError("Netlify microservice headers missing")
 	}
@@ -49,7 +55,7 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 		return nil, internalServerError("Database error loading instance").WithInternalError(err)
 	}
 
-	env := r.Header.Get("x-nf-env")
+	env := r.Header.Get(instanceEnvironmentHeaderName)
 	if env == "" {
 		return nil, badRequestError("No environment specified")
 	}
@@ -59,7 +65,7 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 		return nil, internalServerError("Error loading environment config").WithInternalError(err)
 	}
 
-	if siteURL := r.Header.Get("x-nf-site-url"); siteURL != "" {
+	if siteURL := r.Header.Get(siteURLHeaderName); siteURL != "" {
 		config.SiteURL = siteURL
 	}
 	logEntrySetField(r, "site_url", config.SiteURL)
