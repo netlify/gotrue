@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/models"
@@ -102,7 +103,10 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 	return ctx, nil
 }
 
-func verifyNetlifyRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {
-	// TODO verify microservice management API request came from Netlify
+func (api *API) verifyNetlifyRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+	token := strings.TrimPrefix(req.Header.Get("authorization"), "Bearer ")
+	if token != api.config.NetlifySecret {
+		return nil, unauthorizedError("Request did not originate from Netlify")
+	}
 	return req.Context(), nil
 }

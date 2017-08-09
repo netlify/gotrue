@@ -93,9 +93,9 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 	if globalConfig.MultiInstanceMode {
 		// Netlify microservice API
-		r.With(verifyNetlifyRequest).Get("/", api.GetAppManifest)
+		r.With(api.verifyNetlifyRequest).Get("/", api.GetAppManifest)
 		r.Route("/instances", func(r *router) {
-			r.Use(verifyNetlifyRequest)
+			r.Use(api.verifyNetlifyRequest)
 
 			r.Post("/", api.CreateInstance)
 			r.Route("/{instance_id}", func(r *router) {
