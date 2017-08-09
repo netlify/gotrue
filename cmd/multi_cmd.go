@@ -22,6 +22,9 @@ func multi(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("Failed to load configration: %+v", err)
 	}
+	if globalConfig.NetlifySecret == "" {
+		logrus.Fatal("Netlify microservice secret is required")
+	}
 
 	db, err := dial.Dial(globalConfig)
 	if err != nil {

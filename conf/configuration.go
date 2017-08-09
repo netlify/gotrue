@@ -45,6 +45,7 @@ type GlobalConfiguration struct {
 	} `json:"api"`
 	DB                DBConfiguration     `json:"db"`
 	Logging           nconf.LoggingConfig `json:"log_conf"`
+	NetlifySecret     string              `json:"netlify_secret"`
 	MultiInstanceMode bool                `json:"-"`
 }
 

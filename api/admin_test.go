@@ -57,8 +57,8 @@ func (ts *AdminTestSuite) makeSuperAdmin(req *http.Request, email string) {
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
 
-	_, err = jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		assert.Equal(ts.T(), token.Method.Alg(), jwt.SigningMethodHS256.Name)
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	_, err = p.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return []byte(ts.Config.JWT.Secret), nil
 	})
 	require.NoError(ts.T(), err, "Error parsing token")

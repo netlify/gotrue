@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -23,10 +22,8 @@ func (api *API) requireAuthentication(w http.ResponseWriter, r *http.Request) (c
 		return nil, unauthorizedError("This endpoint requires a Bearer token")
 	}
 
-	token, err := jwt.Parse(matches[1], func(token *jwt.Token) (interface{}, error) {
-		if token.Method.Alg() != jwt.SigningMethodHS256.Name {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Method.Alg())
-		}
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	token, err := p.ParseWithClaims(matches[1], &GoTrueClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(config.JWT.Secret), nil
 	})
 	if err != nil {

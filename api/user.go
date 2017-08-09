@@ -19,24 +19,21 @@ type UserUpdateParams struct {
 // UserGet returns a user
 func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	token := getToken(ctx)
+	claims := getClaims(ctx)
+	if claims == nil {
+		return badRequestError("Could not read claims")
+	}
 
-	id, ok := token.Claims["id"].(string)
-	if !ok {
+	if claims.Id == "" {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	tokenAud, ok := token.Claims["aud"].(string)
-	if !ok {
-		return badRequestError("Could not read User Aud claim")
-	}
-
 	aud := a.requestAud(ctx, r)
-	if aud != tokenAud {
+	if aud != claims.Audience {
 		return badRequestError("Token audience doesn't match request audience")
 	}
 
-	user, err := a.db.FindUserByID(id)
+	user, err := a.db.FindUserByID(claims.Id)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -51,7 +48,6 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	config := getConfig(ctx)
-	token := getToken(ctx)
 
 	params := &UserUpdateParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
@@ -60,12 +56,12 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read User Update params: %v", err)
 	}
 
-	id, ok := token.Claims["id"].(string)
-	if !ok {
+	claims := getClaims(ctx)
+	if claims.Id == "" {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	user, err := a.db.FindUserByID(id)
+	user, err := a.db.FindUserByID(claims.Id)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())

@@ -9,6 +9,13 @@ import (
 	"github.com/netlify/gotrue/models"
 )
 
+type GoTrueClaims struct {
+	jwt.StandardClaims
+	Email        string                 `json:"email"`
+	AppMetaData  map[string]interface{} `json:"app_metadata"`
+	UserMetaData map[string]interface{} `json:"user_metadata"`
+}
+
 // AccessTokenResponse represents an OAuth2 success response
 type AccessTokenResponse struct {
 	Token        string `json:"access_token"`
@@ -143,15 +150,18 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 }
 
 func generateAccessToken(user *models.User, expiresIn time.Duration, secret string) (string, error) {
-	token := jwt.New(jwt.SigningMethodHS256)
+	claims := &GoTrueClaims{
+		StandardClaims: jwt.StandardClaims{
+			Id:        user.ID,
+			Audience:  user.Aud,
+			ExpiresAt: time.Now().Add(expiresIn).Unix(),
+		},
+		Email:        user.Email,
+		AppMetaData:  user.AppMetaData,
+		UserMetaData: user.UserMetaData,
+	}
 
-	token.Claims["id"] = user.ID
-	token.Claims["email"] = user.Email
-	token.Claims["aud"] = user.Aud
-	token.Claims["exp"] = time.Now().Add(expiresIn).Unix()
-	token.Claims["app_metadata"] = user.AppMetaData
-	token.Claims["user_metadata"] = user.UserMetaData
-
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
 }
 

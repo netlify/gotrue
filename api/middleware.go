@@ -7,14 +7,21 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/models"
 )
 
 const (
-	instanceIDHeaderName          = "x-nf-id"
-	instanceEnvironmentHeaderName = "x-nf-env"
-	siteURLHeaderName             = "x-nf-site-url"
+	jwsSignatureHeaderName = "x-nf-sign"
 )
+
+type NetlifyMicroserviceClaims struct {
+	SiteURL    string `json:"site_url"`
+	Env        string `json:"env"`
+	InstanceID string `json:"id"`
+	NetlifyID  string `json:"netlify_id"`
+	jwt.StandardClaims
+}
 
 func addGetBody(w http.ResponseWriter, req *http.Request) (context.Context, error) {
 	if req.Method == http.MethodGet {
@@ -39,12 +46,29 @@ func addGetBody(w http.ResponseWriter, req *http.Request) (context.Context, erro
 func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	ctx := r.Context()
 
-	instanceID := r.Header.Get(instanceIDHeaderName)
-	if instanceID == "" {
+	signature := r.Header.Get(jwsSignatureHeaderName)
+	if signature == "" {
 		return nil, badRequestError("Netlify microservice headers missing")
 	}
 
-	// TODO verify JWS of microservice API request
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	token, err := p.ParseWithClaims(signature, &NetlifyMicroserviceClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(api.config.NetlifySecret), nil
+	})
+	if err != nil {
+		return nil, badRequestError("Netlify microservice headers are invalid: %v", err)
+	}
+
+	var ok bool
+	var claims *NetlifyMicroserviceClaims
+	if claims, ok = token.Claims.(*NetlifyMicroserviceClaims); !ok {
+		return nil, badRequestError("Netlify microservice headers are invalid")
+	}
+
+	instanceID := claims.InstanceID
+	if instanceID == "" {
+		return nil, badRequestError("Netlify microservice headers missing")
+	}
 
 	logEntrySetField(r, "instance_id", instanceID)
 	instance, err := api.db.GetInstance(instanceID)
@@ -55,7 +79,7 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 		return nil, internalServerError("Database error loading instance").WithInternalError(err)
 	}
 
-	env := r.Header.Get(instanceEnvironmentHeaderName)
+	env := claims.Env
 	if env == "" {
 		return nil, badRequestError("No environment specified")
 	}
@@ -65,8 +89,8 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 		return nil, internalServerError("Error loading environment config").WithInternalError(err)
 	}
 
-	if siteURL := r.Header.Get(siteURLHeaderName); siteURL != "" {
-		config.SiteURL = siteURL
+	if claims.SiteURL != "" {
+		config.SiteURL = claims.SiteURL
 	}
 	logEntrySetField(r, "site_url", config.SiteURL)
 

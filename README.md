@@ -25,6 +25,11 @@ uppercase the setting name, replace all `.` with `_`, and add a prefix of `GOTRU
 
 The base URL your site is located at. Currently used in combination with other settings to construct URLs used in emails.
 
+`netlify_secret` - `string` *Multi-instance mode only*
+
+The shared secret with Netlify for this microservice. Used to verify requests have been proxied through Netlify and
+the payload values can be trusted.
+
 ### API
 
 ```

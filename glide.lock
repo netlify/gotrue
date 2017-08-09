@@ -1,5 +1,5 @@
-hash: 376b91249e7bc6b0c5d008758f270531cb9e0bb32757892811ac3ae617b61c53
-updated: 2017-08-03T12:37:41.258663282-04:00
+hash: df2295bd03f5efcd91c99eff07998c161ec00040f96e7cebc8d2bbf7da4560e6
+updated: 2017-08-09T16:06:13.242890488-04:00
 imports:
 - name: github.com/badoux/checkmail
   version: d0a759655d62bcdc95c50a0676f3e9702ed59453
@@ -8,7 +8,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/dgrijalva/jwt-go
-  version: 268038b363c7a8d7306b8e35bf77a1fde4b0c402
+  version: d2709f9f1f31ebcda9651b03077758c1f3a0018c
 - name: github.com/fsnotify/fsnotify
   version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/go-chi/chi
@@ -18,7 +18,7 @@ imports:
 - name: github.com/go-sql-driver/mysql
   version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/golang/protobuf
-  version: 748d386b5c1ea99658fd69fe9f03991ce86a90c1
+  version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
   subpackages:
   - proto
 - name: github.com/hashicorp/hcl
@@ -123,23 +123,23 @@ imports:
   - require
   - suite
 - name: golang.org/x/crypto
-  version: 358f15eacb587b056fc93273b930314a5cda12fe
+  version: b176d7def5d71bdd214203491f89843ed217f420
   subpackages:
   - bcrypt
   - blowfish
 - name: golang.org/x/net
-  version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
+  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
   - context
   - context/ctxhttp
 - name: golang.org/x/oauth2
-  version: 96fca6c793ec32f068f97942ae3c7c073810dfc1
+  version: 9a379c6b3e95a790ffc43293c2a78dee0d7b6e20
   subpackages:
   - bitbucket
   - github
   - internal
 - name: golang.org/x/sys
-  version: d8f5ea21b9295e315e612b4bcf4bedea93454d4d
+  version: e42485b6e20ae7d2304ec72e535b103ed350cc02
   subpackages:
   - unix
 - name: golang.org/x/text

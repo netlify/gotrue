@@ -24,12 +24,12 @@ const (
 	instanceKey   = contextKey("instance")
 )
 
-// WithToken adds the JWT token to the context.
+// withToken adds the JWT token to the context.
 func withToken(ctx context.Context, token *jwt.Token) context.Context {
 	return context.WithValue(ctx, tokenKey, token)
 }
 
-// GetToken reads the JWT token from the context.
+// getToken reads the JWT token from the context.
 func getToken(ctx context.Context) *jwt.Token {
 	obj := ctx.Value(tokenKey)
 	if obj == nil {
@@ -37,6 +37,14 @@ func getToken(ctx context.Context) *jwt.Token {
 	}
 
 	return obj.(*jwt.Token)
+}
+
+func getClaims(ctx context.Context) *GoTrueClaims {
+	token := getToken(ctx)
+	if token == nil {
+		return nil
+	}
+	return token.Claims.(*GoTrueClaims)
 }
 
 // withRequestID adds the provided request ID to the context.
