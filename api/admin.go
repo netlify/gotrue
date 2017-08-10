@@ -40,8 +40,8 @@ func (api *API) getAdminParams(r *http.Request) (*adminUserParams, error) {
 }
 
 // Returns the the target user
-func (api *API) getAdminTargetUser(params *adminUserParams) (*models.User, error) {
-	user, err := api.db.FindUserByEmailAndAudience(params.User.Email, params.User.Aud)
+func (api *API) getAdminTargetUser(instanceID string, params *adminUserParams) (*models.User, error) {
+	user, err := api.db.FindUserByEmailAndAudience(instanceID, params.User.Email, params.User.Aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			if user, err = api.db.FindUserByID(params.User.ID); err != nil {
@@ -61,8 +61,9 @@ func (api *API) getAdminTargetUser(params *adminUserParams) (*models.User, error
 // adminUsers responds with a list of all users in a given audience
 func (api *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
+	instanceID := getInstanceID(ctx)
 	aud := api.requestAud(ctx, r)
-	users, err := api.db.FindUsersInAudience(aud)
+	users, err := api.db.FindUsersInAudience(instanceID, aud)
 	if err != nil {
 		return internalServerError("Database error finding users").WithInternalError(err)
 	}
@@ -75,6 +76,7 @@ func (api *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 
 // adminUserGet returns information about a single user
 func (api *API) adminUserGet(w http.ResponseWriter, r *http.Request) error {
+	instanceID := getInstanceID(r.Context())
 	params := &adminUserParams{
 		User: adminTargetUser{
 			ID:    r.FormValue("id"),
@@ -82,7 +84,7 @@ func (api *API) adminUserGet(w http.ResponseWriter, r *http.Request) error {
 			Aud:   r.FormValue("aud"),
 		},
 	}
-	user, err := api.getAdminTargetUser(params)
+	user, err := api.getAdminTargetUser(instanceID, params)
 	if err != nil {
 		return err
 	}
@@ -91,11 +93,12 @@ func (api *API) adminUserGet(w http.ResponseWriter, r *http.Request) error {
 
 // adminUserUpdate updates a single user object
 func (api *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
+	instanceID := getInstanceID(r.Context())
 	params, err := api.getAdminParams(r)
 	if err != nil {
 		return err
 	}
-	user, err := api.getAdminTargetUser(params)
+	user, err := api.getAdminTargetUser(instanceID, params)
 	if err != nil {
 		return err
 	}
@@ -126,12 +129,14 @@ func (api *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 // adminUserCreate creates a new user based on the provided data
 func (api *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
+	instanceID := getInstanceID(ctx)
 	params, err := api.getAdminParams(r)
 	if err != nil {
 		return err
 	}
 
-	if err := api.mailer.ValidateEmail(params.Email); err != nil {
+	mailer := getMailer(ctx)
+	if err := mailer.ValidateEmail(params.Email); err != nil {
 		return badRequestError("Invalid email address: %s", params.Email).WithInternalError(err)
 	}
 
@@ -140,15 +145,22 @@ func (api *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 		aud = params.User.Aud
 	}
 
-	user, err := models.NewUser(params.Email, params.Password, aud, params.Data)
+	if exists, err := api.db.IsDuplicatedEmail(instanceID, params.Email, aud); err != nil {
+		return internalServerError("Database error checking email").WithInternalError(err)
+	} else if exists {
+		return unprocessableEntityError("Email address already registered by another user")
+	}
+
+	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		return internalServerError("Error creating user").WithInternalError(err)
 	}
 
+	config := getConfig(ctx)
 	if params.Role != "" {
 		user.SetRole(params.Role)
 	} else {
-		user.SetRole(api.config.JWT.DefaultGroupName)
+		user.SetRole(config.JWT.DefaultGroupName)
 	}
 
 	if params.Confirm {
@@ -164,11 +176,12 @@ func (api *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 
 // adminUserDelete delete a user
 func (api *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
+	instanceID := getInstanceID(r.Context())
 	params, err := api.getAdminParams(r)
 	if err != nil {
 		return err
 	}
-	user, err := api.getAdminTargetUser(params)
+	user, err := api.getAdminTargetUser(instanceID, params)
 	if err != nil {
 		return err
 	}

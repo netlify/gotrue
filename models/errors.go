@@ -24,3 +24,10 @@ type RefreshTokenNotFoundError struct{}
 func (e RefreshTokenNotFoundError) Error() string {
 	return "Refresh Token not found"
 }
+
+// InstanceNotFoundError represents when an instance is not found.
+type InstanceNotFoundError struct{}
+
+func (e InstanceNotFoundError) Error() string {
+	return "Instance not found"
+}

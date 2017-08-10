@@ -19,24 +19,21 @@ type UserUpdateParams struct {
 // UserGet returns a user
 func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	token := getToken(ctx)
+	claims := getClaims(ctx)
+	if claims == nil {
+		return badRequestError("Could not read claims")
+	}
 
-	id, ok := token.Claims["id"].(string)
-	if !ok {
+	if claims.Id == "" {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	tokenAud, ok := token.Claims["aud"].(string)
-	if !ok {
-		return badRequestError("Could not read User Aud claim")
-	}
-
 	aud := a.requestAud(ctx, r)
-	if aud != tokenAud {
+	if aud != claims.Audience {
 		return badRequestError("Token audience doesn't match request audience")
 	}
 
-	user, err := a.db.FindUserByID(id)
+	user, err := a.db.FindUserByID(claims.Id)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -50,7 +47,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 // UserUpdate updates fields on a user
 func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	token := getToken(ctx)
+	config := getConfig(ctx)
 
 	params := &UserUpdateParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
@@ -59,12 +56,12 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read User Update params: %v", err)
 	}
 
-	id, ok := token.Claims["id"].(string)
-	if !ok {
+	claims := getClaims(ctx)
+	if claims.Id == "" {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	user, err := a.db.FindUserByID(id)
+	user, err := a.db.FindUserByID(claims.Id)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -72,23 +69,22 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	var sendChangeEmailVerification bool
+	sendChangeEmailVerification := false
 	if params.Email != "" {
-		if err = a.mailer.ValidateEmail(params.Email); err == nil {
-			exists, err := a.db.IsDuplicatedEmail(params.Email, user.Aud)
-			if err != nil {
-				return internalServerError("Database error checking email").WithInternalError(err)
-			}
-
-			if exists {
-				return unprocessableEntityError("Email address already registered by another user")
-			}
-
-			user.GenerateEmailChange(params.Email)
-			sendChangeEmailVerification = true
-		} else {
+		mailer := getMailer(ctx)
+		if err = mailer.ValidateEmail(params.Email); err != nil {
 			return unprocessableEntityError("Unable to verify new email address: " + err.Error())
 		}
+
+		instanceID := getInstanceID(ctx)
+		if exists, err := a.db.IsDuplicatedEmail(instanceID, params.Email, user.Aud); err != nil {
+			return internalServerError("Database error checking email").WithInternalError(err)
+		} else if exists {
+			return unprocessableEntityError("Email address already registered by another user")
+		}
+
+		user.GenerateEmailChange(params.Email)
+		sendChangeEmailVerification = true
 	}
 
 	log := getLogEntry(r)
@@ -115,7 +111,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.AppData != nil {
-		if a.isAdmin(user, a.config.JWT.Aud) {
+		if a.isAdmin(ctx, user, config.JWT.Aud) {
 			return unauthorizedError("Updating app_metadata requires admin privileges")
 		}
 
@@ -127,7 +123,8 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if sendChangeEmailVerification {
-		if err = a.mailer.EmailChangeMail(user); err != nil {
+		mailer := getMailer(ctx)
+		if err = mailer.EmailChangeMail(user); err != nil {
 			log := getLogEntry(r)
 			log.WithError(err).Error("Error sending change email")
 		}

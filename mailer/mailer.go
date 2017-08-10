@@ -57,7 +57,7 @@ func NewMailer(conf *conf.Configuration) Mailer {
 
 	mailConf := conf.Mailer
 	return &TemplateMailer{
-		SiteURL:      mailConf.SiteURL,
+		SiteURL:      conf.SiteURL,
 		MemberFolder: mailConf.MemberFolder,
 		Config:       conf,
 		TemplateMailer: &mailme.Mailer{
@@ -66,7 +66,7 @@ func NewMailer(conf *conf.Configuration) Mailer {
 			User:    conf.Mailer.User,
 			Pass:    conf.Mailer.Pass,
 			From:    conf.Mailer.AdminEmail,
-			BaseURL: conf.Mailer.SiteURL,
+			BaseURL: conf.SiteURL,
 		},
 	}
 }
@@ -120,8 +120,8 @@ func (m *TemplateMailer) RecoveryMail(user *models.User) error {
 
 func mailData(mail string, config *conf.Configuration, user *models.User) map[string]interface{} {
 	data := map[string]interface{}{
-		"SiteURL":         config.Mailer.SiteURL,
-		"ConfirmationURL": config.Mailer.SiteURL + config.Mailer.MemberFolder + "/confirm/" + user.ConfirmationToken,
+		"SiteURL":         config.SiteURL,
+		"ConfirmationURL": config.SiteURL + config.Mailer.MemberFolder + "/confirm/" + user.ConfirmationToken,
 		"Email":           user.Email,
 		"Token":           user.ConfirmationToken,
 		"Data":            user.UserMetaData,
@@ -130,13 +130,13 @@ func mailData(mail string, config *conf.Configuration, user *models.User) map[st
 	// Setup recovery email
 	if mail == "Recovery" {
 		data["Token"] = user.RecoveryToken
-		data["ConfirmationURL"] = config.Mailer.SiteURL + config.Mailer.MemberFolder + "/recover/" + user.RecoveryToken
+		data["ConfirmationURL"] = config.SiteURL + config.Mailer.MemberFolder + "/recover/" + user.RecoveryToken
 	}
 
 	// Setup email change confirmation email
 	if mail == "EmailChange" {
 		data["Token"] = user.EmailChangeToken
-		data["ConfirmationURL"] = config.Mailer.SiteURL + config.Mailer.MemberFolder + "/confirm-email/" + user.EmailChangeToken
+		data["ConfirmationURL"] = config.SiteURL + config.Mailer.MemberFolder + "/confirm-email/" + user.EmailChangeToken
 		data["NewEmail"] = user.EmailChange
 	}
 	return data

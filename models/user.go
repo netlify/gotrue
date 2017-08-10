@@ -12,7 +12,8 @@ import (
 
 // User respresents a registered user with email/password authentication
 type User struct {
-	ID string `json:"id" bson:"_id,omitempty"`
+	InstanceID string `json:"-" bson:"instance_id"`
+	ID         string `json:"id" bson:"_id,omitempty"`
 
 	Aud               string    `json:"aud" bson:"aud"`
 	Role              string    `json:"role" bson:"role"`
@@ -42,8 +43,9 @@ type User struct {
 }
 
 // NewUser initializes a new user from an email, password and user data.
-func NewUser(email, password, aud string, userData map[string]interface{}) (*User, error) {
+func NewUser(instanceID string, email, password, aud string, userData map[string]interface{}) (*User, error) {
 	user := &User{
+		InstanceID:   instanceID,
 		ID:           uuid.NewRandom().String(),
 		Aud:          aud,
 		Email:        email,

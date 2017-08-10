@@ -1,15 +1,15 @@
 package cmd
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage/dial"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var autoconfirm, isSuperAdmin, isAdmin bool
-var audience string
+var audience, instanceID string
 
 func getAudience(c *conf.Configuration) string {
 	if audience == "" {
@@ -26,6 +26,7 @@ func adminCmd() *cobra.Command {
 
 	adminCmd.AddCommand(&adminCreateUserCmd, &adminDeleteUserCmd)
 	adminCmd.PersistentFlags().StringVarP(&audience, "aud", "a", "", "Set the new user's audience")
+	adminCmd.PersistentFlags().StringVarP(&instanceID, "instance_id", "i", "", "Set the instance ID to interact with")
 
 	adminCreateUserCmd.Flags().BoolVar(&autoconfirm, "confirm", false, "Automatically confirm user without sending an email")
 	adminCreateUserCmd.Flags().BoolVar(&isSuperAdmin, "superadmin", false, "Create user with superadmin privileges")
@@ -65,26 +66,26 @@ var adminEditRoleCmd = cobra.Command{
 	},
 }
 
-func adminCreateUser(config *conf.Configuration, args []string) {
-	db, err := dial.Dial(config)
+func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
+	db, err := dial.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 
-	if config.DB.Automigrate {
+	if globalConfig.DB.Automigrate {
 		if err := db.Automigrate(); err != nil {
 			logrus.Fatalf("Error migrating tables: %+v", err)
 		}
 	}
 
 	aud := getAudience(config)
-	if exists, err := db.IsDuplicatedEmail(args[0], aud); exists {
+	if exists, err := db.IsDuplicatedEmail(instanceID, args[0], aud); exists {
 		logrus.Fatalf("Error creating new user: user already exists")
 	} else if err != nil {
 		logrus.Fatalf("Error checking user email: %+v", err)
 	}
 
-	user, err := models.NewUser(args[0], args[1], aud, nil)
+	user, err := models.NewUser(instanceID, args[0], args[1], aud, nil)
 	if err != nil {
 		logrus.Fatalf("Error creating new user: %+v", err)
 	}
@@ -110,13 +111,13 @@ func adminCreateUser(config *conf.Configuration, args []string) {
 	logrus.Infof("Created user: %s", args[0])
 }
 
-func adminDeleteUser(config *conf.Configuration, args []string) {
-	db, err := dial.Dial(config)
+func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
+	db, err := dial.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 
-	user, err := db.FindUserByEmailAndAudience(args[0], getAudience(config))
+	user, err := db.FindUserByEmailAndAudience(instanceID, args[0], getAudience(config))
 	if err != nil {
 		user, err = db.FindUserByID(args[0])
 		if err != nil {
@@ -131,13 +132,13 @@ func adminDeleteUser(config *conf.Configuration, args []string) {
 	logrus.Infof("Removed user: %s", args[0])
 }
 
-func adminEditRole(config *conf.Configuration, args []string) {
-	db, err := dial.Dial(config)
+func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
+	db, err := dial.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 
-	user, err := db.FindUserByEmailAndAudience(args[0], getAudience(config))
+	user, err := db.FindUserByEmailAndAudience(instanceID, args[0], getAudience(config))
 	if err != nil {
 		user, err = db.FindUserByID(args[0])
 		if err != nil {

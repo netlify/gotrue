@@ -31,47 +31,38 @@ func sendJSON(w http.ResponseWriter, status int, obj interface{}) error {
 }
 
 func getUser(ctx context.Context, conn storage.Connection) (*models.User, error) {
-	token := getToken(ctx)
-	if token == nil {
+	claims := getClaims(ctx)
+	if claims == nil {
 		return nil, errors.New("Invalid token")
 	}
 
-	_id, ok := token.Claims["id"]
-	if !ok {
+	if claims.Id == "" {
 		return nil, errors.New("Invalid claim: id")
 	}
-
-	id, ok := _id.(string)
-	if !ok {
-		return nil, errors.New("Invalid value for claim: id")
-	}
-
-	return conn.FindUserByID(id)
+	return conn.FindUserByID(claims.Id)
 }
 
-func (api *API) isAdmin(u *models.User, aud string) bool {
+func (api *API) isAdmin(ctx context.Context, u *models.User, aud string) bool {
+	config := getConfig(ctx)
 	if aud == "" {
-		aud = api.config.JWT.Aud
+		aud = config.JWT.Aud
 	}
-	return u.IsSuperAdmin || (aud == u.Aud && u.HasRole(api.config.JWT.AdminGroupName))
+	return u.IsSuperAdmin || (aud == u.Aud && u.HasRole(config.JWT.AdminGroupName))
 }
 
 func (api *API) requestAud(ctx context.Context, r *http.Request) string {
+	config := getConfig(ctx)
 	// First check for an audience in the header
 	if aud := r.Header.Get(audHeaderName); aud != "" {
 		return aud
 	}
 
 	// Then check the token
-	token := getToken(ctx)
-	if token != nil {
-		if _aud, ok := token.Claims["aud"]; ok {
-			if aud, ok := _aud.(string); ok && aud != "" {
-				return aud
-			}
-		}
+	claims := getClaims(ctx)
+	if claims != nil && claims.Audience != "" {
+		return claims.Audience
 	}
 
 	// Finally, return the default of none of the above methods are successful
-	return api.config.JWT.Aud
+	return config.JWT.Aud
 }

@@ -1,13 +1,11 @@
 package mongo
 
 import (
-	"fmt"
-
-	"github.com/sirupsen/logrus"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/models"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2/txn"
@@ -26,7 +24,7 @@ func (l logger) Output(depth int, s string) error {
 type Connection struct {
 	session *mgo.Session
 	db      *mgo.Database
-	config  *conf.Configuration
+	config  *conf.GlobalConfiguration
 }
 
 // Close closes the mongo connection.
@@ -35,8 +33,22 @@ func (conn *Connection) Close() error {
 	return nil
 }
 
-// Automigrate is not necessary for mongo.
+// Automigrate creates all necessary indexes for mongo.
 func (conn *Connection) Automigrate() error {
+	collections := []string{
+		(&models.RefreshToken{}).TableName(),
+		(&models.User{}).TableName(),
+	}
+	for _, name := range collections {
+		c := conn.db.C(name)
+		if err := c.EnsureIndex(mgo.Index{
+			Key:        []string{"instance_id"},
+			Background: true,
+		}); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -46,8 +58,7 @@ func (conn *Connection) CreateUser(user *models.User) error {
 	if err := c.Insert(user); err != nil {
 		return errors.Wrap(err, "Error creating user")
 	}
-
-	return conn.makeUserAdmin(c, user)
+	return nil
 }
 
 // DeleteUser deletes a user from mongo.
@@ -62,11 +73,11 @@ func (conn *Connection) DeleteUser(user *models.User) error {
 }
 
 // FindUsersInAudience finds users that belong to the provided audience.
-func (conn *Connection) FindUsersInAudience(aud string) ([]*models.User, error) {
+func (conn *Connection) FindUsersInAudience(instanceID string, aud string) ([]*models.User, error) {
 	user := &models.User{}
 	users := []*models.User{}
 	c := conn.db.C(user.TableName())
-	err := c.Find(bson.M{"aud": aud}).All(&users)
+	err := c.Find(bson.M{"instance_id": instanceID, "aud": aud}).All(&users)
 	return users, err
 }
 
@@ -89,8 +100,8 @@ func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User,
 }
 
 // FindUserByEmailAndAudience finds a user with the specified email and audience.
-func (conn *Connection) FindUserByEmailAndAudience(email, aud string) (*models.User, error) {
-	return conn.findUser(bson.M{"email": email, "aud": aud})
+func (conn *Connection) FindUserByEmailAndAudience(instanceID string, email, aud string) (*models.User, error) {
+	return conn.findUser(bson.M{"instance_id": instanceID, "email": email, "aud": aud})
 }
 
 // FindUserByID finds a user with specified ID.
@@ -104,7 +115,7 @@ func (conn *Connection) FindUserByRecoveryToken(token string) (*models.User, err
 }
 
 // FindUserWithRefreshToken finds a user with the specified refresh token.
-func (conn *Connection) FindUserWithRefreshToken(token, aud string) (*models.User, *models.RefreshToken, error) {
+func (conn *Connection) FindUserWithRefreshToken(token string) (*models.User, *models.RefreshToken, error) {
 	refreshToken := &models.RefreshToken{}
 	rc := conn.db.C(refreshToken.TableName())
 
@@ -115,7 +126,7 @@ func (conn *Connection) FindUserWithRefreshToken(token, aud string) (*models.Use
 		return nil, nil, errors.Wrap(err, "error finding refresh token")
 	}
 
-	user, err := conn.findUser(bson.M{"_id": refreshToken.UserID, "aud": aud})
+	user, err := conn.findUser(bson.M{"_id": refreshToken.UserID})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -128,10 +139,11 @@ func (conn *Connection) GrantAuthenticatedUser(user *models.User) (*models.Refre
 	runner := conn.newTxRunner()
 
 	token := &models.RefreshToken{
-		User:   *user,
-		UserID: user.ID,
-		Token:  crypto.SecureToken(),
-		BID:    bson.NewObjectId(),
+		InstanceID: user.InstanceID,
+		User:       *user,
+		UserID:     user.ID,
+		Token:      crypto.SecureToken(),
+		BID:        bson.NewObjectId(),
 	}
 
 	ops := []txn.Op{{
@@ -158,10 +170,11 @@ func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.R
 	token.Revoked = true
 
 	newToken := &models.RefreshToken{
-		User:   *user,
-		UserID: user.ID,
-		Token:  crypto.SecureToken(),
-		BID:    bson.NewObjectId(),
+		InstanceID: user.InstanceID,
+		User:       *user,
+		UserID:     user.ID,
+		Token:      crypto.SecureToken(),
+		BID:        bson.NewObjectId(),
 	}
 
 	ops := []txn.Op{{
@@ -182,8 +195,8 @@ func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.R
 }
 
 // IsDuplicatedEmail returns whether an email and audience are already in use.
-func (conn *Connection) IsDuplicatedEmail(email, aud string) (bool, error) {
-	_, err := conn.findUser(bson.M{"email": email, "aud": aud})
+func (conn *Connection) IsDuplicatedEmail(instanceID string, email, aud string) (bool, error) {
+	_, err := conn.FindUserByEmailAndAudience(instanceID, email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return false, nil
@@ -201,25 +214,11 @@ func (conn *Connection) Logout(id string) {
 	c.RemoveAll(bson.M{"user_id": id})
 }
 
-func (conn *Connection) makeUserAdmin(c *mgo.Collection, user *models.User) error {
-	if conn.config.JWT.AdminGroupDisabled {
-		return nil
-	}
-
-	// Automatically make first user admin
-	v, err := c.Find(bson.M{"_id": bson.M{"$ne": user.ID}}).Count()
-	if err != nil {
-		return errors.Wrap(err, "Error checking existing user count in makeUserAdmin")
-	}
-
-	if v == 0 {
-		user.SetRole(conn.config.JWT.AdminGroupName)
-		if err := c.Update(bson.M{"_id": user.ID}, bson.M{"$set": user}); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Error setting administrative privileges for user %s", user.ID))
-		}
-	}
-
-	return nil
+// CountOtherUsers counts number of users not matching the id
+func (conn *Connection) CountOtherUsers(instanceID string, id string) (int, error) {
+	user := models.User{}
+	c := conn.db.C(user.TableName())
+	return c.Find(bson.M{"instance_id": instanceID, "_id": bson.M{"$ne": id}}).Count()
 }
 
 // RevokeToken revokes a refresh token.
@@ -267,15 +266,63 @@ func (conn *Connection) UpdateUser(user *models.User) error {
 	return nil
 }
 
+// GetInstance finds an instance by ID
+func (conn *Connection) GetInstance(instanceID string) (*models.Instance, error) {
+	instance := &models.Instance{}
+	c := conn.db.C(instance.TableName())
+
+	if err := c.Find(bson.M{"_id": instanceID}).One(instance); err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, models.InstanceNotFoundError{}
+		}
+		return nil, errors.Wrap(err, "error finding instance")
+	}
+	return instance, nil
+}
+
+func (conn *Connection) GetInstanceByUUID(uuid string) (*models.Instance, error) {
+	instance := &models.Instance{}
+	c := conn.db.C(instance.TableName())
+
+	if err := c.Find(bson.M{"uuid": uuid}).One(instance); err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, models.InstanceNotFoundError{}
+		}
+		return nil, errors.Wrap(err, "error finding instance")
+	}
+	return instance, nil
+}
+
+func (conn *Connection) CreateInstance(instance *models.Instance) error {
+	c := conn.db.C(instance.TableName())
+	if err := c.Insert(instance); err != nil {
+		return errors.Wrap(err, "Error creating instance")
+	}
+	return nil
+}
+
+func (conn *Connection) UpdateInstance(instance *models.Instance) error {
+	c := conn.db.C(instance.TableName())
+	if err := c.Update(bson.M{"_id": instance.ID}, bson.M{"$set": instance}); err != nil {
+		return errors.Wrap(err, "Error updating instance record")
+	}
+	return nil
+}
+
+func (conn *Connection) DeleteInstance(instance *models.Instance) error {
+	c := conn.db.C(instance.TableName())
+	return c.Remove(bson.M{"_id": instance.ID})
+}
+
 func (conn *Connection) newTxRunner() *txn.Runner {
 	return txn.NewRunner(conn.db.C("auth_transactions"))
 }
 
 // Dial will connect to that storage engine
-func Dial(config *conf.Configuration) (*Connection, error) {
+func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 	mgo.SetLogger(logger{logrus.WithField("db-connection", "mongo")})
 
-	if config.Logging.IsDebugEnabled() {
+	if logrus.StandardLogger().Level == logrus.DebugLevel {
 		mgo.SetDebug(true)
 	}
 

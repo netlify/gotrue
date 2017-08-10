@@ -19,7 +19,9 @@ type SignupParams struct {
 }
 
 func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter, r *http.Request, params *SignupParams) error {
-	provider, err := a.Provider(params.Provider)
+	config := getConfig(ctx)
+	instanceID := getInstanceID(ctx)
+	provider, err := a.Provider(ctx, params.Provider)
 	if err != nil {
 		return badRequestError("Unsupported provider: %+v", err)
 	}
@@ -35,26 +37,27 @@ func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter,
 		return internalServerError("Error getting user email from external provider").WithInternalError(err)
 	}
 
-	if exists, err := a.db.IsDuplicatedEmail(params.Email, aud); exists {
+	if exists, err := a.db.IsDuplicatedEmail(instanceID, params.Email, aud); exists {
 		return badRequestError("User already exists")
 	} else if err != nil {
 		return internalServerError("Error checking for duplicate users").WithInternalError(err)
 	}
 
-	user, err := a.signupNewUser(params, aud)
+	user, err := a.signupNewUser(ctx, params, aud)
 	if err != nil {
 		return err
 	}
 
-	if a.config.Mailer.Autoconfirm {
+	if config.Mailer.Autoconfirm {
 		user.Confirm()
-	} else if user.ConfirmationSentAt.Add(a.config.Mailer.MaxFrequency).Before(time.Now()) {
-		if err := a.mailer.ConfirmationMail(user); err != nil {
+	} else if user.ConfirmationSentAt.Add(config.Mailer.MaxFrequency).Before(time.Now()) {
+		mailer := getMailer(ctx)
+		if err := mailer.ConfirmationMail(user); err != nil {
 			return internalServerError("Error sending confirmation mail").WithInternalError(err)
 		}
 	}
 
-	user.SetRole(a.config.JWT.DefaultGroupName)
+	user.SetRole(config.JWT.DefaultGroupName)
 	if err := a.db.UpdateUser(user); err != nil {
 		return internalServerError("Error updating user in database").WithInternalError(err)
 	}
@@ -65,6 +68,8 @@ func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter,
 // Signup is the endpoint for registering a new user
 func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
+	config := getConfig(ctx)
+	instanceID := getInstanceID(ctx)
 	params := &SignupParams{}
 
 	jsonDecoder := json.NewDecoder(r.Body)
@@ -86,13 +91,13 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 
 	aud := a.requestAud(ctx, r)
 
-	user, err := a.db.FindUserByEmailAndAudience(params.Email, aud)
+	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
 	if err != nil {
 		if !models.IsNotFoundError(err) {
 			return internalServerError("Database error finding user").WithInternalError(err)
 		}
 
-		user, err = a.signupNewUser(params, aud)
+		user, err = a.signupNewUser(ctx, params, aud)
 		if err != nil {
 			return err
 		}
@@ -103,19 +108,20 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	if err = a.mailer.ValidateEmail(params.Email); err != nil {
+	mailer := getMailer(ctx)
+	if err = mailer.ValidateEmail(params.Email); err != nil {
 		return unprocessableEntityError("Unable to validate email address: " + err.Error())
 	}
 
-	if a.config.Mailer.Autoconfirm {
+	if config.Mailer.Autoconfirm {
 		user.Confirm()
-	} else if user.ConfirmationSentAt.Add(a.config.Mailer.MaxFrequency).Before(time.Now()) {
-		if err := a.mailer.ConfirmationMail(user); err != nil {
+	} else if user.ConfirmationSentAt.Add(config.Mailer.MaxFrequency).Before(time.Now()) {
+		if err := mailer.ConfirmationMail(user); err != nil {
 			return internalServerError("Error sending confirmation mail").WithInternalError(err)
 		}
 	}
 
-	user.SetRole(a.config.JWT.DefaultGroupName)
+	user.SetRole(config.JWT.DefaultGroupName)
 	if err = a.db.UpdateUser(user); err != nil {
 		return internalServerError("Database error updating user").WithInternalError(err)
 	}
@@ -123,8 +129,10 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	return sendJSON(w, http.StatusOK, user)
 }
 
-func (a *API) signupNewUser(params *SignupParams, aud string) (*models.User, error) {
-	user, err := models.NewUser(params.Email, params.Password, aud, params.Data)
+func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud string) (*models.User, error) {
+	config := getConfig(ctx)
+	instanceID := getInstanceID(ctx)
+	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		return nil, internalServerError("Database error creating user").WithInternalError(err)
 	}
@@ -135,6 +143,19 @@ func (a *API) signupNewUser(params *SignupParams, aud string) (*models.User, err
 
 	if err := a.db.CreateUser(user); err != nil {
 		return nil, internalServerError("Database error saving new user").WithInternalError(err)
+	}
+
+	userCount, err := a.db.CountOtherUsers(instanceID, user.ID)
+	if err != nil {
+		return nil, internalServerError("Database error counting users").WithInternalError(err)
+	}
+
+	// first user automatically becomes admin
+	if userCount == 0 && !config.JWT.AdminGroupDisabled {
+		user.SetRole(config.JWT.AdminGroupName)
+		if err = a.db.UpdateUser(user); err != nil {
+			return nil, internalServerError("Database error updating user").WithInternalError(err)
+		}
 	}
 
 	return user, nil

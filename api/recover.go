@@ -16,6 +16,8 @@ type RecoverParams struct {
 // Recover sends a recovery email
 func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
+	config := getConfig(ctx)
+	instanceID := getInstanceID(ctx)
 	params := &RecoverParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
 	err := jsonDecoder.Decode(params)
@@ -28,7 +30,7 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	aud := a.requestAud(ctx, r)
-	user, err := a.db.FindUserByEmailAndAudience(params.Email, aud)
+	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -36,12 +38,13 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	if user.RecoverySentAt.Add(a.config.Mailer.MaxFrequency).Before(time.Now()) {
+	if user.RecoverySentAt.Add(config.Mailer.MaxFrequency).Before(time.Now()) {
 		user.GenerateRecoveryToken()
 		if err := a.db.UpdateUser(user); err != nil {
 			return internalServerError("Database error updating user").WithInternalError(err)
 		}
-		if err := a.mailer.RecoveryMail(user); err != nil {
+		mailer := getMailer(ctx)
+		if err := mailer.RecoveryMail(user); err != nil {
 			return internalServerError("Error sending recovery mail").WithInternalError(err)
 		}
 	}

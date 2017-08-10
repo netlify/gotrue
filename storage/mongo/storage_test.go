@@ -21,14 +21,11 @@ func TestMongoDBTestSuite(t *testing.T) {
 Set the environment variable GOTRUE_MONGODB_TEST_CONN_URL with the connection URL to enable them.`)
 	}
 
-	config := &conf.Configuration{
+	config := &conf.GlobalConfiguration{
 		DB: conf.DBConfiguration{
 			Namespace: "gotrue",
 			Driver:    "mongodb",
 			ConnURL:   connURL,
-		},
-		JWT: conf.JWTConfiguration{
-			AdminGroupName: "admin-test",
 		},
 	}
 
@@ -45,10 +42,9 @@ Set the environment variable GOTRUE_MONGODB_TEST_CONN_URL with the connection UR
 }
 
 func beforeTest() {
-	u := &models.User{}
-	r := &models.RefreshToken{}
-	conn.db.C(u.TableName()).DropCollection()
-	conn.db.C(r.TableName()).DropCollection()
+	conn.db.C((&models.User{}).TableName()).DropCollection()
+	conn.db.C((&models.RefreshToken{}).TableName()).DropCollection()
+	conn.db.C((&models.Instance{}).TableName()).DropCollection()
 }
 
 func tokenID(r *models.RefreshToken) interface{} {

@@ -1,7 +1,7 @@
 package: github.com/netlify/gotrue
 import:
 - package: github.com/dgrijalva/jwt-go
-  version: v2.7.0
+  version: v3.0.0
 - package: github.com/jinzhu/gorm
   version: 5b8c0dd6b92d9caa8036c31dcb117f2df7cceefa
 - package: github.com/pborman/uuid
@@ -43,6 +43,9 @@ import:
 - package: github.com/go-chi/chi
   version: v3.1.4
 - package: github.com/netlify/netlify-commons
-  version: v0.4.3
+  version: v0.4.5
   subpackages:
   - graceful
+  - nconf
+- package: github.com/imdario/mergo
+  version: 0.2.2

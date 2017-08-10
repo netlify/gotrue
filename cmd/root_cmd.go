@@ -16,26 +16,34 @@ var rootCmd = cobra.Command{
 
 // RootCommand will setup and return the root command
 func RootCommand() *cobra.Command {
-	rootCmd.AddCommand(&serveCmd, &migrateCmd, &versionCmd, adminCmd())
+	rootCmd.AddCommand(&serveCmd, &migrateCmd, &multiCmd, &versionCmd, adminCmd())
 	rootCmd.PersistentFlags().StringP("config", "c", "", "the config file to use")
 
 	return &rootCmd
 }
 
-func execWithConfig(cmd *cobra.Command, fn func(config *conf.Configuration)) {
+func execWithConfig(cmd *cobra.Command, fn func(globalConfig *conf.GlobalConfiguration, config *conf.Configuration)) {
+	globalConfig, err := conf.LoadGlobal(cmd)
+	if err != nil {
+		logrus.Fatalf("Failed to load configration: %+v", err)
+	}
 	config, err := conf.LoadConfig(cmd)
 	if err != nil {
 		logrus.Fatalf("Failed to load configration: %+v", err)
 	}
 
-	fn(config)
+	fn(globalConfig, config)
 }
 
-func execWithConfigAndArgs(cmd *cobra.Command, fn func(config *conf.Configuration, args []string), args []string) {
+func execWithConfigAndArgs(cmd *cobra.Command, fn func(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string), args []string) {
+	globalConfig, err := conf.LoadGlobal(cmd)
+	if err != nil {
+		logrus.Fatalf("Failed to load configration: %+v", err)
+	}
 	config, err := conf.LoadConfig(cmd)
 	if err != nil {
 		logrus.Fatalf("Failed to load configration: %+v", err)
 	}
 
-	fn(config, args)
+	fn(globalConfig, config, args)
 }

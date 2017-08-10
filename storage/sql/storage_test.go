@@ -22,14 +22,11 @@ func TestSQLTestSuite(t *testing.T) {
 	err = f.Close()
 	require.NoError(t, err)
 
-	config := &conf.Configuration{
+	config := &conf.GlobalConfiguration{
 		DB: conf.DBConfiguration{
 			Driver:      "sqlite3",
 			ConnURL:     f.Name(),
 			Automigrate: true,
-		},
-		JWT: conf.JWTConfiguration{
-			AdminGroupName: "admin-test",
 		},
 	}
 
@@ -47,8 +44,10 @@ func TestSQLTestSuite(t *testing.T) {
 func beforeTest() {
 	conn.db.DropTableIfExists(&userObj{})
 	conn.db.DropTableIfExists(&models.RefreshToken{})
+	conn.db.DropTableIfExists(&models.Instance{})
 	conn.db.CreateTable(&userObj{})
 	conn.db.CreateTable(&models.RefreshToken{})
+	conn.db.CreateTable(&models.Instance{})
 }
 
 func tokenID(r *models.RefreshToken) interface{} {

@@ -7,14 +7,12 @@ import (
 // Logout is the endpoint for logging out a user and thereby revoking any refresh tokens
 func (a *API) Logout(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	token := getToken(ctx)
-
-	id, ok := token.Claims["id"].(string)
-	if !ok {
+	claims := getClaims(ctx)
+	if claims == nil || claims.Id == "" {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	a.db.Logout(id)
+	a.db.Logout(claims.Id)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

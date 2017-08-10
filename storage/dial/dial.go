@@ -9,7 +9,7 @@ import (
 )
 
 // Dial will connect to that storage engine
-func Dial(config *conf.Configuration) (storage.Connection, error) {
+func Dial(config *conf.GlobalConfiguration) (storage.Connection, error) {
 	if config.DB.Namespace != "" {
 		models.Namespace = config.DB.Namespace
 	}

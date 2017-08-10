@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,14 +19,18 @@ import (
 
 type AdminTestSuite struct {
 	suite.Suite
-	User *models.User
-	API  *API
+	User   *models.User
+	API    *API
+	Config *conf.Configuration
 }
 
 func (ts *AdminTestSuite) SetupTest() {
 	api, err := NewAPIFromConfigFile("config.test.json", "v1")
 	require.NoError(ts.T(), err)
 	ts.API = api
+	config, err := conf.LoadConfigFromFile("config.test.json")
+	require.NoError(ts.T(), err)
+	ts.Config = config
 }
 
 // TestAdminUsersUnauthorized tests API /admin/users route without authentication
@@ -38,22 +44,22 @@ func (ts *AdminTestSuite) TestAdminUsersUnauthorized() {
 
 func (ts *AdminTestSuite) makeSuperAdmin(req *http.Request, email string) {
 	// Cleanup existing user, if they already exist
-	if u, _ := ts.API.db.FindUserByEmailAndAudience(email, ts.API.config.JWT.Aud); u != nil {
+	if u, _ := ts.API.db.FindUserByEmailAndAudience("", email, ts.Config.JWT.Aud); u != nil {
 		require.NoError(ts.T(), ts.API.db.DeleteUser(u), "Error deleting user")
 	}
 
-	u, err := models.NewUser(email, "test", ts.API.config.JWT.Aud, nil)
+	u, err := models.NewUser("", email, "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 
 	u.IsSuperAdmin = true
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
-	token, err := ts.API.generateAccessToken(u)
+	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
 
-	_, err = jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		assert.Equal(ts.T(), token.Method.Alg(), jwt.SigningMethodHS256.Name)
-		return []byte(ts.API.config.JWT.Secret), nil
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	_, err = p.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		return []byte(ts.Config.JWT.Secret), nil
 	})
 	require.NoError(ts.T(), err, "Error parsing token")
 
@@ -99,7 +105,7 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 
 	assert.Equal(ts.T(), w.Code, http.StatusOK)
 
-	u, err := ts.API.db.FindUserByEmailAndAudience("test1@example.com", ts.API.config.JWT.Aud)
+	u, err := ts.API.db.FindUserByEmailAndAudience("", "test1@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	data := make(map[string]interface{})
@@ -110,13 +116,13 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 
 // TestAdminUserGet tests API /admin/user route (GET)
 func (ts *AdminTestSuite) TestAdminUserGet() {
-	u, err := models.NewUser("test1@example.com", "test", ts.API.config.JWT.Aud, nil)
+	u, err := models.NewUser("", "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
 	// Setup request
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/user?email=test1@example.com&aud=%s", ts.API.config.JWT.Aud), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/user?email=test1@example.com&aud=%s", ts.Config.JWT.Aud), nil)
 
 	// Setup response recorder with super admin privileges
 	ts.makeSuperAdmin(req, "test@example.com")
@@ -138,7 +144,7 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 		"role": "testing",
 		"user": map[string]interface{}{
 			"email": "test1@example.com",
-			"aud":   ts.API.config.JWT.Aud,
+			"aud":   ts.Config.JWT.Aud,
 		},
 	}))
 
@@ -158,7 +164,7 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 
 	assert.Equal(ts.T(), data["role"], "testing")
 
-	u, err := ts.API.db.FindUserByEmailAndAudience("test1@example.com", ts.API.config.JWT.Aud)
+	u, err := ts.API.db.FindUserByEmailAndAudience("", "test1@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	assert.Equal(ts.T(), u.Role, "testing")
 }
@@ -169,7 +175,7 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"user": map[string]interface{}{
 			"email": "test1@example.com",
-			"aud":   ts.API.config.JWT.Aud,
+			"aud":   ts.Config.JWT.Aud,
 		},
 	}))
 
