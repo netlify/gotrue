@@ -79,6 +79,7 @@ func (i *Instance) ConfigForEnvironment(env string) (*conf.Configuration, error)
 	if err := mergo.MergeWithOverwrite(&baseConf, i.BaseConfig); err != nil {
 		return nil, err
 	}
+	baseConf.ApplyDefaults()
 
 	if i.Contexts != nil {
 		envConf, ok := i.Contexts[env]
