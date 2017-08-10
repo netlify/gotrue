@@ -52,18 +52,13 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 		return nil, badRequestError("Netlify microservice headers missing")
 	}
 
+	claims := NetlifyMicroserviceClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
-	token, err := p.ParseWithClaims(signature, &NetlifyMicroserviceClaims{}, func(token *jwt.Token) (interface{}, error) {
+	_, err := p.ParseWithClaims(signature, &claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(api.config.NetlifySecret), nil
 	})
 	if err != nil {
 		return nil, badRequestError("Netlify microservice headers are invalid: %v", err)
-	}
-
-	var ok bool
-	var claims *NetlifyMicroserviceClaims
-	if claims, ok = token.Claims.(*NetlifyMicroserviceClaims); !ok {
-		return nil, badRequestError("Netlify microservice headers are invalid")
 	}
 
 	instanceID := claims.InstanceID
