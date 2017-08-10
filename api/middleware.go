@@ -67,6 +67,7 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 	}
 
 	logEntrySetField(r, "instance_id", instanceID)
+	logEntrySetField(r, "netlify_id", claims.NetlifyID)
 	instance, err := api.db.GetInstance(instanceID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
