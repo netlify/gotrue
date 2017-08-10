@@ -63,7 +63,7 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 
 	instanceID := claims.InstanceID
 	if instanceID == "" {
-		return nil, badRequestError("Netlify microservice headers missing")
+		return nil, badRequestError("Instance ID is missing")
 	}
 
 	logEntrySetField(r, "instance_id", instanceID)
