@@ -133,6 +133,11 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 		return nil, err
 	}
 
+	config.ApplyDefaults()
+	return config, nil
+}
+
+func (config *Configuration) ApplyDefaults() {
 	if config.JWT.AdminGroupName == "" {
 		config.JWT.AdminGroupName = "admin"
 	}
@@ -145,5 +150,17 @@ func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
 		config.Mailer.MaxFrequency = 15 * time.Minute
 	}
 
-	return config, nil
+	if config.Mailer.MemberFolder == "" {
+		config.Mailer.MemberFolder = "/member"
+	}
+
+	if config.Mailer.Templates.Confirmation == "" {
+		config.Mailer.Templates.Confirmation = "/.netlify/gotrue/templates/confirm.html"
+	}
+	if config.Mailer.Templates.Recovery == "" {
+		config.Mailer.Templates.Recovery = "/.netlify/gotrue/templates/recover.html"
+	}
+	if config.Mailer.Templates.EmailChange == "" {
+		config.Mailer.Templates.EmailChange = "/.netlify/gotrue/templates/email-change.html"
+	}
 }

@@ -240,7 +240,7 @@ If you do not require email confirmation, you may set this to `true`. Defaults t
 
 The folder on `site_url` where the `confirm`, `recover`, and `confirm-email`
 pages are located. This is used in combination with `site_url` to generate the 
-URLs used in the emails.
+URLs used in the emails. Defaults to `/member`.
 
 `mailer.subjects.confirmation` - `string`
 
@@ -256,10 +256,10 @@ Email subject to use for email change confirmation. Defaults to `Confirm Email C
 
 `mailer.templates.confirmation` - `string`
 
-Email template when confirming a signup.
+URL path to an email template to use when confirming a signup. Defaults to `/.netlify/gotrue/templates/confirm.html`
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
 
-Default:
+Default Content (if template is unavailable):
 ```html
 <h2>Confirm your signup</h2>
 
@@ -269,10 +269,10 @@ Default:
 
 `mailer.templates.recovery` - `string`
 
-Email template when resetting a password.
+URL path to an email template to use when resetting a password. Defaults to `/.netlify/gotrue/templates/recover.html`
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
 
-Default:
+Default Content (if template is unavailable):
 ```html
 <h2>Reset Password</h2>
 
@@ -282,10 +282,10 @@ Default:
 
 `mailer.templates.email_change` - `string`
 
-Email template when confirming the change of an email address.
+URL path to an email template to use when confirming the change of an email address. Defaults to `/.netlify/gotrue/templates/email-change.html`
 `SiteURL`, `Email`, `NewEmail`, and `ConfirmationURL` variables are available.
 
-Default:
+Default Content (if template is unavailable):
 ```html
 <h2>Confirm Change of Email</h2>
 

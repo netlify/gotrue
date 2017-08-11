@@ -1,6 +1,9 @@
 package mailer
 
 import (
+	"net/url"
+	"path"
+
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/mailme"
@@ -87,59 +90,72 @@ func (m TemplateMailer) ValidateEmail(email string) error {
 
 // ConfirmationMail sends a signup confirmation mail to a new user
 func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
-	return m.TemplateMailer.Mail(
-		user.Email,
-		withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Signup"),
-		m.Config.Mailer.Templates.Confirmation,
-		defaultConfirmationMail,
-		mailData("Confirmation", m.Config, user),
-	)
-}
-
-// EmailChangeMail sends an email change confirmation mail to a user
-func (m *TemplateMailer) EmailChangeMail(user *models.User) error {
-	return m.TemplateMailer.Mail(
-		user.EmailChange,
-		withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change"),
-		m.Config.Mailer.Templates.EmailChange,
-		defaultEmailChangeMail,
-		mailData("EmailChange", m.Config, user),
-	)
-}
-
-// RecoveryMail sends a password recovery mail
-func (m *TemplateMailer) RecoveryMail(user *models.User) error {
-	return m.TemplateMailer.Mail(
-		user.Email,
-		withDefault(m.Config.Mailer.Subjects.Recovery, "Reset Your Password"),
-		m.Config.Mailer.Templates.Recovery,
-		defaultRecoveryMail,
-		mailData("Recovery", m.Config, user),
-	)
-}
-
-func mailData(mail string, config *conf.Configuration, user *models.User) map[string]interface{} {
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.MemberFolder, "/confirm/"+user.ConfirmationToken)
+	if err != nil {
+		return err
+	}
 	data := map[string]interface{}{
-		"SiteURL":         config.SiteURL,
-		"ConfirmationURL": config.SiteURL + config.Mailer.MemberFolder + "/confirm/" + user.ConfirmationToken,
+		"SiteURL":         m.Config.SiteURL,
+		"ConfirmationURL": url,
 		"Email":           user.Email,
 		"Token":           user.ConfirmationToken,
 		"Data":            user.UserMetaData,
 	}
 
-	// Setup recovery email
-	if mail == "Recovery" {
-		data["Token"] = user.RecoveryToken
-		data["ConfirmationURL"] = config.SiteURL + config.Mailer.MemberFolder + "/recover/" + user.RecoveryToken
+	return m.TemplateMailer.Mail(
+		user.Email,
+		withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Signup"),
+		m.Config.Mailer.Templates.Confirmation,
+		defaultConfirmationMail,
+		data,
+	)
+}
+
+// EmailChangeMail sends an email change confirmation mail to a user
+func (m *TemplateMailer) EmailChangeMail(user *models.User) error {
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.MemberFolder, "/confirm-email/"+user.EmailChangeToken)
+	if err != nil {
+		return err
+	}
+	data := map[string]interface{}{
+		"SiteURL":         m.Config.SiteURL,
+		"ConfirmationURL": url,
+		"Email":           user.Email,
+		"NewEmail":        user.EmailChange,
+		"Token":           user.EmailChangeToken,
+		"Data":            user.UserMetaData,
 	}
 
-	// Setup email change confirmation email
-	if mail == "EmailChange" {
-		data["Token"] = user.EmailChangeToken
-		data["ConfirmationURL"] = config.SiteURL + config.Mailer.MemberFolder + "/confirm-email/" + user.EmailChangeToken
-		data["NewEmail"] = user.EmailChange
+	return m.TemplateMailer.Mail(
+		user.EmailChange,
+		withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change"),
+		m.Config.Mailer.Templates.EmailChange,
+		defaultEmailChangeMail,
+		data,
+	)
+}
+
+// RecoveryMail sends a password recovery mail
+func (m *TemplateMailer) RecoveryMail(user *models.User) error {
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.MemberFolder, "/recover/"+user.RecoveryToken)
+	if err != nil {
+		return err
 	}
-	return data
+	data := map[string]interface{}{
+		"SiteURL":         m.Config.SiteURL,
+		"ConfirmationURL": url,
+		"Email":           user.Email,
+		"Token":           user.RecoveryToken,
+		"Data":            user.UserMetaData,
+	}
+
+	return m.TemplateMailer.Mail(
+		user.Email,
+		withDefault(m.Config.Mailer.Subjects.Recovery, "Reset Your Password"),
+		m.Config.Mailer.Templates.Recovery,
+		defaultRecoveryMail,
+		data,
+	)
 }
 
 func withDefault(value, defaultValue string) string {
@@ -178,4 +194,16 @@ func (m *noopMailer) EmailChangeMail(user *models.User) error {
 
 func (m noopMailer) Send(user *models.User, subject, body string, data map[string]interface{}) error {
 	return nil
+}
+
+func getSiteURL(siteURL, folder, filename string) (string, error) {
+	site, err := url.Parse(siteURL)
+	if err != nil {
+		return "", err
+	}
+	path, err := url.Parse(path.Join(folder, filename))
+	if err != nil {
+		return "", err
+	}
+	return site.ResolveReference(path).String(), nil
 }
