@@ -63,11 +63,13 @@ type Configuration struct {
 		MemberFolder string        `json:"member_folder"`
 		AdminEmail   string        `json:"admin_email"`
 		Subjects     struct {
+			Invite       string `json:"invite"`
 			Confirmation string `json:"confirmation"`
 			Recovery     string `json:"recovery"`
 			EmailChange  string `json:"email_change"`
 		} `json:"subjects"`
 		Templates struct {
+			Invite       string `json:"invite"`
 			Confirmation string `json:"confirmation"`
 			Recovery     string `json:"recovery"`
 			EmailChange  string `json:"email_change"`
@@ -154,6 +156,9 @@ func (config *Configuration) ApplyDefaults() {
 		config.Mailer.MemberFolder = "/member"
 	}
 
+	if config.Mailer.Templates.Invite == "" {
+		config.Mailer.Templates.Invite = "/.netlify/gotrue/templates/invite.html"
+	}
 	if config.Mailer.Templates.Confirmation == "" {
 		config.Mailer.Templates.Confirmation = "/.netlify/gotrue/templates/confirm.html"
 	}

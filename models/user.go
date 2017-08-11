@@ -20,6 +20,7 @@ type User struct {
 	Email             string    `json:"email" bson:"email"`
 	EncryptedPassword string    `json:"-" bson:"encrypted_password"`
 	ConfirmedAt       time.Time `json:"confirmed_at" bson:"confirmed_at"`
+	InvitedAt         time.Time `json:"invited_at" bson:"invited_at"`
 
 	ConfirmationToken  string    `json:"-" bson:"confirmation_token,omitempty"`
 	ConfirmationSentAt time.Time `json:"confirmation_sent_at,omitempty" bson:"confirmation_sent_at,omitempty"`

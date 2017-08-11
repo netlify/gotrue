@@ -242,6 +242,10 @@ The folder on `site_url` where the `confirm`, `recover`, and `confirm-email`
 pages are located. This is used in combination with `site_url` to generate the 
 URLs used in the emails. Defaults to `/member`.
 
+`mailer.subjects.invite` - `string`
+
+Email subject to use for user invite. Defaults to `You have been invited`.
+
 `mailer.subjects.confirmation` - `string`
 
 Email subject to use for signup confirmation. Defaults to `Confirm Your Signup`.
@@ -253,6 +257,19 @@ Email subject to use for password reset. Defaults to `Reset Your Password`.
 `mailer.subjects.email_change` - `string`
 
 Email subject to use for email change confirmation. Defaults to `Confirm Email Change`.
+
+`mailer.templates.invite` - `string`
+
+URL path to an email template to use when inviting a user. Defaults to `/.netlify/gotrue/templates/invite.html`
+`SiteURL`, `Email`, and `ConfirmationURL` variables are available.
+
+Default Content (if template is unavailable):
+```html
+<h2>You have been invited</h2>
+
+<p>You have been invited to create a user on {{ .SiteURL }}. Follow this link to accept the invite:</p>
+<p><a href="{{ .ConfirmationURL }}">Accept the invite</a></p>
+```
 
 `mailer.templates.confirmation` - `string`
 

@@ -66,6 +66,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		}
 
 		r.Post("/signup", api.Signup)
+		r.Post("/invite", api.Invite)
 		r.Post("/recover", api.Recover)
 		r.Post("/verify", api.Verify)
 		r.Post("/token", api.Token)
