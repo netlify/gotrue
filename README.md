@@ -43,13 +43,13 @@ the payload values can be trusted.
 }
 ```
 
-`api.host` - `string` **required**
+`api.host` - `string`
 
 Hostname to listen on.
 
-`api.port` - `number` **required**
+`api.port` - `number`
 
-Port number to listen on. Can also be set with `PORT` environment variable.
+Port number to listen on. Can also be set with `PORT` environment variable. Defaults to `8081`.
 
 `api.endpoint` - `string` *Multi-instance mode only*
 
