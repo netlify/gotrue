@@ -64,6 +64,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		if globalConfig.MultiInstanceMode {
 			r.Use(api.loadInstanceConfig)
 		}
+		r.Get("/health", api.HealthCheck)
 
 		r.Post("/signup", api.Signup)
 		r.Post("/invite", api.Invite)
@@ -147,6 +148,14 @@ func NewAPIFromConfigFile(filename string, version string) (*API, error) {
 	}
 
 	return NewAPIWithVersion(ctx, globalConfig, db, version), nil
+}
+
+func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
+	return sendJSON(w, http.StatusOK, map[string]string{
+		"version":     a.version,
+		"name":        "GoTrue",
+		"description": "GoTrue is a user registration and authentication API",
+	})
 }
 
 // Provider returns a Provider interface for the given name.
