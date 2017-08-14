@@ -112,6 +112,10 @@ func LoadGlobal(cmd *cobra.Command) (*GlobalConfiguration, error) {
 		config.API.Port = port
 	}
 
+	if config.API.Port == 0 && config.API.Host == "" {
+		config.API.Port = 8081
+	}
+
 	if _, err := nconf.ConfigureLogging(&config.Logging); err != nil {
 		return nil, err
 	}
