@@ -60,11 +60,12 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	r.UseBypass(newStructuredLogger(logrus.StandardLogger()))
 	r.Use(recoverer)
 
+	r.Get("/health", api.HealthCheck)
+
 	r.Route("/", func(r *router) {
 		if globalConfig.MultiInstanceMode {
 			r.Use(api.loadInstanceConfig)
 		}
-		r.Get("/health", api.HealthCheck)
 
 		r.Post("/signup", api.Signup)
 		r.Post("/invite", api.Invite)
