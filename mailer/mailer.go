@@ -11,6 +11,11 @@ import (
 	"github.com/badoux/checkmail"
 )
 
+const defaultInviteMail = `<h2>You have been invited</h2>
+
+<p>You have been invited to create a user on {{ .SiteURL }}. Follow this link to accept the invite:</p>
+<p><a href="{{ .ConfirmationURL }}">Accept the invite</a></p>`
+
 const defaultConfirmationMail = `<h2>Confirm your signup</h2>
 
 <p>Follow this link to confirm your account:</p>
@@ -29,6 +34,7 @@ const defaultEmailChangeMail = `<h2>Confirm email address change</h2>
 // Mailer defines the interface a mailer must implement.
 type Mailer interface {
 	Send(user *models.User, subject, body string, data map[string]interface{}) error
+	InviteMail(user *models.User) error
 	ConfirmationMail(user *models.User) error
 	RecoveryMail(user *models.User) error
 	EmailChangeMail(user *models.User) error
@@ -86,6 +92,29 @@ func (m TemplateMailer) ValidateEmail(email string) error {
 	}
 
 	return nil
+}
+
+// InviteMail sends a invite mail to a new user
+func (m *TemplateMailer) InviteMail(user *models.User) error {
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.MemberFolder, "/invite/"+user.ConfirmationToken)
+	if err != nil {
+		return err
+	}
+	data := map[string]interface{}{
+		"SiteURL":         m.Config.SiteURL,
+		"ConfirmationURL": url,
+		"Email":           user.Email,
+		"Token":           user.ConfirmationToken,
+		"Data":            user.UserMetaData,
+	}
+
+	return m.TemplateMailer.Mail(
+		user.Email,
+		withDefault(m.Config.Mailer.Subjects.Invite, "You have been invited"),
+		m.Config.Mailer.Templates.Invite,
+		defaultInviteMail,
+		data,
+	)
 }
 
 // ConfirmationMail sends a signup confirmation mail to a new user
@@ -177,6 +206,10 @@ func (m TemplateMailer) Send(user *models.User, subject, body string, data map[s
 }
 
 func (m noopMailer) ValidateEmail(email string) error {
+	return nil
+}
+
+func (m *noopMailer) InviteMail(user *models.User) error {
 	return nil
 }
 

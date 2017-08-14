@@ -14,8 +14,9 @@ const (
 
 // VerifyParams are the parameters the Verify endpoint accepts
 type VerifyParams struct {
-	Type  string `json:"type"`
-	Token string `json:"token"`
+	Type     string `json:"type"`
+	Token    string `json:"token"`
+	Password string `json:"password"`
 }
 
 // Verify exchanges a confirmation or recovery token to a refresh token
@@ -32,29 +33,58 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var (
-		user       *models.User
-		err        error
-		verifyFunc func(user *models.User)
+		user *models.User
+		err  error
 	)
 
 	switch params.Type {
 	case signupVerification:
-		user, err = a.db.FindUserByConfirmationToken(params.Token)
-		verifyFunc = func(user *models.User) { user.Confirm() }
+		user, err = a.signupVerify(params)
 	case recoveryVerification:
-		user, err = a.db.FindUserByRecoveryToken(params.Token)
-		verifyFunc = func(user *models.User) { user.Recover() }
+		user, err = a.recoverVerify(params)
 	default:
 		return unprocessableEntityError("Verify requires a verification type")
 	}
 
 	if err != nil {
+		return err
+	}
+	return a.issueRefreshToken(ctx, user, w)
+}
+
+func (a *API) signupVerify(params *VerifyParams) (*models.User, error) {
+	user, err := a.db.FindUserByConfirmationToken(params.Token)
+	if err != nil {
 		if models.IsNotFoundError(err) {
-			return notFoundError(err.Error())
+			return nil, notFoundError(err.Error())
 		}
-		return internalServerError("Database error finding user").WithInternalError(err)
+		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	verifyFunc(user)
-	return a.issueRefreshToken(ctx, user, w)
+	if user.EncryptedPassword == "" {
+		if !user.InvitedAt.IsZero() {
+			if params.Password == "" {
+				return nil, unprocessableEntityError("Invited users must specify a password")
+			}
+			if err = user.EncryptPassword(params.Password); err != nil {
+				return nil, internalServerError("Error encrypting password").WithInternalError(err)
+			}
+		}
+	}
+
+	user.Confirm()
+	return user, nil
+}
+
+func (a *API) recoverVerify(params *VerifyParams) (*models.User, error) {
+	user, err := a.db.FindUserByRecoveryToken(params.Token)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			return nil, notFoundError(err.Error())
+		}
+		return nil, internalServerError("Database error finding user").WithInternalError(err)
+	}
+
+	user.Recover()
+	return user, nil
 }

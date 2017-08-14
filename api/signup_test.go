@@ -66,7 +66,7 @@ func (ts *SignupTestSuite) TestSignup() {
 	assert.Equal(ts.T(), data["email"], "test@example.com")
 	assert.Equal(ts.T(), data["aud"], ts.Config.JWT.Aud)
 	assert.Equal(ts.T(), data["user_metadata"].(map[string]interface{})["a"], 1.0)
-	assert.Len(ts.T(), data, 12)
+	assert.Len(ts.T(), data, 13)
 }
 
 // TestSignupExternalUnsupported tests API /signup for an unsupported external provider
@@ -151,7 +151,6 @@ func (ts *SignupTestSuite) TestSignupExternalGitlab() {
 	if code == "" || ts.Config.External.Gitlab.Secret == "" {
 		ts.T().Skip("GOTRUE_GITLAB_OAUTH_CODE or Gitlab external provider config not set")
 		return
-
 	}
 
 	// Request body
