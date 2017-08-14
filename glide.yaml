@@ -43,7 +43,7 @@ import:
 - package: github.com/go-chi/chi
   version: v3.1.4
 - package: github.com/netlify/netlify-commons
-  version: v0.4.5
+  version: v0.4.6
   subpackages:
   - graceful
   - nconf

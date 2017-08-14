@@ -1,5 +1,5 @@
-hash: df2295bd03f5efcd91c99eff07998c161ec00040f96e7cebc8d2bbf7da4560e6
-updated: 2017-08-09T16:06:13.242890488-04:00
+hash: 35b445216150aa6679fdb0fb9cabfcd0ff9dcf706e645ca9cf5731477717af29
+updated: 2017-08-14T17:28:23.243378545-04:00
 imports:
 - name: github.com/badoux/checkmail
   version: d0a759655d62bcdc95c50a0676f3e9702ed59453
@@ -43,7 +43,7 @@ imports:
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/lib/pq
-  version: dd1fe2071026ce53f36a39112e645b4d4f5793a4
+  version: e42267488fe361b9dc034be7a6bffef5b195bceb
   subpackages:
   - oid
 - name: github.com/magiconair/properties
@@ -60,9 +60,9 @@ imports:
 - name: github.com/nats-io/nuid
   version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
 - name: github.com/netlify/mailme
-  version: 3b136431fdebea1d886bbd1a30b23c43e2d8b4d0
+  version: cd42f69215a689964ec559f05b94f744be948c93
 - name: github.com/netlify/netlify-commons
-  version: 2d430710535c15be9658d227e658e70f87f605c8
+  version: 450321a763ac6f9a30b9553fdf8bde076e8215ca
   subpackages:
   - graceful
   - messaging
@@ -139,16 +139,16 @@ imports:
   - github
   - internal
 - name: golang.org/x/sys
-  version: e42485b6e20ae7d2304ec72e535b103ed350cc02
+  version: 2d3e384235de683634e9080b58f757466840aa48
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 3bd178b88a8180be2df394a1fbb81313916f0e7b
+  version: e56139fd9c5bc7244c76116c68e500765bb6db6b
   subpackages:
   - transform
   - unicode/norm
 - name: google.golang.org/appengine
-  version: c5a90ac045b779001847fec87403f5cba090deae
+  version: d9a072cfa7b9736e44311ef77b3e09d804bfa599
   subpackages:
   - internal
   - internal/base
@@ -174,5 +174,5 @@ imports:
 - name: gopkg.in/stack.v1
   version: 817915b46b97fd7bb80e8ab6b69f01a53ac3eebf
 - name: gopkg.in/yaml.v2
-  version: 25c4ec802a7d637f88d584ab26798e94ad14c13b
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports: []
