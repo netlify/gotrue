@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/netlify/gotrue/api/provider"
@@ -136,7 +137,16 @@ func NewAPIFromConfigFile(filename string, version string) (*API, error) {
 		return nil, err
 	}
 
-	db, err := dial.Dial(globalConfig)
+	var db storage.Connection
+	// try a couple times to connect to the database
+	for i := 1; i <= 3; i++ {
+		db, err = dial.Dial(globalConfig)
+		if err == nil {
+			break
+		}
+		logrus.WithError(err).WithField("attempt", i).Warn("Error connecting to database")
+		time.Sleep(1 * time.Second)
+	}
 	if err != nil {
 		return nil, err
 	}
