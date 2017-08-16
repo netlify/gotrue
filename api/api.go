@@ -15,6 +15,7 @@ import (
 	"github.com/netlify/gotrue/storage/dial"
 	"github.com/netlify/netlify-commons/graceful"
 	"github.com/rs/cors"
+	"github.com/sebest/xff"
 	"github.com/sirupsen/logrus"
 )
 
@@ -55,7 +56,10 @@ func NewAPI(globalConfig *conf.GlobalConfiguration, db storage.Connection) *API 
 func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, db storage.Connection, version string) *API {
 	api := &API{config: globalConfig, db: db, version: version}
 
+	xffmw, _ := xff.Default()
+
 	r := newRouter()
+	r.UseBypass(xffmw.Handler)
 	r.Use(addRequestID)
 	r.UseBypass(newStructuredLogger(logrus.StandardLogger()))
 	r.Use(recoverer)

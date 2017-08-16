@@ -1,5 +1,5 @@
-hash: 35b445216150aa6679fdb0fb9cabfcd0ff9dcf706e645ca9cf5731477717af29
-updated: 2017-08-14T17:28:23.243378545-04:00
+hash: 32abf8e629238d235054f91bb495cea33b42e74dc0b5284166c522b7b0c740b3
+updated: 2017-08-16T16:19:03.149952969-04:00
 imports:
 - name: github.com/badoux/checkmail
   version: d0a759655d62bcdc95c50a0676f3e9702ed59453
@@ -18,7 +18,7 @@ imports:
 - name: github.com/go-sql-driver/mysql
   version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/golang/protobuf
-  version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
+  version: ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
   subpackages:
   - proto
 - name: github.com/hashicorp/hcl
@@ -84,6 +84,8 @@ imports:
   version: 8dd4211afb5d08dbb39a533b9bb9e4b486351df6
 - name: github.com/rybit/nats_logrus_hook
   version: 8d9e8da6aeca6fe5ab668efa91d1ea0722af8d1a
+- name: github.com/sebest/xff
+  version: 6c115e0ffa35d6a2e3f7a9e797c9cf07f0da4b9f
 - name: github.com/signalfx/com_signalfx_metrics_protobuf
   version: 93e507b42f43f458a109ca278d1542a26a0b87fc
 - name: github.com/signalfx/gohistogram
@@ -107,7 +109,7 @@ imports:
 - name: github.com/spf13/cast
   version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
 - name: github.com/spf13/cobra
-  version: b26b538f693051ac6518e65672de3144ce3fbedc
+  version: cb731b898346822cc0c225c28550a8a29d93c732
 - name: github.com/spf13/jwalterweatherman
   version: 0efa5202c04663c757d84f90f5219c1250baf94f
 - name: github.com/spf13/pflag
@@ -139,7 +141,7 @@ imports:
   - github
   - internal
 - name: golang.org/x/sys
-  version: 2d3e384235de683634e9080b58f757466840aa48
+  version: 9f7170bcd8e9f4d3691c06401119c46a769a1e03
   subpackages:
   - unix
 - name: golang.org/x/text

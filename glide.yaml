@@ -49,3 +49,4 @@ import:
   - nconf
 - package: github.com/imdario/mergo
   version: 0.2.2
+- package: github.com/sebest/xff
