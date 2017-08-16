@@ -7,6 +7,8 @@ func IsNotFoundError(err error) bool {
 		return true
 	case RefreshTokenNotFoundError:
 		return true
+	case InstanceNotFoundError:
+		return true
 	}
 	return false
 }
