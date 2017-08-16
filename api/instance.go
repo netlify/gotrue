@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	"github.com/pborman/uuid"
 )
 
 func (a *API) loadInstance(w http.ResponseWriter, r *http.Request) (context.Context, error) {
@@ -62,6 +63,7 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	i := models.Instance{
+		ID:         uuid.NewRandom().String(),
 		UUID:       params.UUID,
 		BaseConfig: params.BaseConfig,
 		Contexts:   params.Contexts,
