@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	// import drivers we might need
+	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/postgres"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -294,7 +295,10 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 		config.DB.Driver = u.Scheme
 	}
 
-	db, err := gorm.Open(config.DB.Driver, config.DB.ConnURL)
+	if config.DB.Dialect == "" {
+		config.DB.Dialect = config.DB.Driver
+	}
+	db, err := gorm.Open(config.DB.Dialect, config.DB.Driver, config.DB.ConnURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "opening database connection")
 	}
