@@ -106,7 +106,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 			r.Post("/", api.CreateInstance)
 			r.Route("/{instance_id}", func(r *router) {
-				r.With(api.loadInstance)
+				r.Use(api.loadInstance)
 
 				r.Get("/", api.GetInstance)
 				r.Put("/", api.UpdateInstance)
