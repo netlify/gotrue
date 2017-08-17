@@ -49,8 +49,8 @@ func (i *Instance) AfterFind() error {
 	return nil
 }
 
-// BeforeUpdate database callback.
-func (i *Instance) BeforeUpdate() error {
+// BeforeSave database callback.
+func (i *Instance) BeforeSave() error {
 	if i.BaseConfig != nil {
 		data, err := json.Marshal(i.BaseConfig)
 		if err != nil {
