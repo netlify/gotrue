@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/imdario/mergo"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/pborman/uuid"
@@ -93,9 +94,24 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Error decoding params: %v", err)
 	}
 
-	// complete overwrite of configuration
-	i.BaseConfig = params.BaseConfig
-	i.Contexts = params.Contexts
+	if params.BaseConfig != nil {
+		if err := mergo.MergeWithOverwrite(i.BaseConfig, params.BaseConfig); err != nil {
+			return internalServerError("Error merging instance configurations").WithInternalError(err)
+		}
+	}
+
+	if params.Contexts != nil {
+		for k, v := range params.Contexts {
+			if c, ok := i.Contexts[k]; ok {
+				if err := mergo.MergeWithOverwrite(&c, &v); err != nil {
+					return internalServerError("Error merging instance configurations").WithInternalError(err)
+				}
+				i.Contexts[k] = c
+			} else {
+				i.Contexts[k] = v
+			}
+		}
+	}
 
 	if err := a.db.UpdateInstance(i); err != nil {
 		return internalServerError("Database error updating instance").WithInternalError(err)
