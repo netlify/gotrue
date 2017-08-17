@@ -25,7 +25,7 @@ func TestSQLTestSuite(t *testing.T) {
 	config := &conf.GlobalConfiguration{
 		DB: conf.DBConfiguration{
 			Driver:      "sqlite3",
-			ConnURL:     f.Name(),
+			URL:         f.Name(),
 			Automigrate: true,
 		},
 	}

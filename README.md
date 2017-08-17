@@ -8,7 +8,7 @@ user data.
 
 ## Configuration
 
-You may configure GoTrue using either a configuration file named `config.json`,
+You may configure GoTrue using either a configuration file named `.env`,
 environment variables, or a combination of both. To determine the environment variable name:
 uppercase the setting name, replace all `.` with `_`, and add a prefix of `GOTRUE_`.
 

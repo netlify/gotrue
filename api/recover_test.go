@@ -22,12 +22,12 @@ type RecoverTestSuite struct {
 }
 
 func (ts *RecoverTestSuite) SetupTest() {
-	api, err := NewAPIFromConfigFile("config.test.json", "v1")
+	api, err := NewAPIFromConfigFile("test.env", "v1")
 	require.NoError(ts.T(), err)
 
 	ts.API = api
 
-	config, err := conf.LoadConfigFromFile("config.test.json")
+	config, err := conf.LoadConfig("test.env")
 	require.NoError(ts.T(), err)
 	ts.Config = config
 

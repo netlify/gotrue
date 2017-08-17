@@ -26,7 +26,7 @@ type InstanceTestSuite struct {
 }
 
 func (ts *InstanceTestSuite) SetupTest() {
-	globalConfig, err := conf.LoadGlobalFromFile("config.test.json")
+	globalConfig, err := conf.LoadGlobal("test.env")
 	require.NoError(ts.T(), err)
 	globalConfig.OperatorToken = operatorToken
 	globalConfig.MultiInstanceMode = true

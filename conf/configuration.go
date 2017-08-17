@@ -2,79 +2,76 @@ package conf
 
 import (
 	"os"
-	"strconv"
 	"time"
 
+	"github.com/joho/godotenv"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/netlify/netlify-commons/nconf"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 )
 
 // ExternalConfiguration holds all config related to external account providers.
 type ExternalConfiguration struct {
-	ClientID    string `json:"client_id"`
+	ClientID    string `json:"client_id" split_words:"true"`
 	Secret      string `json:"secret"`
-	RedirectURI string `json:"redirect_uri"`
+	RedirectURI string `json:"redirect_uri" split_words:"true"`
 	URL         string `json:"url"`
 }
 
 // DBConfiguration holds all the database related configuration.
 type DBConfiguration struct {
 	Dialect     string `json:"dialect"`
-	Driver      string `json:"driver"`
-	ConnURL     string `json:"url"`
+	Driver      string `json:"driver" required:"true"`
+	URL         string `json:"url" envconfig:"DATABASE_URL" required:"true"`
 	Namespace   string `json:"namespace"`
 	Automigrate bool   `json:"automigrate"`
 }
 
 // JWTConfiguration holds all the JWT related configuration.
 type JWTConfiguration struct {
-	Secret             string `json:"secret"`
+	Secret             string `json:"secret" required:"true"`
 	Exp                int    `json:"exp"`
 	Aud                string `json:"aud"`
-	AdminGroupName     string `json:"admin_group_name"`
-	AdminGroupDisabled bool   `json:"admin_group_disabled"`
-	DefaultGroupName   string `json:"default_group_name"`
+	AdminGroupName     string `json:"admin_group_name" split_words:"true"`
+	AdminGroupDisabled bool   `json:"admin_group_disabled" split_words:"true"`
+	DefaultGroupName   string `json:"default_group_name" split_words:"true"`
 }
 
 // GlobalConfiguration holds all the configuration that applies to all instances.
 type GlobalConfiguration struct {
 	API struct {
-		Host     string `json:"host"`
-		Port     int    `json:"port"`
-		Endpoint string `json:"endpoint"`
-	} `json:"api"`
-	DB                DBConfiguration     `json:"db"`
-	Logging           nconf.LoggingConfig `json:"log_conf"`
-	OperatorToken     string              `json:"operator_token"`
-	MultiInstanceMode bool                `json:"-"`
+		Host     string
+		Port     int `envconfig:"PORT" default:"8081"`
+		Endpoint string
+	}
+	DB                DBConfiguration
+	Logging           nconf.LoggingConfig `envconfig:"LOG"`
+	OperatorToken     string              `split_words:"true"`
+	MultiInstanceMode bool
+}
+
+// EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.
+type EmailContentConfiguration struct {
+	Invite       string `json:"invite"`
+	Confirmation string `json:"confirmation"`
+	Recovery     string `json:"recovery"`
+	EmailChange  string `json:"email_change" split_words:"true"`
 }
 
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
-	SiteURL string           `json:"site_url"`
+	SiteURL string           `json:"site_url" split_words:"true" required:"true"`
 	JWT     JWTConfiguration `json:"jwt"`
 	Mailer  struct {
-		MaxFrequency time.Duration `json:"max_frequency"`
-		Autoconfirm  bool          `json:"autoconfirm"`
-		Host         string        `json:"host"`
-		Port         int           `json:"port"`
-		User         string        `json:"user"`
-		Pass         string        `json:"pass"`
-		MemberFolder string        `json:"member_folder"`
-		AdminEmail   string        `json:"admin_email"`
-		Subjects     struct {
-			Invite       string `json:"invite"`
-			Confirmation string `json:"confirmation"`
-			Recovery     string `json:"recovery"`
-			EmailChange  string `json:"email_change"`
-		} `json:"subjects"`
-		Templates struct {
-			Invite       string `json:"invite"`
-			Confirmation string `json:"confirmation"`
-			Recovery     string `json:"recovery"`
-			EmailChange  string `json:"email_change"`
-		} `json:"templates"`
+		MaxFrequency time.Duration             `json:"max_frequency" split_words:"true"`
+		Autoconfirm  bool                      `json:"autoconfirm"`
+		Host         string                    `json:"host"`
+		Port         int                       `json:"port"`
+		User         string                    `json:"user"`
+		Pass         string                    `json:"pass"`
+		MemberFolder string                    `json:"member_folder" split_words:"true"`
+		AdminEmail   string                    `json:"admin_email" split_words:"true"`
+		Subjects     EmailContentConfiguration `json:"subjects"`
+		Templates    EmailContentConfiguration `json:"templates"`
 	} `json:"mailer"`
 	External struct {
 		Github    ExternalConfiguration `json:"github"`
@@ -83,67 +80,54 @@ type Configuration struct {
 	} `json:"external"`
 }
 
-// LoadGlobalFromFile loads global configuration from the provided filename.
-func LoadGlobalFromFile(name string) (*GlobalConfiguration, error) {
-	cmd := &cobra.Command{}
-	config := ""
-	cmd.Flags().StringVar(&config, "config", "config.test.json", "Config file")
-	cmd.Flags().Set("config", name)
-	return LoadGlobal(cmd)
+func loadEnvironment(filename string) error {
+	// default to .env if an empty string is passed as a filename
+	// godotenv will only default if passed an empty argument list
+	filenames := []string{}
+	if filename != "" {
+		filenames = append(filenames, filename)
+	}
+	if err := godotenv.Load(filenames...); err != nil {
+		// handle if .env file does not exist, this is OK
+		if os.IsNotExist(err) && filename == "" {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 // LoadGlobal loads configuration from file and environment variables.
-func LoadGlobal(cmd *cobra.Command) (*GlobalConfiguration, error) {
-	config := new(GlobalConfiguration)
-
-	if err := nconf.LoadConfig(cmd, "gotrue", config); err != nil {
+func LoadGlobal(filename string) (*GlobalConfiguration, error) {
+	if err := loadEnvironment(filename); err != nil {
 		return nil, err
 	}
 
-	if config.DB.ConnURL == "" && os.Getenv("DATABASE_URL") != "" {
-		config.DB.ConnURL = os.Getenv("DATABASE_URL")
+	config := new(GlobalConfiguration)
+	if err := envconfig.Process("gotrue", config); err != nil {
+		return nil, err
 	}
-
-	if config.API.Port == 0 && os.Getenv("PORT") != "" {
-		port, err := strconv.Atoi(os.Getenv("PORT"))
-		if err != nil {
-			return nil, errors.Wrap(err, "formatting PORT into int")
-		}
-
-		config.API.Port = port
-	}
-
-	if config.API.Port == 0 && config.API.Host == "" {
-		config.API.Port = 8081
-	}
-
 	if _, err := nconf.ConfigureLogging(&config.Logging); err != nil {
 		return nil, err
 	}
-
 	return config, nil
 }
 
-// LoadConfigFromFile loads per-instance configuration from the provided filename.
-func LoadConfigFromFile(name string) (*Configuration, error) {
-	cmd := &cobra.Command{}
-	config := ""
-	cmd.Flags().StringVar(&config, "config", "config.test.json", "Config file")
-	cmd.Flags().Set("config", name)
-	return LoadConfig(cmd)
-}
-
 // LoadConfig loads per-instance configuration.
-func LoadConfig(cmd *cobra.Command) (*Configuration, error) {
-	config := new(Configuration)
-	if err := nconf.LoadConfig(cmd, "gotrue", config); err != nil {
+func LoadConfig(filename string) (*Configuration, error) {
+	if err := loadEnvironment(filename); err != nil {
 		return nil, err
 	}
 
+	config := new(Configuration)
+	if err := envconfig.Process("gotrue", config); err != nil {
+		return nil, err
+	}
 	config.ApplyDefaults()
 	return config, nil
 }
 
+// ApplyDefaults sets defaults for a Configuration
 func (config *Configuration) ApplyDefaults() {
 	if config.JWT.AdminGroupName == "" {
 		config.JWT.AdminGroupName = "admin"

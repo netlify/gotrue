@@ -326,7 +326,7 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 		mgo.SetDebug(true)
 	}
 
-	session, err := mgo.Dial(config.DB.ConnURL)
+	session, err := mgo.Dial(config.DB.URL)
 	if err != nil {
 		return nil, errors.Wrap(err, "opening database connection")
 	}

@@ -126,11 +126,11 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 // NewAPIFromConfigFile creates a new REST API using the provided configuration file.
 func NewAPIFromConfigFile(filename string, version string) (*API, error) {
-	globalConfig, err := conf.LoadGlobalFromFile(filename)
+	globalConfig, err := conf.LoadGlobal(filename)
 	if err != nil {
 		return nil, err
 	}
-	config, err := conf.LoadConfigFromFile(filename)
+	config, err := conf.LoadConfig(filename)
 	if err != nil {
 		return nil, err
 	}
