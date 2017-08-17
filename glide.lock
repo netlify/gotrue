@@ -1,6 +1,10 @@
-hash: 32abf8e629238d235054f91bb495cea33b42e74dc0b5284166c522b7b0c740b3
-updated: 2017-08-16T16:19:03.149952969-04:00
+hash: 7260ab4358d6b13da349498b1a52a696379b3a46cee69f2704e0203a53beefe0
+updated: 2017-08-16T19:19:29.089891255-04:00
 imports:
+- name: cloud.google.com/go
+  version: 06f11fffc537c4aef126d9fd3a92e2d7968f118f
+  subpackages:
+  - compute/metadata
 - name: github.com/badoux/checkmail
   version: d0a759655d62bcdc95c50a0676f3e9702ed59453
 - name: github.com/davecgh/go-spew
@@ -21,6 +25,14 @@ imports:
   version: ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
   subpackages:
   - proto
+- name: github.com/GoogleCloudPlatform/cloudsql-proxy
+  version: 571947b0f240c8b2fa4d163065e5b155920ddfa9
+  subpackages:
+  - logging
+  - proxy/certs
+  - proxy/dialers/postgres
+  - proxy/proxy
+  - proxy/util
 - name: github.com/hashicorp/hcl
   version: 392dba7d905ed5d04a5794ba89f558b27e2ba1ca
   subpackages:
@@ -139,7 +151,10 @@ imports:
   subpackages:
   - bitbucket
   - github
+  - google
   - internal
+  - jws
+  - jwt
 - name: golang.org/x/sys
   version: 9f7170bcd8e9f4d3691c06401119c46a769a1e03
   subpackages:
@@ -149,13 +164,22 @@ imports:
   subpackages:
   - transform
   - unicode/norm
+- name: google.golang.org/api
+  version: 98825bb0065da4054e5da6db34f5fc598e50bc24
+  subpackages:
+  - gensupport
+  - googleapi
+  - googleapi/internal/uritemplates
+  - sqladmin/v1beta4
 - name: google.golang.org/appengine
   version: d9a072cfa7b9736e44311ef77b3e09d804bfa599
   subpackages:
   - internal
+  - internal/app_identity
   - internal/base
   - internal/datastore
   - internal/log
+  - internal/modules
   - internal/remote_api
   - internal/urlfetch
   - urlfetch

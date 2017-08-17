@@ -20,6 +20,7 @@ type ExternalConfiguration struct {
 
 // DBConfiguration holds all the database related configuration.
 type DBConfiguration struct {
+	Dialect     string `json:"dialect"`
 	Driver      string `json:"driver"`
 	ConnURL     string `json:"url"`
 	Namespace   string `json:"namespace"`

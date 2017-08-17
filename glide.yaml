@@ -50,3 +50,7 @@ import:
 - package: github.com/imdario/mergo
   version: 0.2.2
 - package: github.com/sebest/xff
+- package: github.com/GoogleCloudPlatform/cloudsql-proxy
+  version: "1.10"
+  subpackages:
+  - proxy/dialers/postgres
