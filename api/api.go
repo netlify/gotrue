@@ -86,8 +86,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 		r.Route("/admin", func(r *router) {
 			r.Use(addGetBody)
-			r.Use(api.requireAuthentication)
-			r.Use(api.requireAdmin)
+			r.Use(api.requireAdminCredentials)
 
 			r.Get("/users", api.adminUsers)
 
@@ -99,10 +98,10 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	})
 
 	if globalConfig.MultiInstanceMode {
-		// Netlify microservice API
-		r.With(api.verifyNetlifyRequest).Get("/", api.GetAppManifest)
+		// Operator microservice API
+		r.With(api.verifyOperatorRequest).Get("/", api.GetAppManifest)
 		r.Route("/instances", func(r *router) {
-			r.Use(api.verifyNetlifyRequest)
+			r.Use(api.verifyOperatorRequest)
 
 			r.Post("/", api.CreateInstance)
 			r.Route("/{instance_id}", func(r *router) {

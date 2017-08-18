@@ -191,6 +191,37 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 	assert.Equal(ts.T(), w.Code, http.StatusOK)
 }
 
+// TestAdminUserCreateWithManagementToken tests API /admin/user route using the management token (POST)
+func (ts *AdminTestSuite) TestAdminUserCreateWithManagementToken() {
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"email":    "test2@example.com",
+		"password": "test2",
+	}))
+
+	// Setup request
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/admin/user", &buffer)
+
+	req.Header.Set("Authorization", "Bearer foobar")
+	req.Header.Set("X-JWT-AUD", "op-test-aud")
+
+	ts.API.handler.ServeHTTP(w, req)
+
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
+
+	_, err := ts.API.db.FindUserByEmailAndAudience("", "test2@example.com", ts.Config.JWT.Aud)
+	require.Error(ts.T(), err)
+
+	u, err := ts.API.db.FindUserByEmailAndAudience("", "test2@example.com", "op-test-aud")
+	require.NoError(ts.T(), err)
+
+	data := make(map[string]interface{})
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
+
+	assert.Equal(ts.T(), data["email"], u.Email)
+}
+
 func TestAdmin(t *testing.T) {
 	suite.Run(t, new(AdminTestSuite))
 }

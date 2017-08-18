@@ -10,27 +10,12 @@ import (
 
 // requireAuthentication checks incoming requests for tokens presented using the Authorization header
 func (api *API) requireAuthentication(w http.ResponseWriter, r *http.Request) (context.Context, error) {
-	ctx := r.Context()
-	config := getConfig(ctx)
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		return nil, unauthorizedError("This endpoint requires a Bearer token")
-	}
-
-	matches := bearerRegexp.FindStringSubmatch(authHeader)
-	if len(matches) != 2 {
-		return nil, unauthorizedError("This endpoint requires a Bearer token")
-	}
-
-	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
-	token, err := p.ParseWithClaims(matches[1], &GoTrueClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(config.JWT.Secret), nil
-	})
+	token, err := api.extractBearerToken(w, r)
 	if err != nil {
-		return nil, unauthorizedError("Invalid token: %v", err)
+		return nil, err
 	}
 
-	return withToken(ctx, token), nil
+	return api.parseJWTClaims(token, r)
 }
 
 type adminCheckParams struct {
@@ -39,9 +24,8 @@ type adminCheckParams struct {
 	} `json:"user"`
 }
 
-func (api *API) requireAdmin(w http.ResponseWriter, r *http.Request) (context.Context, error) {
+func (api *API) requireAdmin(ctx context.Context, w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	// Find the administrative user
-	ctx := r.Context()
 	adminUser, err := getUser(ctx, api.db)
 	if err != nil {
 		return nil, unauthorizedError("Invalid admin user")
@@ -68,4 +52,33 @@ func (api *API) requireAdmin(w http.ResponseWriter, r *http.Request) (context.Co
 		return nil, unauthorizedError("User not allowed")
 	}
 	return ctx, nil
+}
+
+func (api *API) extractBearerToken(w http.ResponseWriter, r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return "", unauthorizedError("This endpoint requires a Bearer token")
+	}
+
+	matches := bearerRegexp.FindStringSubmatch(authHeader)
+	if len(matches) != 2 {
+		return "", unauthorizedError("This endpoint requires a Bearer token")
+	}
+
+	return matches[1], nil
+}
+
+func (api *API) parseJWTClaims(bearer string, r *http.Request) (context.Context, error) {
+	ctx := r.Context()
+	config := getConfig(ctx)
+
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	token, err := p.ParseWithClaims(bearer, &GoTrueClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.JWT.Secret), nil
+	})
+	if err != nil {
+		return nil, unauthorizedError("Invalid token: %v", err)
+	}
+
+	return withToken(ctx, token), nil
 }
