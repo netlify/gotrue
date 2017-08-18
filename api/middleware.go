@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/models"
@@ -55,10 +54,10 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 	claims := NetlifyMicroserviceClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 	_, err := p.ParseWithClaims(signature, &claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(api.config.NetlifySecret), nil
+		return []byte(api.config.OperatorToken), nil
 	})
 	if err != nil {
-		return nil, badRequestError("Netlify microservice headers are invalid: %v", err)
+		return nil, badRequestError("Operator microservice headers are invalid: %v", err)
 	}
 
 	instanceID := claims.InstanceID
@@ -99,10 +98,36 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 	return ctx, nil
 }
 
-func (api *API) verifyNetlifyRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {
-	token := strings.TrimPrefix(req.Header.Get("authorization"), "Bearer ")
-	if token != api.config.NetlifySecret {
-		return nil, unauthorizedError("Request did not originate from Netlify")
+func (api *API) verifyOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+	c, _, err := api.extractOperatorRequest(w, req)
+	return c, err
+}
+
+func (api *API) extractOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, string, error) {
+	token, err := api.extractBearerToken(w, req)
+	if err != nil {
+		return nil, token, err
 	}
-	return req.Context(), nil
+	if token == "" || token != api.config.OperatorToken {
+		return nil, token, unauthorizedError("Request does not include an Operator token")
+	}
+	return req.Context(), token, nil
+}
+
+func (api *API) requireAdminCredentials(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+	c, t, err := api.extractOperatorRequest(w, req)
+	if err == nil {
+		return c, nil
+	}
+
+	if t == "" {
+		return nil, err
+	}
+
+	c, err = api.parseJWTClaims(t, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.requireAdmin(c, w, req)
 }

@@ -24,8 +24,8 @@ func multi(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("Failed to load configration: %+v", err)
 	}
-	if globalConfig.NetlifySecret == "" {
-		logrus.Fatal("Netlify microservice secret is required")
+	if globalConfig.OperatorToken == "" {
+		logrus.Fatal("Operator token secret is required")
 	}
 
 	var db storage.Connection

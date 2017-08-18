@@ -15,5 +15,6 @@
   },
   "logging": {
     "level": "error"
-  }
+  },
+  "operator_token": "foobar"
 }

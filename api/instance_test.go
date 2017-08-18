@@ -18,7 +18,7 @@ import (
 )
 
 const testUUID = "11111111-1111-1111-1111-111111111111"
-const netlifySecret = "netlifysecret"
+const operatorToken = "operatorToken"
 
 type InstanceTestSuite struct {
 	suite.Suite
@@ -28,7 +28,7 @@ type InstanceTestSuite struct {
 func (ts *InstanceTestSuite) SetupTest() {
 	globalConfig, err := conf.LoadGlobalFromFile("config.test.json")
 	require.NoError(ts.T(), err)
-	globalConfig.NetlifySecret = netlifySecret
+	globalConfig.OperatorToken = operatorToken
 	globalConfig.MultiInstanceMode = true
 	db, err := dial.Dial(globalConfig)
 	require.NoError(ts.T(), err)
@@ -66,7 +66,7 @@ func (ts *InstanceTestSuite) TestCreate() {
 	// Setup request
 	req := httptest.NewRequest(http.MethodPost, "http://localhost/instances", &buffer)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+netlifySecret)
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
 
 	// Setup response recorder
 	w := httptest.NewRecorder()
@@ -101,7 +101,7 @@ func (ts *InstanceTestSuite) TestGet() {
 
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/instances/"+instanceID, nil)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+netlifySecret)
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
 
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
