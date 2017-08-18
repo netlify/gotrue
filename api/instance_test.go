@@ -149,7 +149,7 @@ func (ts *InstanceTestSuite) TestUpdate() {
 
 	req := httptest.NewRequest(http.MethodPut, "http://localhost/instances/"+instanceID, &buffer)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+netlifySecret)
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
 
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
