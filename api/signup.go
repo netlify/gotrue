@@ -32,9 +32,19 @@ func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter,
 	}
 
 	aud := a.requestAud(ctx, r)
-	params.Email, err = provider.GetUserEmail(ctx, tok)
+	userData, err := provider.GetUserData(ctx, tok)
 	if err != nil {
 		return internalServerError("Error getting user email from external provider").WithInternalError(err)
+	}
+
+	params.Email = userData.Email
+	if params.Data == nil {
+		params.Data = make(map[string]interface{})
+	}
+	for k, v := range userData.Metadata {
+		if v != "" {
+			params.Data[k] = v
+		}
 	}
 
 	if exists, err := a.db.IsDuplicatedEmail(instanceID, params.Email, aud); exists {

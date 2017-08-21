@@ -89,14 +89,14 @@ func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter,
 		return internalServerError("Unable to authenticate via %s", providerName).WithInternalError(err).WithInternalMessage("Error exchanging code with external provider")
 	}
 
-	email, err := provider.GetUserEmail(ctx, tok)
+	data, err := provider.GetUserData(ctx, tok)
 	if err != nil {
 		return internalServerError("Error getting user email from %s", providerName).WithInternalError(err).WithInternalMessage("Error getting email address from external provider")
 	}
 
 	aud := a.requestAud(ctx, r)
 	instanceID := getInstanceID(ctx)
-	user, err := a.db.FindUserByEmailAndAudience(instanceID, email, aud)
+	user, err := a.db.FindUserByEmailAndAudience(instanceID, data.Email, aud)
 	if err != nil {
 		return internalServerError(err.Error())
 	}
