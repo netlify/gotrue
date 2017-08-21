@@ -76,12 +76,19 @@ func (api *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 
 // adminUserGet returns information about a single user
 func (api *API) adminUserGet(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 	instanceID := getInstanceID(r.Context())
+
+	aud := r.FormValue("aud")
+	if aud == "" {
+		aud = api.requestAud(ctx, r)
+	}
+
 	params := &adminUserParams{
 		User: adminTargetUser{
 			ID:    r.FormValue("id"),
 			Email: r.FormValue("email"),
-			Aud:   r.FormValue("aud"),
+			Aud:   aud,
 		},
 	}
 	user, err := api.getAdminTargetUser(instanceID, params)
