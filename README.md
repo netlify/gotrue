@@ -37,7 +37,7 @@ PORT=9999
 
 Hostname to listen on.
 
-`PORT` / `GOTRUE_API_PORT` - `number`
+`PORT` (no prefix) / `API_PORT` - `number`
 
 Port number to listen on. Defaults to `8081`.
 
@@ -56,7 +56,7 @@ DATABASE_URL=gotrue.db
 
 Chooses what dialect of database you want. Choose from `mongo`, `sqlite3`, `mysql`, or `postgres`.
 
-`DATABASE_URL` / `DB_DATABASE_URL` - `string` **required**
+`DATABASE_URL` (no prefix) / `DB_DATABASE_URL` - `string` **required**
 
 Connection string for the database. See the [gorm examples](https://github.com/jinzhu/gorm/blob/gh-pages/documents/database.md) for more details.
 
