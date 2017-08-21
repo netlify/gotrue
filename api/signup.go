@@ -130,7 +130,6 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud string) (*models.User, error) {
-	config := getConfig(ctx)
 	instanceID := getInstanceID(ctx)
 	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.Data)
 	if err != nil {
@@ -143,19 +142,6 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 
 	if err := a.db.CreateUser(user); err != nil {
 		return nil, internalServerError("Database error saving new user").WithInternalError(err)
-	}
-
-	userCount, err := a.db.CountOtherUsers(instanceID, user.ID)
-	if err != nil {
-		return nil, internalServerError("Database error counting users").WithInternalError(err)
-	}
-
-	// first user automatically becomes admin
-	if userCount == 0 && !config.JWT.AdminGroupDisabled {
-		user.SetRole(config.JWT.AdminGroupName)
-		if err = a.db.UpdateUser(user); err != nil {
-			return nil, internalServerError("Database error updating user").WithInternalError(err)
-		}
 	}
 
 	return user, nil
