@@ -81,20 +81,17 @@ type Configuration struct {
 }
 
 func loadEnvironment(filename string) error {
-	// default to .env if an empty string is passed as a filename
-	// godotenv will only default if passed an empty argument list
-	filenames := []string{}
+	var err error
 	if filename != "" {
-		filenames = append(filenames, filename)
-	}
-	if err := godotenv.Load(filenames...); err != nil {
+		err = godotenv.Load(filename)
+	} else {
+		err = godotenv.Load()
 		// handle if .env file does not exist, this is OK
-		if os.IsNotExist(err) && filename == "" {
+		if os.IsNotExist(err) {
 			return nil
 		}
-		return err
 	}
-	return nil
+	return err
 }
 
 // LoadGlobal loads configuration from file and environment variables.
