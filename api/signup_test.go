@@ -171,6 +171,32 @@ func (ts *SignupTestSuite) TestSignupExternalGitlab() {
 	assert.Equal(ts.T(), w.Code, http.StatusOK)
 }
 
+// TestSignupExternalGoogle tests API /signup for google
+func (ts *SignupTestSuite) TestSignupExternalGoogle() {
+	code := os.Getenv("GOTRUE_GOOGLE_OAUTH_CODE")
+	if code == "" || ts.Config.External.Google.Secret == "" {
+		ts.T().Skip("GOTRUE_GOOGLE_OAUTH_CODE or Google external provider config not set")
+		return
+	}
+
+	// Request body
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"provider": "google",
+		"code":     code,
+	}))
+
+	// Setup request
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup response recorder
+	w := httptest.NewRecorder()
+
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), w.Code, http.StatusOK)
+}
+
 // TestSignupTwice checks to make sure the same email cannot be registered twice
 func (ts *SignupTestSuite) TestSignupTwice() {
 	// Request body

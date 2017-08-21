@@ -73,9 +73,10 @@ type Configuration struct {
 		Templates    EmailContentConfiguration `json:"templates"`
 	} `json:"mailer"`
 	External struct {
-		Github    ExternalConfiguration `json:"github"`
 		Bitbucket ExternalConfiguration `json:"bitbucket"`
+		Github    ExternalConfiguration `json:"github"`
 		Gitlab    ExternalConfiguration `json:"gitlab"`
+		Google    ExternalConfiguration `json:"google"`
 	} `json:"external"`
 }
 

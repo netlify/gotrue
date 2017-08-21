@@ -112,7 +112,7 @@ The default group to assign all new users to.
 
 ### External Authentication Providers
 
-We support `github`, `gitlab`, and `bitbucket` for external authentication.
+We support `bitbucket`, `github`, `gitlab`, and `google` for external authentication.
 Use the names as the keys underneath `external` to configure each separately.
 
 ```
