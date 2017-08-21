@@ -168,12 +168,14 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 	name = strings.ToLower(name)
 
 	switch name {
-	case "github":
-		return provider.NewGithubProvider(config.External.Github), nil
 	case "bitbucket":
 		return provider.NewBitbucketProvider(config.External.Bitbucket), nil
+	case "github":
+		return provider.NewGithubProvider(config.External.Github), nil
 	case "gitlab":
 		return provider.NewGitlabProvider(config.External.Gitlab), nil
+	case "google":
+		return provider.NewGoogleProvider(config.External.Google), nil
 	default:
 		return nil, fmt.Errorf("Provider %s could not be found", name)
 	}
