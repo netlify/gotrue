@@ -1,5 +1,5 @@
-hash: 8c0159de73a98271b5de3433a052c65eafaef48069d0dda8617103c3bedf7087
-updated: 2017-08-17T16:59:35.71966572-07:00
+hash: 584c9db44ed61e38b043e033cc12c9a6f229a5a91a110b1f4a69bf48f843e0f1
+updated: 2017-08-21T11:29:52.316754668-04:00
 imports:
 - name: cloud.google.com/go
   version: 06f11fffc537c4aef126d9fd3a92e2d7968f118f
@@ -52,6 +52,10 @@ imports:
   version: 5b8c0dd6b92d9caa8036c31dcb117f2df7cceefa
 - name: github.com/jinzhu/inflection
   version: 1c35d901db3da928c72a72d8458480cc9ade058f
+- name: github.com/joho/godotenv
+  version: 726cc8b906e3d31c70a9671c90a13716a8d3f50d
+- name: github.com/kelseyhightower/envconfig
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/lib/pq
@@ -72,7 +76,7 @@ imports:
 - name: github.com/nats-io/nuid
   version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
 - name: github.com/netlify/mailme
-  version: cd42f69215a689964ec559f05b94f744be948c93
+  version: c4a76ce443c1122ead2518b28cc7ffaf1091cc9a
 - name: github.com/netlify/netlify-commons
   version: 450321a763ac6f9a30b9553fdf8bde076e8215ca
   subpackages:
@@ -85,7 +89,7 @@ imports:
 - name: github.com/pborman/uuid
   version: a97ce2ca70fa5a848076093f05e639a89ca34d06
 - name: github.com/pelletier/go-toml
-  version: 69d355db5304c0f7f809a2edc054553e7142f016
+  version: 4692b8f9babfc93db58cc592ba2689d8736781de
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/pmezard/go-difflib
@@ -121,7 +125,7 @@ imports:
 - name: github.com/spf13/cast
   version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
 - name: github.com/spf13/cobra
-  version: cb731b898346822cc0c225c28550a8a29d93c732
+  version: 4a7b7e65864c064d48dce82efbbfed2bdc0bf2aa
 - name: github.com/spf13/jwalterweatherman
   version: 0efa5202c04663c757d84f90f5219c1250baf94f
 - name: github.com/spf13/pflag
@@ -137,7 +141,7 @@ imports:
   - require
   - suite
 - name: golang.org/x/crypto
-  version: b176d7def5d71bdd214203491f89843ed217f420
+  version: eb71ad9bd329b5ac0fd0148dd99bd62e8be8e035
   subpackages:
   - bcrypt
   - blowfish
@@ -156,7 +160,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 9f7170bcd8e9f4d3691c06401119c46a769a1e03
+  version: 07c182904dbd53199946ba614a412c61d3c548f5
   subpackages:
   - unix
 - name: golang.org/x/text
@@ -165,7 +169,7 @@ imports:
   - transform
   - unicode/norm
 - name: google.golang.org/api
-  version: 98825bb0065da4054e5da6db34f5fc598e50bc24
+  version: ed10e890a8366167a7ce33fac2b12447987bcb1c
   subpackages:
   - gensupport
   - googleapi

@@ -287,8 +287,8 @@ func (conn *Connection) DeleteInstance(instance *models.Instance) error {
 
 // Dial will connect to that storage engine
 func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
-	if config.DB.Driver == "" && config.DB.ConnURL != "" {
-		u, err := url.Parse(config.DB.ConnURL)
+	if config.DB.Driver == "" && config.DB.URL != "" {
+		u, err := url.Parse(config.DB.URL)
 		if err != nil {
 			return nil, errors.Wrap(err, "parsing db connection url")
 		}
@@ -298,7 +298,7 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 	if config.DB.Dialect == "" {
 		config.DB.Dialect = config.DB.Driver
 	}
-	db, err := gorm.Open(config.DB.Dialect, config.DB.Driver, config.DB.ConnURL)
+	db, err := gorm.Open(config.DB.Dialect, config.DB.Driver, config.DB.URL)
 	if err != nil {
 		return nil, errors.Wrap(err, "opening database connection")
 	}

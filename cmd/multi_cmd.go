@@ -20,9 +20,9 @@ var multiCmd = cobra.Command{
 }
 
 func multi(cmd *cobra.Command, args []string) {
-	globalConfig, err := conf.LoadGlobal(cmd)
+	globalConfig, err := conf.LoadGlobal(configFile)
 	if err != nil {
-		logrus.Fatalf("Failed to load configration: %+v", err)
+		logrus.Fatalf("Failed to load configuration: %+v", err)
 	}
 	if globalConfig.OperatorToken == "" {
 		logrus.Fatal("Operator token secret is required")

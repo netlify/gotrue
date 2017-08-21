@@ -8,139 +8,111 @@ user data.
 
 ## Configuration
 
-You may configure GoTrue using either a configuration file named `config.json`,
-environment variables, or a combination of both. To determine the environment variable name:
-uppercase the setting name, replace all `.` with `_`, and add a prefix of `GOTRUE_`.
+You may configure GoTrue using either a configuration file named `.env`,
+environment variables, or a combination of both. Environment variables are prefixed with `GOTRUE_`, and will always have precedence over values provided via file.
 
 ### Top-Level
 
 ```
-{
-  "site_url": "https://example.netlify.com/",
-  ...
-}
+GOTRUE_SITE_URL=https://example.netlify.com/
 ```
 
-`site_url` - `string` **required**
+`SITE_URL` - `string` **required**
 
 The base URL your site is located at. Currently used in combination with other settings to construct URLs used in emails.
 
-`netlify_secret` - `string` *Multi-instance mode only*
+`OPERATOR_TOKEN` - `string` *Multi-instance mode only*
 
-The shared secret with Netlify for this microservice. Used to verify requests have been proxied through Netlify and
+The shared secret with an operator (usually Netlify) for this microservice. Used to verify requests have been proxied through the operator and
 the payload values can be trusted.
 
 ### API
 
 ```
-{
-  ...
-  "api": {
-    "host": "localhost",
-    "port": 9999
-  },
-  ...
-}
+GOTRUE_API_HOST=localhost
+PORT=9999
 ```
 
-`api.host` - `string`
+`API_HOST` - `string`
 
 Hostname to listen on.
 
-`api.port` - `number`
+`PORT` / `GOTRUE_API_PORT` - `number`
 
-Port number to listen on. Can also be set with `PORT` environment variable. Defaults to `8081`.
+Port number to listen on. Defaults to `8081`.
 
-`api.endpoint` - `string` *Multi-instance mode only*
+`API_ENDPOINT` - `string` *Multi-instance mode only*
 
 Controls what endpoint Netlify can access this API on.
 
 ### Database
 
 ```
-{
-  ...
-  "db": {
-    "driver": "sqlite3",
-    "url": "gotrue.db"
-  },
-  ...
-}
+GOTRUE_DB_DRIVER=sqlite3
+DATABASE_URL=gotrue.db
 ```
 
-`db.driver` - `string` **required**
+`DB_DRIVER` - `string` **required**
 
 Chooses what dialect of database you want. Choose from `mongo`, `sqlite3`, `mysql`, or `postgres`.
 
-`db.url` - `string` **required**
+`DATABASE_URL` / `DB_DATABASE_URL` - `string` **required**
 
 Connection string for the database. See the [gorm examples](https://github.com/jinzhu/gorm/blob/gh-pages/documents/database.md) for more details.
 
-`db.namespace` - `string`
+`DB_NAMESPACE` - `string`
 
 Adds a prefix to all table names.
 
-`db.automigrate` - `bool`
+`DB_AUTOMIGRATE` - `bool`
 
 If enabled, creates missing tables and columns upon startup.
 
 ### Logging
 
 ```
-{
-  ...
-  "log_conf": {
-    "log_level": "debug"
-  },
-  ...
-}
+LOG_LEVEL=debug
 ```
 
-`log_conf.log_level` - `string`
+`LOG_LEVEL` - `string`
 
 Controls what log levels are output. Choose from `panic`, `fatal`, `error`, `warn`, `info`, or `debug`. Defaults to `info`.
 
-`log_conf.log_file` - `string`
+`LOG_FILE` - `string`
 
 If you wish logs to be written to a file, set `log_file` to a valid file path.
 
 ### JSON Web Tokens (JWT)
 
 ```
-{
-  ...
-  "jwt": {
-    "secret": "supersecretvalue",
-    "exp": 3600,
-    "aud": "netlify"
-  },
-  ...
-}
+GOTRUE_JWT_SECRET=supersecretvalue
+GOTRUE_JWT_EXP=3600
+GOTRUE_JWT_AUD=netlify
 ```
 
-`jwt.secret` - `string` **required**
+`JWT_SECRET` - `string` **required**
 
 The secret used to sign JWT tokens with.
 
-`jwt.exp` - `number`
+`JWT_EXP` - `number`
 
 How long tokens are valid for, in seconds. Defaults to 3600 (1 hour).
 
-`jwt.aud` - `string`
+`JWT_AUD` - `string`
 
 The default JWT audience. Use audiences to group users.
 
-`jwt.admin_group_name` - `string`
+`JWT_ADMIN_GROUP_NAME` - `string`
 
 The name of the admin group (if enabled). Defaults to `admin`.
 
-`jwt.admin_group_disabled` - `bool`
+`JWT_ADMIN_GROUP_DISABLED` - `bool`
 
 The first user created will be made an admin.
 Set to `true` to turn off this behavior.
 Defaults to `false`.
 
-`jwt.default_group_name` - `string`
+`JWT_DEFAULT_GROUP_NAME` - `string`
 
 The default group to assign all new users to.
 
@@ -150,34 +122,25 @@ We support `github`, `gitlab`, and `bitbucket` for external authentication.
 Use the names as the keys underneath `external` to configure each separately.
 
 ```
-{
-  ...
-  "external": {
-    "github": {
-      "client_id": "myappclientid",
-      "secret": "clientsecretvaluessssh"
-    },
-    ...
-  },
-  ...
-}
+GOTRUE_EXTERNAL_GITHUB_CLIENT_ID=myappclientid
+GOTRUE_EXTERNAL_GITHUB_SECRET=clientsecretvaluessssh
 ```
 
 No external providers are required, but you must provide the required values if you choose to enable any.
 
-`external.x.client_id` - `string` **required**
+`EXTERNAL_X_CLIENT_ID` - `string` **required**
 
 The OAuth2 Client ID registered with the external provider.
 
-`external.x.secret` - `string` **required**
+`EXTERNAL_X_SECRET` - `string` **required**
 
 The OAuth2 Client Secret provided by the external provider when you registered.
 
-`external.x.redirect_uri` - `string` **required for gitlab**
+`EXTERNAL_X_REDIRECT_URI` - `string` **required for gitlab**
 
 The URI a OAuth2 provider will redirect to with the `code` and `state` values.
 
-`external.x.url` - `string`
+`EXTERNAL_X_URL` - `string`
 
 The base URL used for constructing the URLs to request authorization and access tokens. Used by `gitlab` only. Defaults to `https://gitlab.com`.
 
@@ -187,78 +150,62 @@ Sending email is not required, but highly recommended for password recovery.
 If enabled, you must provide the required values below.
 
 ```
-{
-  ...
-  "mailer": {
-    "admin_email": "support@example.com",
-    "host": "",
-    "port": 25,
-    "user": "",
-    "pass": "",
-    "subjects": {
-      "confirmation": "",
-      ...
-    },
-    "templates": {
-      "confirmation": "",
-      ...
-    }
-  },
-  ...
-}
+GOTRUE_MAILER_ADMIN_EMAIL=support@example.com
+GOTRUE_MAILER_PORT=25
+GOTRUE_MAILER_SUBJECTS_CONFIRMATION="Please confirm"
 ```
 
-`mailer.admin_email` - `string` **required**
+`MAILER_ADMIN_EMAIL` - `string` **required**
 
 The `From` email address for all emails sent.
 
-`mailer.host` - `string` **required**
+`MAILER_HOST` - `string` **required**
 
 The mail server hostname to send emails through.
 
-`mailer.port` - `number` **required**
+`MAILER_PORT` - `number` **required**
 
 The port number to connect to the mail server on.
 
-`mailer.user` - `string`
+`MAILER_USER` - `string`
 
 If the mail server requires authentication, the username to use.
 
-`mailer.pass` - `string`
+`MAILER_PASS` - `string`
 
 If the mail server requires authentication, the password to use.
 
-`mailer.max_frequency` - `number`
+`MAILER_MAX_FREQUENCY` - `number`
 
 Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email. The value is the number of seconds. Defaults to 900 (15 minutes).
 
-`mailer.autoconfirm` - `bool`
+`MAILER_AUTOCONFIRM` - `bool`
 
 If you do not require email confirmation, you may set this to `true`. Defaults to `false`.
 
-`mailer.member_folder` - `string`
+`MAILER_MEMBER_FOLDER` - `string`
 
 The folder on `site_url` where the `confirm`, `recover`, and `confirm-email`
 pages are located. This is used in combination with `site_url` to generate the 
 URLs used in the emails. Defaults to `/member`.
 
-`mailer.subjects.invite` - `string`
+`MAILER_SUBJECTS_INVITE` - `string`
 
 Email subject to use for user invite. Defaults to `You have been invited`.
 
-`mailer.subjects.confirmation` - `string`
+`MAILER_SUBJECTS_CONFIRMATION` - `string`
 
 Email subject to use for signup confirmation. Defaults to `Confirm Your Signup`.
 
-`mailer.subjects.recovery` - `string`
+`MAILER_SUBJECTS_RECOVERY` - `string`
 
 Email subject to use for password reset. Defaults to `Reset Your Password`.
 
-`mailer.subjects.email_change` - `string`
+`MAILER_SUBJECTS_EMAIL_CHANGE` - `string`
 
 Email subject to use for email change confirmation. Defaults to `Confirm Email Change`.
 
-`mailer.templates.invite` - `string`
+`MAILER_TEMPLATES_INVITE` - `string`
 
 URL path to an email template to use when inviting a user. Defaults to `/.netlify/gotrue/templates/invite.html`
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
@@ -271,7 +218,7 @@ Default Content (if template is unavailable):
 <p><a href="{{ .ConfirmationURL }}">Accept the invite</a></p>
 ```
 
-`mailer.templates.confirmation` - `string`
+`MAILER_TEMPLATES_CONFIRMATION` - `string`
 
 URL path to an email template to use when confirming a signup. Defaults to `/.netlify/gotrue/templates/confirm.html`
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
@@ -284,7 +231,7 @@ Default Content (if template is unavailable):
 <p><a href="{{ .ConfirmationURL }}">Confirm your mail</a></p>
 ```
 
-`mailer.templates.recovery` - `string`
+`MAILER_TEMPLATES_RECOVERY` - `string`
 
 URL path to an email template to use when resetting a password. Defaults to `/.netlify/gotrue/templates/recover.html`
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
@@ -297,7 +244,7 @@ Default Content (if template is unavailable):
 <p><a href="{{ .ConfirmationURL }}">Reset Password</a></p>
 ```
 
-`mailer.templates.email_change` - `string`
+`MAILER_TEMPLATES_EMAIL_CHANGE` - `string`
 
 URL path to an email template to use when confirming the change of an email address. Defaults to `/.netlify/gotrue/templates/email-change.html`
 `SiteURL`, `Email`, `NewEmail`, and `ConfirmationURL` variables are available.

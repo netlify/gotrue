@@ -53,3 +53,7 @@ import:
   version: "1.10"
   subpackages:
   - proxy/dialers/postgres
+- package: github.com/kelseyhightower/envconfig
+  version: v1.3.0
+- package: github.com/joho/godotenv
+  version: v1.1

@@ -25,7 +25,7 @@ Set the environment variable GOTRUE_MONGODB_TEST_CONN_URL with the connection UR
 		DB: conf.DBConfiguration{
 			Namespace: "gotrue",
 			Driver:    "mongodb",
-			ConnURL:   connURL,
+			URL:       connURL,
 		},
 	}
 

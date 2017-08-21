@@ -1,11 +1,11 @@
-config.json
-config.test.json
+.env
 gorm.db
 vendor/
 gotrue
 test.db
 
 .DS_Store
+.vscode
 www/dist/
 www/.DS_Store
 www/node_modules
