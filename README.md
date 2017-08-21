@@ -106,12 +106,6 @@ The default JWT audience. Use audiences to group users.
 
 The name of the admin group (if enabled). Defaults to `admin`.
 
-`JWT_ADMIN_GROUP_DISABLED` - `bool`
-
-The first user created will be made an admin.
-Set to `true` to turn off this behavior.
-Defaults to `false`.
-
 `JWT_DEFAULT_GROUP_NAME` - `string`
 
 The default group to assign all new users to.

@@ -28,12 +28,11 @@ type DBConfiguration struct {
 
 // JWTConfiguration holds all the JWT related configuration.
 type JWTConfiguration struct {
-	Secret             string `json:"secret" required:"true"`
-	Exp                int    `json:"exp"`
-	Aud                string `json:"aud"`
-	AdminGroupName     string `json:"admin_group_name" split_words:"true"`
-	AdminGroupDisabled bool   `json:"admin_group_disabled" split_words:"true"`
-	DefaultGroupName   string `json:"default_group_name" split_words:"true"`
+	Secret           string `json:"secret" required:"true"`
+	Exp              int    `json:"exp"`
+	Aud              string `json:"aud"`
+	AdminGroupName   string `json:"admin_group_name" split_words:"true"`
+	DefaultGroupName string `json:"default_group_name" split_words:"true"`
 }
 
 // GlobalConfiguration holds all the configuration that applies to all instances.
