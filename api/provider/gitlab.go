@@ -83,14 +83,22 @@ func (g gitlabProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2
 	return dst, nil
 }
 
-func (g gitlabProvider) GetUserEmail(ctx context.Context, tok *oauth2.Token) (string, error) {
+func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
 	user := struct {
-		Email string `json:"email"`
+		Email     string `json:"email"`
+		Name      string `json:"name"`
+		AvatarURL string `json:"avatar_url"`
 	}{}
 
 	if err := makeRequest(ctx, tok, g.Config, "https://gitlab.com/api/v4/user", &user); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return user.Email, nil
+	return &UserProvidedData{
+		Email: user.Email,
+		Metadata: map[string]string{
+			nameKey:      user.Name,
+			avatarURLKey: user.AvatarURL,
+		},
+	}, nil
 }
