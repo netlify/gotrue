@@ -127,5 +127,6 @@ func (a *API) DeleteInstance(w http.ResponseWriter, r *http.Request) error {
 
 	// TODO do we delete everything associated with an instance too?
 
-	return sendJSON(w, http.StatusOK, nil)
+	w.WriteHeader(http.StatusNoContent)
+	return nil
 }
