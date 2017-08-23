@@ -20,4 +20,5 @@ func migrate(globalConfig *conf.GlobalConfiguration, config *conf.Configuration)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
+	defer db.Close()
 }

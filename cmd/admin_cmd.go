@@ -71,6 +71,7 @@ func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
+	defer db.Close()
 
 	aud := getAudience(config)
 	if exists, err := db.IsDuplicatedEmail(instanceID, args[0], aud); exists {
@@ -110,6 +111,7 @@ func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
+	defer db.Close()
 
 	user, err := db.FindUserByEmailAndAudience(instanceID, args[0], getAudience(config))
 	if err != nil {
@@ -131,6 +133,7 @@ func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configur
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
+	defer db.Close()
 
 	user, err := db.FindUserByEmailAndAudience(instanceID, args[0], getAudience(config))
 	if err != nil {
