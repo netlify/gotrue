@@ -60,14 +60,14 @@ func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter,
 
 	if config.Mailer.Autoconfirm {
 		user.Confirm()
-	} else if user.ConfirmationSentAt.Add(config.Mailer.MaxFrequency).Before(time.Now()) {
+	} else {
 		mailer := getMailer(ctx)
 		if err := mailer.ConfirmationMail(user); err != nil {
 			return internalServerError("Error sending confirmation mail").WithInternalError(err)
 		}
+		user.ConfirmationSentAt = time.Now()
 	}
 
-	user.SetRole(config.JWT.DefaultGroupName)
 	if err := a.db.UpdateUser(user); err != nil {
 		return internalServerError("Error updating user in database").WithInternalError(err)
 	}
@@ -99,6 +99,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		return unprocessableEntityError("Signup requires a valid email and password")
 	}
 
+	mailer := getMailer(ctx)
 	aud := a.requestAud(ctx, r)
 
 	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
@@ -106,32 +107,30 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		if !models.IsNotFoundError(err) {
 			return internalServerError("Database error finding user").WithInternalError(err)
 		}
+		if err = mailer.ValidateEmail(params.Email); err != nil {
+			return unprocessableEntityError("Unable to validate email address: " + err.Error())
+		}
 
 		user, err = a.signupNewUser(ctx, params, aud)
 		if err != nil {
 			return err
 		}
 	} else {
-		user, err = a.confirmUser(user, params)
+		err = a.updateUserMetadata(user, params)
 		if err != nil {
 			return err
 		}
 	}
 
-	mailer := getMailer(ctx)
-	if err = mailer.ValidateEmail(params.Email); err != nil {
-		return unprocessableEntityError("Unable to validate email address: " + err.Error())
-	}
-
 	if config.Mailer.Autoconfirm {
 		user.Confirm()
-	} else if user.ConfirmationSentAt.Add(config.Mailer.MaxFrequency).Before(time.Now()) {
+	} else {
 		if err := mailer.ConfirmationMail(user); err != nil {
 			return internalServerError("Error sending confirmation mail").WithInternalError(err)
 		}
+		user.ConfirmationSentAt = time.Now()
 	}
 
-	user.SetRole(config.JWT.DefaultGroupName)
 	if err = a.db.UpdateUser(user); err != nil {
 		return internalServerError("Database error updating user").WithInternalError(err)
 	}
@@ -141,6 +140,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 
 func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud string) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
+	config := getConfig(ctx)
 	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		return nil, internalServerError("Database error creating user").WithInternalError(err)
@@ -150,6 +150,7 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 		user.EncryptedPassword = ""
 	}
 
+	user.SetRole(config.JWT.DefaultGroupName)
 	if err := a.db.CreateUser(user); err != nil {
 		return nil, internalServerError("Database error saving new user").WithInternalError(err)
 	}
@@ -157,17 +158,14 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 	return user, nil
 }
 
-func (a *API) confirmUser(user *models.User, params *SignupParams) (*models.User, error) {
+func (a *API) updateUserMetadata(user *models.User, params *SignupParams) error {
 	if user.IsRegistered() {
-		return nil, badRequestError("A user with this email address has already been registered")
+		return badRequestError("A user with this email address has already been registered")
 	}
 
 	user.UpdateUserMetaData(params.Data)
-	user.GenerateConfirmationToken()
-
 	if err := a.db.UpdateUser(user); err != nil {
-		return nil, internalServerError("Database error updating user").WithInternalError(err)
+		return internalServerError("Database error updating user").WithInternalError(err)
 	}
-
-	return user, nil
+	return nil
 }

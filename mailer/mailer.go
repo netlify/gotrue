@@ -3,6 +3,7 @@ package mailer
 import (
 	"net/url"
 	"path"
+	"time"
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
@@ -119,6 +120,10 @@ func (m *TemplateMailer) InviteMail(user *models.User) error {
 
 // ConfirmationMail sends a signup confirmation mail to a new user
 func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
+	if !user.ConfirmationSentAt.Add(m.Config.Mailer.MaxFrequency).Before(time.Now()) {
+		return nil
+	}
+
 	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.MemberFolder, "/confirm/"+user.ConfirmationToken)
 	if err != nil {
 		return err

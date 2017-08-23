@@ -122,7 +122,6 @@ func (u *User) Authenticate(password string) bool {
 func (u *User) GenerateConfirmationToken() {
 	token := crypto.SecureToken()
 	u.ConfirmationToken = token
-	u.ConfirmationSentAt = time.Now()
 }
 
 // GenerateRecoveryToken generates a secure password recovery token
