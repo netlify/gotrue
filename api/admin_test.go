@@ -142,6 +142,12 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"role": "testing",
+		"app_metadata": map[string]interface{}{
+			"roles": []string{"writer", "editor"},
+		},
+		"user_metadata": map[string]interface{}{
+			"name": "David",
+		},
 		"user": map[string]interface{}{
 			"email": "test1@example.com",
 			"aud":   ts.Config.JWT.Aud,
@@ -167,6 +173,10 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 	u, err := ts.API.db.FindUserByEmailAndAudience("", "test1@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	assert.Equal(ts.T(), u.Role, "testing")
+	assert.Equal(ts.T(), u.UserMetaData["name"], "David")
+	assert.Len(ts.T(), u.AppMetaData["roles"], 2)
+	assert.Contains(ts.T(), u.AppMetaData["roles"], "writer")
+	assert.Contains(ts.T(), u.AppMetaData["roles"], "editor")
 }
 
 // TestAdminUserDelete tests API /admin/user route (DELETE)

@@ -22,12 +22,13 @@ type adminTargetUser struct {
 }
 
 type adminUserParams struct {
-	Role     string                 `json:"role"`
-	Email    string                 `json:"email"`
-	Password string                 `json:"password"`
-	Confirm  bool                   `json:"confirm"`
-	Data     map[string]interface{} `json:"data"`
-	User     adminTargetUser        `json:"user"`
+	Role         string                 `json:"role"`
+	Email        string                 `json:"email"`
+	Password     string                 `json:"password"`
+	Confirm      bool                   `json:"confirm"`
+	UserMetaData map[string]interface{} `json:"user_metadata"`
+	AppMetaData  map[string]interface{} `json:"app_metadata"`
+	User         adminTargetUser        `json:"user"`
 }
 
 func (api *API) getAdminParams(r *http.Request) (*adminUserParams, error) {
@@ -126,6 +127,14 @@ func (api *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 		user.Email = params.Email
 	}
 
+	if params.AppMetaData != nil {
+		user.UpdateAppMetaData(params.AppMetaData)
+	}
+
+	if params.UserMetaData != nil {
+		user.UpdateUserMetaData(params.UserMetaData)
+	}
+
 	if err := api.db.UpdateUser(user); err != nil {
 		return internalServerError("Error updating user").WithInternalError(err)
 	}
@@ -158,7 +167,7 @@ func (api *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 		return unprocessableEntityError("Email address already registered by another user")
 	}
 
-	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.Data)
+	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.UserMetaData)
 	if err != nil {
 		return internalServerError("Error creating user").WithInternalError(err)
 	}
