@@ -271,11 +271,34 @@ GoTrue exposes the following endpoints:
 
   ```json
   {
-    "id":1,
+    "id":"11111111-2222-3333-4444-5555555555555",
     "email":"email@example.com",
     "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
     "updated_at": "2016-05-15T19:53:12.368652374-07:00"
+  }
+  ```
+
+* **POST /invite**
+
+  Invites a new user with an email.
+
+  ```json
+  {
+    "email": "email@example.com"
+  }
+  ```
+
+  Returns:
+
+  ```json
+  {
+    "id":"11111111-2222-3333-4444-5555555555555",
+    "email":"email@example.com",
+    "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
+    "created_at": "2016-05-15T19:53:12.368652374-07:00",
+    "updated_at": "2016-05-15T19:53:12.368652374-07:00",
+    "invited_at": "2016-05-15T19:53:12.368652374-07:00",
   }
   ```
 
@@ -322,7 +345,7 @@ GoTrue exposes the following endpoints:
 * **POST /token**
 
   This is an OAuth2 endpoint that currently implements
-  the password and refresh_token grant types
+  the password, refresh_token, and authorization_code grant types
 
   ```
   grant_type=password&username=email@example.com&password=secret
@@ -356,7 +379,7 @@ GoTrue exposes the following endpoints:
 
   ```json
   {
-    "id":1,
+    "id":"11111111-2222-3333-4444-5555555555555",
     "email":"email@example.com",
     "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
@@ -385,7 +408,7 @@ GoTrue exposes the following endpoints:
 
   ```json
   {
-    "id":1,
+    "id":"11111111-2222-3333-4444-5555555555555",
     "email":"email@example.com",
     "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
