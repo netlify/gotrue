@@ -16,7 +16,8 @@ type Instance struct {
 	// Netlify UUID
 	UUID string `json:"uuid,omitempty" bson:"uuid,omitempty"`
 
-	RawBaseConfig string              `json:"-" bson:"-"`
+	// force usage of text column type
+	RawBaseConfig string              `json:"-" bson:"-" gorm:"size:65535"`
 	BaseConfig    *conf.Configuration `json:"config"`
 
 	RawContexts string                        `json:"-" bson:"-"`
