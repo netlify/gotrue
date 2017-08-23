@@ -20,8 +20,4 @@ func migrate(globalConfig *conf.GlobalConfiguration, config *conf.Configuration)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
-
-	if err := db.Automigrate(); err != nil {
-		logrus.Fatalf("Error migrating tables: %+v", err)
-	}
 }

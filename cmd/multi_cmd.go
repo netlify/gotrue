@@ -43,12 +43,6 @@ func multi(cmd *cobra.Command, args []string) {
 	}
 	defer db.Close()
 
-	if globalConfig.DB.Automigrate {
-		if err := db.Automigrate(); err != nil {
-			logrus.Fatalf("Error migrating models: %+v", err)
-		}
-	}
-
 	globalConfig.MultiInstanceMode = true
 	api := api.NewAPIWithVersion(context.Background(), globalConfig, db, Version)
 

@@ -14,9 +14,24 @@ func Dial(config *conf.GlobalConfiguration) (storage.Connection, error) {
 		models.Namespace = config.DB.Namespace
 	}
 
+	var conn storage.Connection
+	var err error
 	if config.DB.Driver == "mongo" {
-		return mongo.Dial(config)
+		conn, err = mongo.Dial(config)
+	} else {
+		conn, err = sql.Dial(config)
 	}
 
-	return sql.Dial(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if config.DB.Automigrate {
+		if err := conn.Automigrate(); err != nil {
+			conn.Close()
+			return nil, err
+		}
+	}
+
+	return conn, nil
 }

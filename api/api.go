@@ -140,12 +140,6 @@ func NewAPIFromConfigFile(filename string, version string) (*API, error) {
 		return nil, err
 	}
 
-	if globalConfig.DB.Automigrate {
-		if err := db.Automigrate(); err != nil {
-			return nil, err
-		}
-	}
-
 	ctx, err := WithInstanceConfig(context.Background(), config, "")
 	if err != nil {
 		logrus.Fatalf("Error loading instance config: %+v", err)

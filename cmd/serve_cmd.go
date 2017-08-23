@@ -26,12 +26,6 @@ func serve(globalConfig *conf.GlobalConfiguration, config *conf.Configuration) {
 	}
 	defer db.Close()
 
-	if globalConfig.DB.Automigrate {
-		if err := db.Automigrate(); err != nil {
-			logrus.Fatalf("Error migrating models: %+v", err)
-		}
-	}
-
 	ctx, err := api.WithInstanceConfig(context.Background(), config, "")
 	if err != nil {
 		logrus.Fatalf("Error loading instance config: %+v", err)

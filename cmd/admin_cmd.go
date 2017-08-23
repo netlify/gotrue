@@ -72,12 +72,6 @@ func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 
-	if globalConfig.DB.Automigrate {
-		if err := db.Automigrate(); err != nil {
-			logrus.Fatalf("Error migrating tables: %+v", err)
-		}
-	}
-
 	aud := getAudience(config)
 	if exists, err := db.IsDuplicatedEmail(instanceID, args[0], aud); exists {
 		logrus.Fatalf("Error creating new user: user already exists")
