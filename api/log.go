@@ -46,7 +46,7 @@ func (l *structuredLoggerEntry) Write(status, bytes int, elapsed time.Duration) 
 		"duration": elapsed.Nanoseconds(),
 	})
 
-	l.Logger.Info("Completed request")
+	l.Logger.Info("request completed")
 }
 
 func (l *structuredLoggerEntry) Panic(v interface{}, stack []byte) {
