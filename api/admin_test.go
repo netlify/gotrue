@@ -108,10 +108,11 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 	u, err := ts.API.db.FindUserByEmailAndAudience("", "test1@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
-	data := make(map[string]interface{})
+	data := models.User{}
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
-	assert.Equal(ts.T(), data["email"], u.Email)
+	assert.Equal(ts.T(), u.Email, data.Email)
+	assert.Equal(ts.T(), "email", data.AppMetaData["provider"])
 }
 
 // TestAdminUserGet tests API /admin/user route (GET)

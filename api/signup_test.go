@@ -59,14 +59,14 @@ func (ts *SignupTestSuite) TestSignup() {
 
 	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	require.Equal(ts.T(), http.StatusOK, w.Code)
 
-	data := make(map[string]interface{})
+	data := models.User{}
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-	assert.Equal(ts.T(), data["email"], "test@example.com")
-	assert.Equal(ts.T(), data["aud"], ts.Config.JWT.Aud)
-	assert.Equal(ts.T(), data["user_metadata"].(map[string]interface{})["a"], 1.0)
-	assert.Len(ts.T(), data, 13)
+	assert.Equal(ts.T(), "test@example.com", data.Email)
+	assert.Equal(ts.T(), ts.Config.JWT.Aud, data.Aud)
+	assert.Equal(ts.T(), 1.0, data.UserMetaData["a"])
+	assert.Equal(ts.T(), "email", data.AppMetaData["provider"])
 }
 
 // TestSignupExternalUnsupported tests API /signup for an unsupported external provider
@@ -115,7 +115,10 @@ func (ts *SignupTestSuite) TestSignupExternalGithub() {
 
 	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	require.Equal(ts.T(), http.StatusOK, w.Code)
+	data := models.User{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
+	assert.Equal(ts.T(), "github", data.AppMetaData["provider"])
 }
 
 // TestSignupExternalBitbucket tests API /signup for bitbucket
@@ -142,7 +145,10 @@ func (ts *SignupTestSuite) TestSignupExternalBitbucket() {
 
 	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	require.Equal(ts.T(), http.StatusOK, w.Code)
+	data := models.User{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
+	assert.Equal(ts.T(), "bitbucket", data.AppMetaData["provider"])
 }
 
 // TestSignupExternalGitlab tests API /signup for gitlab
@@ -168,7 +174,10 @@ func (ts *SignupTestSuite) TestSignupExternalGitlab() {
 	w := httptest.NewRecorder()
 
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	require.Equal(ts.T(), http.StatusOK, w.Code)
+	data := models.User{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
+	assert.Equal(ts.T(), "gitlab", data.AppMetaData["provider"])
 }
 
 // TestSignupExternalGoogle tests API /signup for google
@@ -194,7 +203,10 @@ func (ts *SignupTestSuite) TestSignupExternalGoogle() {
 	w := httptest.NewRecorder()
 
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	require.Equal(ts.T(), http.StatusOK, w.Code)
+	data := models.User{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
+	assert.Equal(ts.T(), "google", data.AppMetaData["provider"])
 }
 
 // TestSignupTwice checks to make sure the same email cannot be registered twice
