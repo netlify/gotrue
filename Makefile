@@ -23,5 +23,4 @@ vet: # Vet the code
 	go vet $(CHECK_FILES)
 
 test: ## Run tests.
-	rm -f api/test.db
 	go test -v $(CHECK_FILES)

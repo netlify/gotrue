@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -23,6 +24,14 @@ const operatorToken = "operatorToken"
 type InstanceTestSuite struct {
 	suite.Suite
 	API *API
+}
+
+func (ts *InstanceTestSuite) SetupSuite() {
+	require.NoError(ts.T(), os.Setenv("GOTRUE_DB_DATABASE_URL", createTestDB()))
+}
+
+func (ts *InstanceTestSuite) TearDownSuite() {
+	os.Remove(ts.API.config.DB.URL)
 }
 
 func (ts *InstanceTestSuite) SetupTest() {

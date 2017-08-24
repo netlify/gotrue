@@ -63,10 +63,17 @@ func (api *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	instanceID := getInstanceID(ctx)
 	aud := api.requestAud(ctx, r)
-	users, err := api.db.FindUsersInAudience(instanceID, aud)
+
+	pageParams, err := paginate(r)
+	if err != nil {
+		return badRequestError("Bad Pagination Parameters: %v", err)
+	}
+
+	users, err := api.db.FindUsersInAudience(instanceID, aud, pageParams)
 	if err != nil {
 		return internalServerError("Database error finding users").WithInternalError(err)
 	}
+	addPaginationHeaders(w, r, pageParams)
 
 	return sendJSON(w, http.StatusOK, map[string]interface{}{
 		"users": users,

@@ -2,7 +2,6 @@
 gorm.db
 vendor/
 gotrue
-test.db
 
 .DS_Store
 .vscode

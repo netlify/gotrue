@@ -95,10 +95,23 @@ func (conn *Connection) DeleteUser(u *models.User) error {
 }
 
 // FindUsersInAudience finds users with the matching audience.
-func (conn *Connection) FindUsersInAudience(instanceID string, aud string) ([]*models.User, error) {
+func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination) ([]*models.User, error) {
 	users := []*models.User{}
-	db := conn.db.Find(&users, "instance_id = ? and aud = ?", instanceID, aud)
-	return users, db.Error
+	q := conn.db.Table((&models.User{}).TableName()).Where("instance_id = ? and aud = ?", instanceID, aud)
+
+	var rsp *gorm.DB
+	if pageParams != nil {
+		var total uint64
+		if cq := q.Count(&total); cq.Error != nil {
+			return nil, cq.Error
+		}
+		pageParams.Count = total
+
+		rsp = q.Offset(pageParams.Offset()).Limit(pageParams.PerPage).Find(&users)
+	} else {
+		rsp = q.Find(&users)
+	}
+	return users, rsp.Error
 }
 
 // FindUserByConfirmationToken finds users with the matching confirmation token.
