@@ -171,6 +171,10 @@ func (api *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return internalServerError("Error creating user").WithInternalError(err)
 	}
+	if user.AppMetaData == nil {
+		user.AppMetaData = make(map[string]interface{})
+	}
+	user.AppMetaData["provider"] = "email"
 
 	config := getConfig(ctx)
 	if params.Role != "" {
