@@ -69,7 +69,12 @@ func (api *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Bad Pagination Parameters: %v", err)
 	}
 
-	users, err := api.db.FindUsersInAudience(instanceID, aud, pageParams)
+	sortParams, err := sort(r, map[string]bool{"created_at": true}, []models.SortField{models.SortField{Name: "created_at", Dir: models.Descending}})
+	if err != nil {
+		return badRequestError("Bad Sort Parameters: %v", err)
+	}
+
+	users, err := api.db.FindUsersInAudience(instanceID, aud, pageParams, sortParams)
 	if err != nil {
 		return internalServerError("Database error finding users").WithInternalError(err)
 	}

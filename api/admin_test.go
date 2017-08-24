@@ -119,6 +119,55 @@ func (ts *AdminTestSuite) TestAdminUsers_Pagination() {
 	}
 }
 
+// TestAdminUsers tests API /admin/users route
+func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
+	// Setup request
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
+	qv := req.URL.Query()
+	qv.Set("sort", "created_at asc")
+	req.URL.RawQuery = qv.Encode()
+
+	// Setup response recorder with super admin privileges
+	ts.makeSuperAdmin(req, "test@example.com")
+
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusOK, w.Code)
+
+	data := struct {
+		Users []*models.User `json:"users"`
+		Aud   string         `json:"aud"`
+	}{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
+
+	require.Len(ts.T(), data.Users, 2)
+	assert.Equal(ts.T(), "test1@example.com", data.Users[0].Email)
+	assert.Equal(ts.T(), "test@example.com", data.Users[1].Email)
+}
+
+// TestAdminUsers tests API /admin/users route
+func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
+	// Setup request
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
+
+	// Setup response recorder with super admin privileges
+	ts.makeSuperAdmin(req, "test@example.com")
+
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusOK, w.Code)
+
+	data := struct {
+		Users []*models.User `json:"users"`
+		Aud   string         `json:"aud"`
+	}{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
+
+	require.Len(ts.T(), data.Users, 2)
+	assert.Equal(ts.T(), "test@example.com", data.Users[0].Email)
+	assert.Equal(ts.T(), "test1@example.com", data.Users[1].Email)
+}
+
 // TestAdminUserCreate tests API /admin/user route (POST)
 func (ts *AdminTestSuite) TestAdminUserCreate() {
 	var buffer bytes.Buffer

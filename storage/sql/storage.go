@@ -2,6 +2,7 @@ package sql
 
 import (
 	// this is where we do the connections
+
 	"net/url"
 
 	// import drivers we might need
@@ -95,9 +96,15 @@ func (conn *Connection) DeleteUser(u *models.User) error {
 }
 
 // FindUsersInAudience finds users with the matching audience.
-func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination) ([]*models.User, error) {
+func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination, sortParams *models.SortParams) ([]*models.User, error) {
 	users := []*models.User{}
 	q := conn.db.Table((&models.User{}).TableName()).Where("instance_id = ? and aud = ?", instanceID, aud)
+
+	if sortParams != nil && len(sortParams.Fields) > 0 {
+		for _, field := range sortParams.Fields {
+			q = q.Order(field.Name + " " + string(field.Dir))
+		}
+	}
 
 	var rsp *gorm.DB
 	if pageParams != nil {

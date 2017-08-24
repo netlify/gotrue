@@ -73,13 +73,25 @@ func (conn *Connection) DeleteUser(user *models.User) error {
 }
 
 // FindUsersInAudience finds users that belong to the provided audience.
-func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination) ([]*models.User, error) {
+func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination, sortParams *models.SortParams) ([]*models.User, error) {
 	user := &models.User{}
 	users := []*models.User{}
 	c := conn.db.C(user.TableName())
 	q := c.Find(bson.M{"instance_id": instanceID, "aud": aud})
 
 	var err error
+	if sortParams != nil && len(sortParams.Fields) > 0 {
+		sortFields := []string{}
+		for _, field := range sortParams.Fields {
+			if field.Dir == models.Ascending {
+				sortFields = append(sortFields, field.Name)
+			} else {
+				sortFields = append(sortFields, "-"+field.Name)
+			}
+		}
+		q = q.Sort(sortFields...)
+	}
+
 	if pageParams != nil {
 		count, err := q.Count()
 		if err != nil {
