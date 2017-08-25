@@ -17,7 +17,6 @@ const (
 
 type NetlifyMicroserviceClaims struct {
 	SiteURL    string `json:"site_url"`
-	Env        string `json:"env"`
 	InstanceID string `json:"id"`
 	NetlifyID  string `json:"netlify_id"`
 	jwt.StandardClaims
@@ -75,12 +74,7 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 		return nil, internalServerError("Database error loading instance").WithInternalError(err)
 	}
 
-	env := claims.Env
-	if env == "" {
-		return nil, badRequestError("No environment specified")
-	}
-	logEntrySetField(r, "env", env)
-	config, err := instance.ConfigForEnvironment(env)
+	config, err := instance.Config()
 	if err != nil {
 		return nil, internalServerError("Error loading environment config").WithInternalError(err)
 	}

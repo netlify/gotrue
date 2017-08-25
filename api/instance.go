@@ -37,9 +37,8 @@ func (a *API) GetAppManifest(w http.ResponseWriter, r *http.Request) error {
 }
 
 type InstanceRequestParams struct {
-	UUID       string                        `json:"uuid"`
-	BaseConfig *conf.Configuration           `json:"config"`
-	Contexts   map[string]conf.Configuration `json:"contexts"`
+	UUID       string              `json:"uuid"`
+	BaseConfig *conf.Configuration `json:"config"`
 }
 
 type InstanceResponse struct {
@@ -67,7 +66,6 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		ID:         uuid.NewRandom().String(),
 		UUID:       params.UUID,
 		BaseConfig: params.BaseConfig,
-		Contexts:   params.Contexts,
 	}
 	if err = a.db.CreateInstance(&i); err != nil {
 		return internalServerError("Database error creating instance").WithInternalError(err)
@@ -97,19 +95,6 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 	if params.BaseConfig != nil {
 		if err := mergo.MergeWithOverwrite(i.BaseConfig, params.BaseConfig); err != nil {
 			return internalServerError("Error merging instance configurations").WithInternalError(err)
-		}
-	}
-
-	if params.Contexts != nil {
-		for k, v := range params.Contexts {
-			if c, ok := i.Contexts[k]; ok {
-				if err := mergo.MergeWithOverwrite(&c, &v); err != nil {
-					return internalServerError("Error merging instance configurations").WithInternalError(err)
-				}
-				i.Contexts[k] = c
-			} else {
-				i.Contexts[k] = v
-			}
 		}
 	}
 

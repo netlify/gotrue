@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/imdario/mergo"
 	"github.com/netlify/gotrue/conf"
 )
 
@@ -19,9 +18,6 @@ type Instance struct {
 	// force usage of text column type
 	RawBaseConfig string              `json:"-" bson:"-" gorm:"size:65535"`
 	BaseConfig    *conf.Configuration `json:"config"`
-
-	RawContexts string                        `json:"-" bson:"-"`
-	Contexts    map[string]conf.Configuration `sql:"-" json:"contexts" bson:"contexts"`
 
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
@@ -41,12 +37,6 @@ func (i *Instance) AfterFind() error {
 			return err
 		}
 	}
-	if i.RawContexts != "" {
-		err := json.Unmarshal([]byte(i.RawContexts), &i.Contexts)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -59,38 +49,18 @@ func (i *Instance) BeforeSave() error {
 		}
 		i.RawBaseConfig = string(data)
 	}
-	if i.Contexts != nil {
-		data, err := json.Marshal(i.Contexts)
-		if err != nil {
-			return err
-		}
-		i.RawContexts = string(data)
-	}
 	return nil
 }
 
-// ConfigForEnvironment loads the configuration for an environment, merging in
-// the base configuration values.
-func (i *Instance) ConfigForEnvironment(env string) (*conf.Configuration, error) {
+// Config loads the the base configuration values with defaults.
+func (i *Instance) Config() (*conf.Configuration, error) {
 	if i.BaseConfig == nil {
 		return nil, errors.New("no configuration data available")
 	}
 
-	baseConf := conf.Configuration{}
-	if err := mergo.MergeWithOverwrite(&baseConf, i.BaseConfig); err != nil {
-		return nil, err
-	}
+	baseConf := &conf.Configuration{}
+	*baseConf = *i.BaseConfig
 	baseConf.ApplyDefaults()
 
-	if i.Contexts != nil {
-		envConf, ok := i.Contexts[env]
-		if !ok {
-			return &baseConf, nil
-		}
-		if err := mergo.MergeWithOverwrite(&baseConf, envConf); err != nil {
-			return nil, err
-		}
-	}
-
-	return &baseConf, nil
+	return baseConf, nil
 }
