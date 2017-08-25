@@ -11,6 +11,7 @@ import (
 
 type GoTrueClaims struct {
 	jwt.StandardClaims
+	ID           string                 `json:"id"`
 	Email        string                 `json:"email"`
 	AppMetaData  map[string]interface{} `json:"app_metadata"`
 	UserMetaData map[string]interface{} `json:"user_metadata"`
@@ -152,10 +153,10 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 func generateAccessToken(user *models.User, expiresIn time.Duration, secret string) (string, error) {
 	claims := &GoTrueClaims{
 		StandardClaims: jwt.StandardClaims{
-			Id:        user.ID,
 			Audience:  user.Aud,
 			ExpiresAt: time.Now().Add(expiresIn).Unix(),
 		},
+		ID:           user.ID,
 		Email:        user.Email,
 		AppMetaData:  user.AppMetaData,
 		UserMetaData: user.UserMetaData,

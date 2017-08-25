@@ -36,10 +36,10 @@ func getUser(ctx context.Context, conn storage.Connection) (*models.User, error)
 		return nil, errors.New("Invalid token")
 	}
 
-	if claims.Id == "" {
+	if claims.ID == "" {
 		return nil, errors.New("Invalid claim: id")
 	}
-	return conn.FindUserByID(claims.Id)
+	return conn.FindUserByID(claims.ID)
 }
 
 func (api *API) isAdmin(ctx context.Context, u *models.User, aud string) bool {

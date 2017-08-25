@@ -8,11 +8,11 @@ import (
 func (a *API) Logout(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	claims := getClaims(ctx)
-	if claims == nil || claims.Id == "" {
+	if claims == nil || claims.ID == "" {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	a.db.Logout(claims.Id)
+	a.db.Logout(claims.ID)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
