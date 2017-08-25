@@ -41,8 +41,14 @@ func (ts *UserTestSuite) SetupTest() {
 	require.NoError(ts.T(), err)
 	ts.Config = config
 
+	// Cleanup existing user
+	u, err := ts.API.db.FindUserByEmailAndAudience("", "test@example.com", config.JWT.Aud)
+	if err == nil {
+		require.NoError(ts.T(), api.db.DeleteUser(u))
+	}
+
 	// Create user
-	u, err := models.NewUser("", "test@example.com", "password", config.JWT.Aud, nil)
+	u, err = models.NewUser("", "test@example.com", "password", config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error creating test user model")
 	require.NoError(ts.T(), api.db.CreateUser(u), "Error saving new test user")
 }

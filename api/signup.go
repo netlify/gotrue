@@ -111,6 +111,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 			return unprocessableEntityError("Unable to validate email address: " + err.Error())
 		}
 
+		params.Provider = "email"
 		user, err = a.signupNewUser(ctx, params, aud)
 		if err != nil {
 			return err
@@ -145,6 +146,10 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 	if err != nil {
 		return nil, internalServerError("Database error creating user").WithInternalError(err)
 	}
+	if user.AppMetaData == nil {
+		user.AppMetaData = make(map[string]interface{})
+	}
+	user.AppMetaData["provider"] = params.Provider
 
 	if params.Password == "" {
 		user.EncryptedPassword = ""

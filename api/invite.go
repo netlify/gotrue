@@ -42,8 +42,9 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	signupParams := SignupParams{
-		Email: params.Email,
-		Data:  params.Data,
+		Email:    params.Email,
+		Data:     params.Data,
+		Provider: "email",
 	}
 
 	user, err = a.signupNewUser(ctx, &signupParams, aud)
