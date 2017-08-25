@@ -2,6 +2,7 @@ package sql
 
 import (
 	// this is where we do the connections
+
 	"net/url"
 
 	// import drivers we might need
@@ -95,10 +96,29 @@ func (conn *Connection) DeleteUser(u *models.User) error {
 }
 
 // FindUsersInAudience finds users with the matching audience.
-func (conn *Connection) FindUsersInAudience(instanceID string, aud string) ([]*models.User, error) {
+func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination, sortParams *models.SortParams) ([]*models.User, error) {
 	users := []*models.User{}
-	db := conn.db.Find(&users, "instance_id = ? and aud = ?", instanceID, aud)
-	return users, db.Error
+	q := conn.db.Table((&models.User{}).TableName()).Where("instance_id = ? and aud = ?", instanceID, aud)
+
+	if sortParams != nil && len(sortParams.Fields) > 0 {
+		for _, field := range sortParams.Fields {
+			q = q.Order(field.Name + " " + string(field.Dir))
+		}
+	}
+
+	var rsp *gorm.DB
+	if pageParams != nil {
+		var total uint64
+		if cq := q.Count(&total); cq.Error != nil {
+			return nil, cq.Error
+		}
+		pageParams.Count = total
+
+		rsp = q.Offset(pageParams.Offset()).Limit(pageParams.PerPage).Find(&users)
+	} else {
+		rsp = q.Find(&users)
+	}
+	return users, rsp.Error
 }
 
 // FindUserByConfirmationToken finds users with the matching confirmation token.

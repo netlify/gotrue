@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -20,6 +21,14 @@ type UserTestSuite struct {
 	suite.Suite
 	API    *API
 	Config *conf.Configuration
+}
+
+func (ts *UserTestSuite) SetupSuite() {
+	require.NoError(ts.T(), os.Setenv("GOTRUE_DB_DATABASE_URL", createTestDB()))
+}
+
+func (ts *UserTestSuite) TearDownSuite() {
+	os.Remove(ts.API.config.DB.URL)
 }
 
 func (ts *UserTestSuite) SetupTest() {

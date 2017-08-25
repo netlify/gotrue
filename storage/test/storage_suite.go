@@ -4,6 +4,7 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -38,6 +39,32 @@ func (s *StorageTestSuite) TestFindUserByEmailAndAudience() {
 
 	_, err = s.C.FindUserByEmailAndAudience(u.InstanceID, u.Email, "invalid")
 	require.EqualError(s.T(), err, models.UserNotFoundError{}.Error())
+}
+
+func (s *StorageTestSuite) TestFindUsersInAudience() {
+	u := s.createUser()
+
+	n, err := s.C.FindUsersInAudience(u.InstanceID, u.Aud, nil, nil)
+	require.NoError(s.T(), err)
+	require.Len(s.T(), n, 1)
+
+	p := models.Pagination{
+		Page:    1,
+		PerPage: 50,
+	}
+	n, err = s.C.FindUsersInAudience(u.InstanceID, u.Aud, &p, nil)
+	require.NoError(s.T(), err)
+	require.Len(s.T(), n, 1)
+	assert.Equal(s.T(), uint64(1), p.Count)
+
+	sp := &models.SortParams{
+		Fields: []models.SortField{
+			models.SortField{Name: "created_at", Dir: models.Descending},
+		},
+	}
+	n, err = s.C.FindUsersInAudience(u.InstanceID, u.Aud, nil, sp)
+	require.NoError(s.T(), err)
+	require.Len(s.T(), n, 1)
 }
 
 func (s *StorageTestSuite) TestFindUserByID() {

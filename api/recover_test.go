@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -19,6 +20,14 @@ type RecoverTestSuite struct {
 	suite.Suite
 	API    *API
 	Config *conf.Configuration
+}
+
+func (ts *RecoverTestSuite) SetupSuite() {
+	require.NoError(ts.T(), os.Setenv("GOTRUE_DB_DATABASE_URL", createTestDB()))
+}
+
+func (ts *RecoverTestSuite) TearDownSuite() {
+	os.Remove(ts.API.config.DB.URL)
 }
 
 func (ts *RecoverTestSuite) SetupTest() {

@@ -21,6 +21,14 @@ type SignupTestSuite struct {
 	Config *conf.Configuration
 }
 
+func (ts *SignupTestSuite) SetupSuite() {
+	require.NoError(ts.T(), os.Setenv("GOTRUE_DB_DATABASE_URL", createTestDB()))
+}
+
+func (ts *SignupTestSuite) TearDownSuite() {
+	os.Remove(ts.API.config.DB.URL)
+}
+
 func (ts *SignupTestSuite) SetupTest() {
 	api, err := NewAPIFromConfigFile("test.env", "v1")
 	require.NoError(ts.T(), err)

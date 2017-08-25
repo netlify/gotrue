@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -19,6 +20,14 @@ type InviteTestSuite struct {
 	suite.Suite
 	API    *API
 	Config *conf.Configuration
+}
+
+func (ts *InviteTestSuite) SetupSuite() {
+	require.NoError(ts.T(), os.Setenv("GOTRUE_DB_DATABASE_URL", createTestDB()))
+}
+
+func (ts *InviteTestSuite) TearDownSuite() {
+	os.Remove(ts.API.config.DB.URL)
 }
 
 func (ts *InviteTestSuite) SetupTest() {
