@@ -65,7 +65,8 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return oauthError("invalid_grant", "Invalid Password")
 	}
 
-	user.LastSignInAt = time.Now()
+	now := time.Now()
+	user.LastSignInAt = &now
 	return a.issueRefreshToken(ctx, user, w)
 }
 
@@ -106,7 +107,8 @@ func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter,
 		return oauthError("invalid_grant", "Email not confirmed")
 	}
 
-	user.LastSignInAt = time.Now()
+	now := time.Now()
+	user.LastSignInAt = &now
 	return a.issueRefreshToken(ctx, user, w)
 }
 

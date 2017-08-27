@@ -22,17 +22,17 @@ type User struct {
 	ConfirmedAt       time.Time `json:"confirmed_at" bson:"confirmed_at"`
 	InvitedAt         time.Time `json:"invited_at" bson:"invited_at"`
 
-	ConfirmationToken  string    `json:"-" bson:"confirmation_token,omitempty"`
-	ConfirmationSentAt time.Time `json:"confirmation_sent_at,omitempty" bson:"confirmation_sent_at,omitempty"`
+	ConfirmationToken  string     `json:"-" bson:"confirmation_token,omitempty"`
+	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty" bson:"confirmation_sent_at,omitempty"`
 
 	RecoveryToken  string    `json:"-" bson:"recovery_token,omitempty"`
 	RecoverySentAt time.Time `json:"recovery_sent_at,omitempty" bson:"recovery_sent_at,omitempty"`
 
-	EmailChangeToken  string    `json:"-" bson:"email_change_token,omitempty"`
-	EmailChange       string    `json:"new_email,omitempty" bson:"new_email,omitempty"`
-	EmailChangeSentAt time.Time `json:"email_change_sent_at,omitempty" bson:"email_change_sent_at,omitempty"`
+	EmailChangeToken  string     `json:"-" bson:"email_change_token,omitempty"`
+	EmailChange       string     `json:"new_email,omitempty" bson:"new_email,omitempty"`
+	EmailChangeSentAt *time.Time `json:"email_change_sent_at,omitempty" bson:"email_change_sent_at,omitempty"`
 
-	LastSignInAt time.Time `json:"last_sign_in_at,omitempty" bson:"last_sign_in_at,omitempty"`
+	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty" bson:"last_sign_in_at,omitempty"`
 
 	AppMetaData  map[string]interface{} `json:"app_metadata,omitempty" sql:"-" bson:"app_metadata,omitempty"`
 	UserMetaData map[string]interface{} `json:"user_metadata,omitempty" sql:"-" bson:"user_metadata,omitempty"`
@@ -134,8 +134,9 @@ func (u *User) GenerateRecoveryToken() {
 // GenerateEmailChange prepares for verifying a new email
 func (u *User) GenerateEmailChange(email string) {
 	token := crypto.SecureToken()
+	now := time.Now()
 	u.EmailChangeToken = token
-	u.EmailChangeSentAt = time.Now()
+	u.EmailChangeSentAt = &now
 	u.EmailChange = email
 }
 

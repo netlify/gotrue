@@ -58,7 +58,7 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 		return unprocessableEntityError("Unable to validate email address: " + err.Error())
 	}
 
-	if user.ConfirmationSentAt.Add(config.Mailer.MaxFrequency).Before(time.Now()) {
+	if user.ConfirmationSentAt != nil && user.ConfirmationSentAt.Add(config.Mailer.MaxFrequency).Before(time.Now()) {
 		if err := mailer.InviteMail(user); err != nil {
 			return internalServerError("Error sending confirmation mail").WithInternalError(err)
 		}
