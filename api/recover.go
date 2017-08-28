@@ -38,7 +38,7 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	if user.RecoverySentAt.Add(config.Mailer.MaxFrequency).Before(time.Now()) {
+	if user.RecoverySentAt == nil || user.RecoverySentAt.Add(config.Mailer.MaxFrequency).Before(time.Now()) {
 		user.GenerateRecoveryToken()
 		if err := a.db.UpdateUser(user); err != nil {
 			return internalServerError("Database error updating user").WithInternalError(err)

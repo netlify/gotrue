@@ -59,7 +59,7 @@ func TestRecover(t *testing.T) {
 func (ts *RecoverTestSuite) TestRecover_FirstRecovery() {
 	u, err := ts.API.db.FindUserByEmailAndAudience("", "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
-	u.RecoverySentAt = time.Time{}
+	u.RecoverySentAt = &time.Time{}
 	require.NoError(ts.T(), ts.API.db.UpdateUser(u))
 
 	// Request body
@@ -80,14 +80,14 @@ func (ts *RecoverTestSuite) TestRecover_FirstRecovery() {
 	u, err = ts.API.db.FindUserByEmailAndAudience("", "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
-	assert.WithinDuration(ts.T(), time.Now(), u.RecoverySentAt, 1*time.Second)
+	assert.WithinDuration(ts.T(), time.Now(), *u.RecoverySentAt, 1*time.Second)
 }
 
 func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
 	recoveryTime := time.Now().UTC().Add(-5 * time.Minute)
 	u, err := ts.API.db.FindUserByEmailAndAudience("", "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
-	u.RecoverySentAt = recoveryTime
+	u.RecoverySentAt = &recoveryTime
 	require.NoError(ts.T(), ts.API.db.UpdateUser(u))
 
 	// Request body
@@ -109,14 +109,14 @@ func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
 	require.NoError(ts.T(), err)
 
 	// ensure it did not send a new email
-	assert.Equal(ts.T(), recoveryTime, u.RecoverySentAt)
+	assert.Equal(ts.T(), recoveryTime, *u.RecoverySentAt)
 }
 
 func (ts *RecoverTestSuite) TestRecover_NewEmailSent() {
 	recoveryTime := time.Now().UTC().Add(-20 * time.Minute)
 	u, err := ts.API.db.FindUserByEmailAndAudience("", "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
-	u.RecoverySentAt = recoveryTime
+	u.RecoverySentAt = &recoveryTime
 	require.NoError(ts.T(), ts.API.db.UpdateUser(u))
 
 	// Request body
@@ -138,5 +138,5 @@ func (ts *RecoverTestSuite) TestRecover_NewEmailSent() {
 	require.NoError(ts.T(), err)
 
 	// ensure it sent a new email
-	assert.WithinDuration(ts.T(), time.Now(), u.RecoverySentAt, 1*time.Second)
+	assert.WithinDuration(ts.T(), time.Now(), *u.RecoverySentAt, 1*time.Second)
 }

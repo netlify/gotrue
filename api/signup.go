@@ -65,7 +65,8 @@ func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter,
 		if err := mailer.ConfirmationMail(user); err != nil {
 			return internalServerError("Error sending confirmation mail").WithInternalError(err)
 		}
-		user.ConfirmationSentAt = time.Now()
+		now := time.Now()
+		user.ConfirmationSentAt = &now
 	}
 
 	if err := a.db.UpdateUser(user); err != nil {
@@ -129,7 +130,8 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		if err := mailer.ConfirmationMail(user); err != nil {
 			return internalServerError("Error sending confirmation mail").WithInternalError(err)
 		}
-		user.ConfirmationSentAt = time.Now()
+		now := time.Now()
+		user.ConfirmationSentAt = &now
 	}
 
 	if err = a.db.UpdateUser(user); err != nil {

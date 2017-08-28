@@ -51,17 +51,16 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	user.InvitedAt = time.Now()
+	now := time.Now()
+	user.InvitedAt = &now
 
 	mailer := getMailer(ctx)
 	if err = mailer.ValidateEmail(params.Email); err != nil {
 		return unprocessableEntityError("Unable to validate email address: " + err.Error())
 	}
 
-	if user.ConfirmationSentAt.Add(config.Mailer.MaxFrequency).Before(time.Now()) {
-		if err := mailer.InviteMail(user); err != nil {
-			return internalServerError("Error sending confirmation mail").WithInternalError(err)
-		}
+	if err := mailer.InviteMail(user); err != nil {
+		return internalServerError("Error sending confirmation mail").WithInternalError(err)
 	}
 
 	user.SetRole(config.JWT.DefaultGroupName)

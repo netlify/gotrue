@@ -97,6 +97,10 @@ func (m TemplateMailer) ValidateEmail(email string) error {
 
 // InviteMail sends a invite mail to a new user
 func (m *TemplateMailer) InviteMail(user *models.User) error {
+	if user.ConfirmationSentAt != nil && !user.ConfirmationSentAt.Add(m.Config.Mailer.MaxFrequency).Before(time.Now()) {
+		return nil
+	}
+
 	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.MemberFolder, "/invite/"+user.ConfirmationToken)
 	if err != nil {
 		return err
@@ -120,7 +124,7 @@ func (m *TemplateMailer) InviteMail(user *models.User) error {
 
 // ConfirmationMail sends a signup confirmation mail to a new user
 func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
-	if !user.ConfirmationSentAt.Add(m.Config.Mailer.MaxFrequency).Before(time.Now()) {
+	if user.ConfirmationSentAt != nil && !user.ConfirmationSentAt.Add(m.Config.Mailer.MaxFrequency).Before(time.Now()) {
 		return nil
 	}
 
