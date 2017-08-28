@@ -70,7 +70,8 @@ func (ts *InviteTestSuite) TestInvite() {
 
 func (ts *InviteTestSuite) TestVerifyInvite() {
 	user, err := models.NewUser("", "test@example.com", "", ts.Config.JWT.Aud, nil)
-	user.InvitedAt = time.Now()
+	now := time.Now()
+	user.InvitedAt = &now
 	user.EncryptedPassword = ""
 	require.NoError(ts.T(), err)
 	require.NoError(ts.T(), ts.API.db.CreateUser(user))
@@ -101,7 +102,8 @@ func (ts *InviteTestSuite) TestVerifyInvite() {
 
 func (ts *InviteTestSuite) TestVerifyInvite_NoPassword() {
 	user, err := models.NewUser("", "test@example.com", "", ts.Config.JWT.Aud, nil)
-	user.InvitedAt = time.Now()
+	now := time.Now()
+	user.InvitedAt = &now
 	user.EncryptedPassword = ""
 	require.NoError(ts.T(), err)
 	require.NoError(ts.T(), ts.API.db.CreateUser(user))

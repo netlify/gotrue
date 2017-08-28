@@ -51,7 +51,8 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	user.InvitedAt = time.Now()
+	now := time.Now()
+	user.InvitedAt = &now
 
 	mailer := getMailer(ctx)
 	if err = mailer.ValidateEmail(params.Email); err != nil {

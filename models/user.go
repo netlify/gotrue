@@ -15,18 +15,18 @@ type User struct {
 	InstanceID string `json:"-" bson:"instance_id"`
 	ID         string `json:"id" bson:"_id,omitempty"`
 
-	Aud               string    `json:"aud" bson:"aud"`
-	Role              string    `json:"role" bson:"role"`
-	Email             string    `json:"email" bson:"email"`
-	EncryptedPassword string    `json:"-" bson:"encrypted_password"`
-	ConfirmedAt       time.Time `json:"confirmed_at" bson:"confirmed_at"`
-	InvitedAt         time.Time `json:"invited_at" bson:"invited_at"`
+	Aud               string     `json:"aud" bson:"aud"`
+	Role              string     `json:"role" bson:"role"`
+	Email             string     `json:"email" bson:"email"`
+	EncryptedPassword string     `json:"-" bson:"encrypted_password"`
+	ConfirmedAt       *time.Time `json:"confirmed_at" bson:"confirmed_at"`
+	InvitedAt         *time.Time `json:"invited_at" bson:"invited_at"`
 
 	ConfirmationToken  string     `json:"-" bson:"confirmation_token,omitempty"`
 	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty" bson:"confirmation_sent_at,omitempty"`
 
-	RecoveryToken  string    `json:"-" bson:"recovery_token,omitempty"`
-	RecoverySentAt time.Time `json:"recovery_sent_at,omitempty" bson:"recovery_sent_at,omitempty"`
+	RecoveryToken  string     `json:"-" bson:"recovery_token,omitempty"`
+	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty" bson:"recovery_sent_at,omitempty"`
 
 	EmailChangeToken  string     `json:"-" bson:"email_change_token,omitempty"`
 	EmailChange       string     `json:"new_email,omitempty" bson:"new_email,omitempty"`
@@ -127,8 +127,9 @@ func (u *User) GenerateConfirmationToken() {
 // GenerateRecoveryToken generates a secure password recovery token
 func (u *User) GenerateRecoveryToken() {
 	token := crypto.SecureToken()
+	now := time.Now()
 	u.RecoveryToken = token
-	u.RecoverySentAt = time.Now()
+	u.RecoverySentAt = &now
 }
 
 // GenerateEmailChange prepares for verifying a new email
@@ -143,7 +144,8 @@ func (u *User) GenerateEmailChange(email string) {
 // Confirm resets the confimation token and the confirm timestamp
 func (u *User) Confirm() {
 	u.ConfirmationToken = ""
-	u.ConfirmedAt = time.Now()
+	now := time.Now()
+	u.ConfirmedAt = &now
 }
 
 // ConfirmEmailChange confirm the change of email for a user
