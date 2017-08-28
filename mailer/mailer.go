@@ -2,7 +2,6 @@ package mailer
 
 import (
 	"net/url"
-	"path"
 	"time"
 
 	"github.com/netlify/gotrue/conf"
@@ -45,7 +44,6 @@ type Mailer interface {
 // TemplateMailer will send mail and use templates from the site for easy mail styling
 type TemplateMailer struct {
 	SiteURL        string
-	MemberFolder   string
 	Config         *conf.Configuration
 	TemplateMailer *mailme.Mailer
 }
@@ -65,11 +63,9 @@ func NewMailer(conf *conf.Configuration) Mailer {
 		return &noopMailer{}
 	}
 
-	mailConf := conf.Mailer
 	return &TemplateMailer{
-		SiteURL:      conf.SiteURL,
-		MemberFolder: mailConf.MemberFolder,
-		Config:       conf,
+		SiteURL: conf.SiteURL,
+		Config:  conf,
 		TemplateMailer: &mailme.Mailer{
 			Host:    conf.Mailer.Host,
 			Port:    conf.Mailer.Port,
@@ -101,7 +97,7 @@ func (m *TemplateMailer) InviteMail(user *models.User) error {
 		return nil
 	}
 
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.MemberFolder, "/invite/"+user.ConfirmationToken)
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Invite, "#invite_token="+user.ConfirmationToken)
 	if err != nil {
 		return err
 	}
@@ -128,7 +124,7 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
 		return nil
 	}
 
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.MemberFolder, "/confirm/"+user.ConfirmationToken)
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Confirmation, "#confirmation_token="+user.ConfirmationToken)
 	if err != nil {
 		return err
 	}
@@ -151,7 +147,7 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
 
 // EmailChangeMail sends an email change confirmation mail to a user
 func (m *TemplateMailer) EmailChangeMail(user *models.User) error {
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.MemberFolder, "/confirm-email/"+user.EmailChangeToken)
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.EmailChange, "#email_change_token="+user.EmailChangeToken)
 	if err != nil {
 		return err
 	}
@@ -175,7 +171,7 @@ func (m *TemplateMailer) EmailChangeMail(user *models.User) error {
 
 // RecoveryMail sends a password recovery mail
 func (m *TemplateMailer) RecoveryMail(user *models.User) error {
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.MemberFolder, "/recover/"+user.RecoveryToken)
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Recovery, "#recovery_token="+user.RecoveryToken)
 	if err != nil {
 		return err
 	}
@@ -238,14 +234,14 @@ func (m noopMailer) Send(user *models.User, subject, body string, data map[strin
 	return nil
 }
 
-func getSiteURL(siteURL, folder, filename string) (string, error) {
+func getSiteURL(siteURL, filepath, extra string) (string, error) {
 	site, err := url.Parse(siteURL)
 	if err != nil {
 		return "", err
 	}
-	path, err := url.Parse(path.Join(folder, filename))
+	path, err := url.Parse(filepath)
 	if err != nil {
 		return "", err
 	}
-	return site.ResolveReference(path).String(), nil
+	return site.ResolveReference(path).String() + extra, nil
 }

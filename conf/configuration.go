@@ -67,10 +67,10 @@ type Configuration struct {
 		Port         int                       `json:"port"`
 		User         string                    `json:"user"`
 		Pass         string                    `json:"pass"`
-		MemberFolder string                    `json:"member_folder" split_words:"true"`
 		AdminEmail   string                    `json:"admin_email" split_words:"true"`
 		Subjects     EmailContentConfiguration `json:"subjects"`
 		Templates    EmailContentConfiguration `json:"templates"`
+		URLPaths     EmailContentConfiguration `json:"url_paths"`
 	} `json:"mailer"`
 	External struct {
 		Bitbucket ExternalConfiguration `json:"bitbucket"`
@@ -138,10 +138,6 @@ func (config *Configuration) ApplyDefaults() {
 		config.Mailer.MaxFrequency = 15 * time.Minute
 	}
 
-	if config.Mailer.MemberFolder == "" {
-		config.Mailer.MemberFolder = "/member"
-	}
-
 	if config.Mailer.Templates.Invite == "" {
 		config.Mailer.Templates.Invite = "/.netlify/gotrue/templates/invite.html"
 	}
@@ -153,5 +149,18 @@ func (config *Configuration) ApplyDefaults() {
 	}
 	if config.Mailer.Templates.EmailChange == "" {
 		config.Mailer.Templates.EmailChange = "/.netlify/gotrue/templates/email-change.html"
+	}
+
+	if config.Mailer.URLPaths.Invite == "" {
+		config.Mailer.URLPaths.Invite = "/member/invite"
+	}
+	if config.Mailer.URLPaths.Confirmation == "" {
+		config.Mailer.URLPaths.Confirmation = "/member/confirm"
+	}
+	if config.Mailer.URLPaths.Recovery == "" {
+		config.Mailer.URLPaths.Recovery = "/member/recover"
+	}
+	if config.Mailer.URLPaths.EmailChange == "" {
+		config.Mailer.URLPaths.EmailChange = "/member/confirm-email"
 	}
 }
