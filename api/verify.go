@@ -62,7 +62,7 @@ func (a *API) signupVerify(params *VerifyParams) (*models.User, error) {
 	}
 
 	if user.EncryptedPassword == "" {
-		if !user.InvitedAt.IsZero() {
+		if user.InvitedAt != nil {
 			if params.Password == "" {
 				return nil, unprocessableEntityError("Invited users must specify a password")
 			}
