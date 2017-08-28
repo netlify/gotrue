@@ -24,7 +24,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read claims")
 	}
 
-	if claims.ID == "" {
+	if claims.Subject == "" {
 		return badRequestError("Could not read User ID claim")
 	}
 
@@ -33,7 +33,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Token audience doesn't match request audience")
 	}
 
-	user, err := a.db.FindUserByID(claims.ID)
+	user, err := a.db.FindUserByID(claims.Subject)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -57,11 +57,11 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	claims := getClaims(ctx)
-	if claims.ID == "" {
+	if claims.Subject == "" {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	user, err := a.db.FindUserByID(claims.ID)
+	user, err := a.db.FindUserByID(claims.Subject)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
