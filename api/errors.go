@@ -8,10 +8,18 @@ import (
 	"runtime/debug"
 )
 
+var oauthErrorMap map[int]string = map[int]string{
+	http.StatusBadRequest:          "invalid_request",
+	http.StatusUnauthorized:        "unauthorized_client",
+	http.StatusForbidden:           "access_denied",
+	http.StatusInternalServerError: "server_error",
+	http.StatusServiceUnavailable:  "temporarily_unavailable",
+}
+
 // OAuthError is the JSON handler for OAuth2 error responses
 type OAuthError struct {
 	Err             string `json:"error"`
-	Description     string `json:"description,omitempty"`
+	Description     string `json:"error_description,omitempty"`
 	InternalError   error  `json:"-"`
 	InternalMessage string `json:"-"`
 }

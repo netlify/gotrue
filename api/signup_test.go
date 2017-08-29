@@ -30,13 +30,10 @@ func (ts *SignupTestSuite) TearDownSuite() {
 }
 
 func (ts *SignupTestSuite) SetupTest() {
-	api, err := NewAPIFromConfigFile("test.env", "v1")
+	api, config, err := NewAPIFromConfigFile("test.env", "v1")
 	require.NoError(ts.T(), err)
 
 	ts.API = api
-
-	config, err := conf.LoadConfig("test.env")
-	require.NoError(ts.T(), err)
 	ts.Config = config
 
 	// Cleanup existing user
@@ -75,146 +72,6 @@ func (ts *SignupTestSuite) TestSignup() {
 	assert.Equal(ts.T(), ts.Config.JWT.Aud, data.Aud)
 	assert.Equal(ts.T(), 1.0, data.UserMetaData["a"])
 	assert.Equal(ts.T(), "email", data.AppMetaData["provider"])
-}
-
-// TestSignupExternalUnsupported tests API /signup for an unsupported external provider
-func (ts *SignupTestSuite) TestSignupExternalUnsupported() {
-	// Request body
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"provider": "external provider",
-		"code":     "123456789",
-	}))
-
-	// Setup request
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Setup response recorder
-	w := httptest.NewRecorder()
-
-	ts.API.handler.ServeHTTP(w, req)
-
-	// Bad request expected for invalid external provider
-	assert.Equal(ts.T(), w.Code, http.StatusBadRequest)
-}
-
-// TestSignupExternalGithub tests API /signup for github
-func (ts *SignupTestSuite) TestSignupExternalGithub() {
-	code := os.Getenv("GOTRUE_GITHUB_OAUTH_CODE")
-	if code == "" || ts.Config.External.Github.Secret == "" {
-		ts.T().Skip("GOTRUE_GITHUB_OAUTH_CODE or Github external provider config not set")
-		return
-	}
-
-	// Request body
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"provider": "github",
-		"code":     code,
-	}))
-
-	// Setup request
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Setup response recorder
-	w := httptest.NewRecorder()
-
-	ts.API.handler.ServeHTTP(w, req)
-
-	require.Equal(ts.T(), http.StatusOK, w.Code)
-	data := models.User{}
-	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-	assert.Equal(ts.T(), "github", data.AppMetaData["provider"])
-}
-
-// TestSignupExternalBitbucket tests API /signup for bitbucket
-func (ts *SignupTestSuite) TestSignupExternalBitbucket() {
-	code := os.Getenv("GOTRUE_BITBUCKET_OAUTH_CODE")
-	if code == "" || ts.Config.External.Bitbucket.Secret == "" {
-		ts.T().Skip("GOTRUE_BITBUCKET_OAUTH_CODE or Bitbucket external provider config not set")
-		return
-	}
-
-	// Request body
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"provider": "bitbucket",
-		"code":     code,
-	}))
-
-	// Setup request
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Setup response recorder
-	w := httptest.NewRecorder()
-
-	ts.API.handler.ServeHTTP(w, req)
-
-	require.Equal(ts.T(), http.StatusOK, w.Code)
-	data := models.User{}
-	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-	assert.Equal(ts.T(), "bitbucket", data.AppMetaData["provider"])
-}
-
-// TestSignupExternalGitlab tests API /signup for gitlab
-func (ts *SignupTestSuite) TestSignupExternalGitlab() {
-	code := os.Getenv("GOTRUE_GITLAB_OAUTH_CODE")
-	if code == "" || ts.Config.External.Gitlab.Secret == "" {
-		ts.T().Skip("GOTRUE_GITLAB_OAUTH_CODE or Gitlab external provider config not set")
-		return
-	}
-
-	// Request body
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"provider": "gitlab",
-		"code":     code,
-	}))
-
-	// Setup request
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Setup response recorder
-	w := httptest.NewRecorder()
-
-	ts.API.handler.ServeHTTP(w, req)
-	require.Equal(ts.T(), http.StatusOK, w.Code)
-	data := models.User{}
-	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-	assert.Equal(ts.T(), "gitlab", data.AppMetaData["provider"])
-}
-
-// TestSignupExternalGoogle tests API /signup for google
-func (ts *SignupTestSuite) TestSignupExternalGoogle() {
-	code := os.Getenv("GOTRUE_GOOGLE_OAUTH_CODE")
-	if code == "" || ts.Config.External.Google.Secret == "" {
-		ts.T().Skip("GOTRUE_GOOGLE_OAUTH_CODE or Google external provider config not set")
-		return
-	}
-
-	// Request body
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"provider": "google",
-		"code":     code,
-	}))
-
-	// Setup request
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Setup response recorder
-	w := httptest.NewRecorder()
-
-	ts.API.handler.ServeHTTP(w, req)
-	require.Equal(ts.T(), http.StatusOK, w.Code)
-	data := models.User{}
-	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-	assert.Equal(ts.T(), "google", data.AppMetaData["provider"])
 }
 
 // TestSignupTwice checks to make sure the same email cannot be registered twice

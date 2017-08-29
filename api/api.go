@@ -2,13 +2,10 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"regexp"
-	"strings"
 
 	"github.com/go-chi/chi"
-	"github.com/netlify/gotrue/api/provider"
 	"github.com/imdario/mergo"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
@@ -67,11 +64,19 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 	r.Get("/health", api.HealthCheck)
 
+	if globalConfig.MultiInstanceMode {
+		r.With(api.loadOAuthState).With(api.loadInstanceConfig).Get("/callback", api.ExternalProviderCallback)
+	} else {
+		r.With(api.loadOAuthState).Get("/callback", api.ExternalProviderCallback)
+	}
+
 	r.Route("/", func(r *router) {
 		if globalConfig.MultiInstanceMode {
+			r.Use(api.loadJWSSignatureHeader)
 			r.Use(api.loadInstanceConfig)
 		}
 
+		r.Get("/authorize", api.ExternalProviderRedirect)
 		r.Post("/signup", api.Signup)
 		r.Post("/invite", api.Invite)
 		r.Post("/recover", api.Recover)
@@ -126,19 +131,19 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 }
 
 // NewAPIFromConfigFile creates a new REST API using the provided configuration file.
-func NewAPIFromConfigFile(filename string, version string) (*API, error) {
+func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configuration, error) {
 	globalConfig, err := conf.LoadGlobal(filename)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	config, err := conf.LoadConfig(filename)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	db, err := dial.Dial(globalConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ctx, err := WithInstanceConfig(context.Background(), config, "")
@@ -146,7 +151,7 @@ func NewAPIFromConfigFile(filename string, version string) (*API, error) {
 		logrus.Fatalf("Error loading instance config: %+v", err)
 	}
 
-	return NewAPIWithVersion(ctx, globalConfig, db, version), nil
+	return NewAPIWithVersion(ctx, globalConfig, db, version), config, nil
 }
 
 func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
@@ -155,25 +160,6 @@ func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 		"name":        "GoTrue",
 		"description": "GoTrue is a user registration and authentication API",
 	})
-}
-
-// Provider returns a Provider interface for the given name.
-func (a *API) Provider(ctx context.Context, name string) (provider.Provider, error) {
-	config := getConfig(ctx)
-	name = strings.ToLower(name)
-
-	switch name {
-	case "bitbucket":
-		return provider.NewBitbucketProvider(config.External.Bitbucket), nil
-	case "github":
-		return provider.NewGithubProvider(config.External.Github), nil
-	case "gitlab":
-		return provider.NewGitlabProvider(config.External.Gitlab), nil
-	case "google":
-		return provider.NewGoogleProvider(config.External.Google), nil
-	default:
-		return nil, fmt.Errorf("Provider %s could not be found", name)
-	}
 }
 
 func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanceID string) (context.Context, error) {

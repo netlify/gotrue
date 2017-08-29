@@ -45,7 +45,7 @@ type GlobalConfiguration struct {
 	DB                DBConfiguration
 	External          ExternalProviderConfiguration
 	Logging           nconf.LoggingConfig `envconfig:"LOG"`
-	OperatorToken     string              `split_words:"true"`
+	OperatorToken     string              `split_words:"true" required:"true"`
 	MultiInstanceMode bool
 }
 

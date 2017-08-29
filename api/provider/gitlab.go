@@ -2,10 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"net/http"
-	"net/url"
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
@@ -42,45 +38,18 @@ func NewGitlabProvider(ext conf.OAuthProviderConfiguration) Provider {
 				AuthURL:  base + "/oauth/authorize",
 				TokenURL: base + "/oauth/token",
 			},
+			RedirectURL: ext.RedirectURI,
 		},
 		External: ext,
 	}
 }
 
+func (g gitlabProvider) VerifiesEmails() bool {
+	return false
+}
+
 func (g gitlabProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {
-	res, err := http.PostForm(g.Endpoint.TokenURL, url.Values{
-		"client_id":     {g.External.ClientID},
-		"client_secret": {g.External.Secret},
-		"code":          {code},
-		"grant_type":    {"authorization_code"},
-		"redirect_uri":  {g.External.RedirectURI},
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		e := struct {
-			Error   string `json:"error"`
-			Message string `json:"error_description"`
-		}{}
-
-		if err := json.NewDecoder(res.Body).Decode(&e); err != nil {
-			return nil, err
-		}
-
-		return nil, errors.New(e.Message)
-	}
-
-	dst := &oauth2.Token{}
-	if err := json.NewDecoder(res.Body).Decode(dst); err != nil {
-		return nil, err
-	}
-
-	return dst, nil
+	return g.Exchange(ctx, code)
 }
 
 func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
@@ -89,8 +58,9 @@ func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 		Name      string `json:"name"`
 		AvatarURL string `json:"avatar_url"`
 	}{}
+	base := defaultBase(g.External.URL)
 
-	if err := makeRequest(ctx, tok, g.Config, "https://gitlab.com/api/v4/user", &user); err != nil {
+	if err := makeRequest(ctx, tok, g.Config, base+"/api/v4/user", &user); err != nil {
 		return nil, err
 	}
 

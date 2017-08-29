@@ -42,12 +42,21 @@ func addGetBody(w http.ResponseWriter, req *http.Request) (context.Context, erro
 	return req.Context(), nil
 }
 
+func (a *API) loadJWSSignatureHeader(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	ctx := r.Context()
-
 	signature := r.Header.Get(jwsSignatureHeaderName)
 	if signature == "" {
-		return nil, badRequestError("Netlify microservice headers missing")
+		return nil, badRequestError("Operator microservice headers missing")
+	}
+	return withSignature(ctx, signature), nil
+}
+
 func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (context.Context, error) {
+	ctx := r.Context()
+
+	signature := getSignature(ctx)
+	if signature == "" {
+		return nil, badRequestError("Operator signature missing")
 	}
 
 	claims := NetlifyMicroserviceClaims{}
@@ -56,7 +65,7 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 		return []byte(a.config.OperatorToken), nil
 	})
 	if err != nil {
-		return nil, badRequestError("Operator microservice headers are invalid: %v", err)
+		return nil, badRequestError("Operator microservice signature is invalid: %v", err)
 	}
 
 	instanceID := claims.InstanceID
@@ -84,6 +93,7 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 	}
 	logEntrySetField(r, "site_url", config.SiteURL)
 
+	ctx = withNetlifyID(ctx, claims.NetlifyID)
 	ctx, err = WithInstanceConfig(ctx, config, instanceID)
 	if err != nil {
 		return nil, internalServerError("Error loading instance config").WithInternalError(err)

@@ -21,8 +21,14 @@ func NewGithubProvider(ext conf.OAuthProviderConfiguration) Provider {
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint:     github.Endpoint,
+			RedirectURL:  ext.RedirectURI,
+			Scopes:       []string{"user:email"},
 		},
 	}
+}
+
+func (g githubProvider) VerifiesEmails() bool {
+	return true
 }
 
 func (g githubProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {

@@ -61,10 +61,10 @@ func NewUser(instanceID string, email, password, aud string, userData map[string
 	return user, nil
 }
 
-// IsRegistered checks if a user has already being
+// IsConfirmed checks if a user has already being
 // registered and confirmed.
-func (u *User) IsRegistered() bool {
-	return !u.ConfirmedAt.IsZero()
+func (u *User) IsConfirmed() bool {
+	return u.ConfirmedAt != nil
 }
 
 // SetRole sets the users Role to roleName

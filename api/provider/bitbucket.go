@@ -24,8 +24,14 @@ func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) Provider {
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint:     bitbucket.Endpoint,
+			RedirectURL:  ext.RedirectURI,
+			Scopes:       []string{"account"},
 		},
 	}
+}
+
+func (g bitbucketProvider) VerifiesEmails() bool {
+	return false
 }
 
 func (g bitbucketProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {
