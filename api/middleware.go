@@ -42,18 +42,18 @@ func addGetBody(w http.ResponseWriter, req *http.Request) (context.Context, erro
 	return req.Context(), nil
 }
 
-func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	ctx := r.Context()
 
 	signature := r.Header.Get(jwsSignatureHeaderName)
 	if signature == "" {
 		return nil, badRequestError("Netlify microservice headers missing")
+func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	}
 
 	claims := NetlifyMicroserviceClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 	_, err := p.ParseWithClaims(signature, &claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(api.config.OperatorToken), nil
+		return []byte(a.config.OperatorToken), nil
 	})
 	if err != nil {
 		return nil, badRequestError("Operator microservice headers are invalid: %v", err)
@@ -66,7 +66,7 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 
 	logEntrySetField(r, "instance_id", instanceID)
 	logEntrySetField(r, "netlify_id", claims.NetlifyID)
-	instance, err := api.db.GetInstance(instanceID)
+	instance, err := a.db.GetInstance(instanceID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError("Unable to locate site configuration")
@@ -92,24 +92,24 @@ func (api *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (cont
 	return ctx, nil
 }
 
-func (api *API) verifyOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {
-	c, _, err := api.extractOperatorRequest(w, req)
+func (a *API) verifyOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+	c, _, err := a.extractOperatorRequest(w, req)
 	return c, err
 }
 
-func (api *API) extractOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, string, error) {
-	token, err := api.extractBearerToken(w, req)
+func (a *API) extractOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, string, error) {
+	token, err := a.extractBearerToken(w, req)
 	if err != nil {
 		return nil, token, err
 	}
-	if token == "" || token != api.config.OperatorToken {
+	if token == "" || token != a.config.OperatorToken {
 		return nil, token, unauthorizedError("Request does not include an Operator token")
 	}
 	return req.Context(), token, nil
 }
 
-func (api *API) requireAdminCredentials(w http.ResponseWriter, req *http.Request) (context.Context, error) {
-	c, t, err := api.extractOperatorRequest(w, req)
+func (a *API) requireAdminCredentials(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+	c, t, err := a.extractOperatorRequest(w, req)
 	if err == nil {
 		return c, nil
 	}
@@ -118,10 +118,10 @@ func (api *API) requireAdminCredentials(w http.ResponseWriter, req *http.Request
 		return nil, err
 	}
 
-	c, err = api.parseJWTClaims(t, req)
+	c, err = a.parseJWTClaims(t, req)
 	if err != nil {
 		return nil, err
 	}
 
-	return api.requireAdmin(c, w, req)
+	return a.requireAdmin(c, w, req)
 }
