@@ -64,8 +64,14 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 	ctx := r.Context()
 	config := a.getConfig(ctx)
 	instanceID := getInstanceID(ctx)
+	rq := r.URL.Query()
 
-	oauthCode := r.URL.Query().Get("code")
+	extError := rq.Get("error")
+	if extError != "" {
+		return oauthError(extError, rq.Get("error_description"))
+	}
+
+	oauthCode := rq.Get("code")
 	if oauthCode == "" {
 		return badRequestError("Authorization code missing")
 	}
