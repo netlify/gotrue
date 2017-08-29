@@ -15,7 +15,7 @@ import (
 
 type gitlabProvider struct {
 	*oauth2.Config
-	External conf.ExternalConfiguration
+	External conf.OAuthProviderConfiguration
 }
 
 func defaultBase(base string) string {
@@ -32,7 +32,7 @@ func defaultBase(base string) string {
 }
 
 // NewGitlabProvider creates a Gitlab account provider.
-func NewGitlabProvider(ext conf.ExternalConfiguration) Provider {
+func NewGitlabProvider(ext conf.OAuthProviderConfiguration) Provider {
 	base := defaultBase(ext.URL)
 	return &gitlabProvider{
 		Config: &oauth2.Config{

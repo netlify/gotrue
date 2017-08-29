@@ -16,7 +16,7 @@ type RecoverParams struct {
 // Recover sends a recovery email
 func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 	instanceID := getInstanceID(ctx)
 	params := &RecoverParams{}
 	jsonDecoder := json.NewDecoder(r.Body)

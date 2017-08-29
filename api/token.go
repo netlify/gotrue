@@ -113,7 +113,7 @@ func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter,
 
 // RefreshTokenGrant implements the refresh_token grant type flow
 func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 	tokenStr := r.FormValue("refresh_token")
 
 	if tokenStr == "" {
@@ -168,7 +168,7 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, secret stri
 }
 
 func (a *API) issueRefreshToken(ctx context.Context, user *models.User, w http.ResponseWriter) error {
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 	refreshToken, err := a.db.GrantAuthenticatedUser(user)
 	if err != nil {
 		return internalServerError("Database error granting user").WithInternalError(err)

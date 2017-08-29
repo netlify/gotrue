@@ -79,7 +79,7 @@ func (a *API) signupExternalProvider(ctx context.Context, w http.ResponseWriter,
 // Signup is the endpoint for registering a new user
 func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 	instanceID := getInstanceID(ctx)
 	params := &SignupParams{}
 
@@ -143,7 +143,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 
 func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud string) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		return nil, internalServerError("Database error creating user").WithInternalError(err)

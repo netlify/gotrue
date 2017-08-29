@@ -47,7 +47,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 // UserUpdate updates fields on a user
 func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 
 	params := &UserUpdateParams{}
 	jsonDecoder := json.NewDecoder(r.Body)

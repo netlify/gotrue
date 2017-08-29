@@ -42,16 +42,16 @@ func getUser(ctx context.Context, conn storage.Connection) (*models.User, error)
 	return conn.FindUserByID(claims.Subject)
 }
 
-	config := getConfig(ctx)
 func (a *API) isAdmin(ctx context.Context, u *models.User, aud string) bool {
+	config := a.getConfig(ctx)
 	if aud == "" {
 		aud = config.JWT.Aud
 	}
 	return u.IsSuperAdmin || (aud == u.Aud && u.HasRole(config.JWT.AdminGroupName))
 }
 
-	config := getConfig(ctx)
 func (a *API) requestAud(ctx context.Context, r *http.Request) string {
+	config := a.getConfig(ctx)
 	// First check for an audience in the header
 	if aud := r.Header.Get(audHeaderName); aud != "" {
 		return aud

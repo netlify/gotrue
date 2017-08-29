@@ -188,7 +188,7 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	}
 	user.AppMetaData["provider"] = "email"
 
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 	if params.Role != "" {
 		user.SetRole(params.Role)
 	} else {

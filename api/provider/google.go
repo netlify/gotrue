@@ -14,7 +14,7 @@ type googleProvider struct {
 }
 
 // NewGoogleProvider creates a Google account provider.
-func NewGoogleProvider(ext conf.ExternalConfiguration) Provider {
+func NewGoogleProvider(ext conf.OAuthProviderConfiguration) Provider {
 	return &googleProvider{
 		&oauth2.Config{
 			ClientID:     ext.ClientID,

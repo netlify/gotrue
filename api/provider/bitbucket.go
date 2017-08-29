@@ -18,7 +18,7 @@ type bitbucketProvider struct {
 }
 
 // NewBitbucketProvider creates a Bitbucket account provider.
-func NewBitbucketProvider(ext conf.ExternalConfiguration) Provider {
+func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) Provider {
 	return &bitbucketProvider{
 		&oauth2.Config{
 			ClientID:     ext.ClientID,

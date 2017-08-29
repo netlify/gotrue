@@ -9,8 +9,8 @@ import (
 	"github.com/netlify/netlify-commons/nconf"
 )
 
-// ExternalConfiguration holds all config related to external account providers.
-type ExternalConfiguration struct {
+// OAuthProviderConfiguration holds all config related to external account providers.
+type OAuthProviderConfiguration struct {
 	ClientID    string `json:"client_id" split_words:"true"`
 	Secret      string `json:"secret"`
 	RedirectURI string `json:"redirect_uri" split_words:"true"`
@@ -43,6 +43,7 @@ type GlobalConfiguration struct {
 		Endpoint string
 	}
 	DB                DBConfiguration
+	External          ExternalProviderConfiguration
 	Logging           nconf.LoggingConfig `envconfig:"LOG"`
 	OperatorToken     string              `split_words:"true"`
 	MultiInstanceMode bool
@@ -54,6 +55,14 @@ type EmailContentConfiguration struct {
 	Confirmation string `json:"confirmation"`
 	Recovery     string `json:"recovery"`
 	EmailChange  string `json:"email_change" split_words:"true"`
+}
+
+type ExternalProviderConfiguration struct {
+	Bitbucket   OAuthProviderConfiguration `json:"bitbucket"`
+	Github      OAuthProviderConfiguration `json:"github"`
+	Gitlab      OAuthProviderConfiguration `json:"gitlab"`
+	Google      OAuthProviderConfiguration `json:"google"`
+	RedirectURL string                     `json:"redirect_url"`
 }
 
 // Configuration holds all the per-instance configuration.
@@ -72,12 +81,7 @@ type Configuration struct {
 		Templates    EmailContentConfiguration `json:"templates"`
 		URLPaths     EmailContentConfiguration `json:"url_paths"`
 	} `json:"mailer"`
-	External struct {
-		Bitbucket ExternalConfiguration `json:"bitbucket"`
-		Github    ExternalConfiguration `json:"github"`
-		Gitlab    ExternalConfiguration `json:"gitlab"`
-		Google    ExternalConfiguration `json:"google"`
-	} `json:"external"`
+	External ExternalProviderConfiguration `json:"external"`
 }
 
 func loadEnvironment(filename string) error {

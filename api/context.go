@@ -67,16 +67,6 @@ func withConfig(ctx context.Context, config *conf.Configuration) context.Context
 	return context.WithValue(ctx, configKey, config)
 }
 
-// getConfig reads the tenant configuration from the context.
-func getConfig(ctx context.Context) *conf.Configuration {
-	obj := ctx.Value(configKey)
-	if obj == nil {
-		return nil
-	}
-
-	return obj.(*conf.Configuration)
-}
-
 // withMailer adds the mailer to the context.
 func withMailer(ctx context.Context, mailer mailer.Mailer) context.Context {
 	return context.WithValue(ctx, mailerKey, mailer)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/netlify/gotrue/api/provider"
+	"github.com/imdario/mergo"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
@@ -183,4 +184,19 @@ func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanc
 	ctx = withInstanceID(ctx, instanceID)
 
 	return ctx, nil
+}
+
+func (a *API) getConfig(ctx context.Context) *conf.Configuration {
+	obj := ctx.Value(configKey)
+	if obj == nil {
+		return nil
+	}
+
+	config := obj.(*conf.Configuration)
+	extConfig := (*a.config).External
+	if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
+		return nil
+	}
+	config.External = extConfig
+	return config
 }
