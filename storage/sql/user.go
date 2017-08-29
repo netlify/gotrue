@@ -10,8 +10,8 @@ import (
 type userObj struct {
 	*models.User
 
-	RawAppMetaData  string `json:"-" bson:"-"`
-	RawUserMetaData string `json:"-" bson:"-"`
+	RawAppMetaData  string `json:"-"`
+	RawUserMetaData string `json:"-"`
 }
 
 func (u *userObj) BeforeCreate(tx *gorm.DB) error {

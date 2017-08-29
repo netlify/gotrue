@@ -14,10 +14,6 @@ import:
 - package: gopkg.in/gomail.v2
   version: 2.0.0
 - package: github.com/netlify/mailme
-- package: gopkg.in/mgo.v2
-  subpackages:
-  - txn
-  - bson
 - package: github.com/stretchr/testify
   version: v1.1.4
   subpackages:

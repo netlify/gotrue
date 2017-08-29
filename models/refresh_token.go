@@ -2,23 +2,20 @@ package models
 
 import (
 	"time"
-
-	"gopkg.in/mgo.v2/bson"
 )
 
 // RefreshToken is the database model for refresh tokens.
 type RefreshToken struct {
-	InstanceID string        `json:"-" bson:"instance_id"`
-	ID         int64         `bson:"seq_id,omitempty"`
-	BID        bson.ObjectId `bson:"_id" sql:"-"`
+	InstanceID string `json:"-"`
+	ID         int64
 
-	Token string `bson:"token"`
+	Token string
 
-	User   User   `bson:"-"`
-	UserID string `bson:"user_id"`
+	User   User
+	UserID string
 
-	Revoked   bool      `bson:"revoked"`
-	CreatedAt time.Time `bson:"created_at"`
+	Revoked   bool
+	CreatedAt time.Time
 }
 
 // TableName returns the database table name for RefreshToken
