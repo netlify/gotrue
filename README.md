@@ -179,19 +179,19 @@ If you do not require email confirmation, you may set this to `true`. Defaults t
 
 `MAILER_URLPATHS_INVITE` - `string`
 
-URL path to use in the user invite email. Defaults to `/member/invite`.
+URL path to use in the user invite email. Defaults to `/`.
 
 `MAILER_URLPATHS_CONFIRMATION` - `string`
 
-URL path to use in the signup confirmation email. Defaults to `/member/confirm`.
+URL path to use in the signup confirmation email. Defaults to `/`.
 
 `MAILER_URLPATHS_RECOVERY` - `string`
 
-URL path to use in the password reset email. Defaults to `/member/recover`.
+URL path to use in the password reset email. Defaults to `/`.
 
 `MAILER_URLPATHS_EMAIL_CHANGE` - `string`
 
-URL path to use in the email change confirmation email. Defaults to `/member/confirm-email`.
+URL path to use in the email change confirmation email. Defaults to `/`.
 
 `MAILER_SUBJECTS_INVITE` - `string`
 

@@ -152,15 +152,15 @@ func (config *Configuration) ApplyDefaults() {
 	}
 
 	if config.Mailer.URLPaths.Invite == "" {
-		config.Mailer.URLPaths.Invite = "/member/invite"
+		config.Mailer.URLPaths.Invite = "/"
 	}
 	if config.Mailer.URLPaths.Confirmation == "" {
-		config.Mailer.URLPaths.Confirmation = "/member/confirm"
+		config.Mailer.URLPaths.Confirmation = "/"
 	}
 	if config.Mailer.URLPaths.Recovery == "" {
-		config.Mailer.URLPaths.Recovery = "/member/recover"
+		config.Mailer.URLPaths.Recovery = "/"
 	}
 	if config.Mailer.URLPaths.EmailChange == "" {
-		config.Mailer.URLPaths.EmailChange = "/member/confirm-email"
+		config.Mailer.URLPaths.EmailChange = "/"
 	}
 }
