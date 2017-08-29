@@ -16,12 +16,15 @@ func (c contextKey) String() string {
 }
 
 const (
-	tokenKey      = contextKey("jwt")
-	requestIDKey  = contextKey("request_id")
-	configKey     = contextKey("config")
-	mailerKey     = contextKey("mailer")
-	instanceIDKey = contextKey("instance_id")
-	instanceKey   = contextKey("instance")
+	tokenKey                = contextKey("jwt")
+	requestIDKey            = contextKey("request_id")
+	configKey               = contextKey("config")
+	mailerKey               = contextKey("mailer")
+	instanceIDKey           = contextKey("instance_id")
+	instanceKey             = contextKey("instance")
+	signatureKey            = contextKey("signature")
+	netlifyIDKey            = contextKey("netlify_id")
+	externalProviderTypeKey = contextKey("external_provider_type")
 )
 
 // withToken adds the JWT token to the context.
@@ -67,16 +70,6 @@ func withConfig(ctx context.Context, config *conf.Configuration) context.Context
 	return context.WithValue(ctx, configKey, config)
 }
 
-// getConfig reads the tenant configuration from the context.
-func getConfig(ctx context.Context) *conf.Configuration {
-	obj := ctx.Value(configKey)
-	if obj == nil {
-		return nil
-	}
-
-	return obj.(*conf.Configuration)
-}
-
 // withMailer adds the mailer to the context.
 func withMailer(ctx context.Context, mailer mailer.Mailer) context.Context {
 	return context.WithValue(ctx, mailerKey, mailer)
@@ -117,4 +110,49 @@ func getInstance(ctx context.Context) *models.Instance {
 		return nil
 	}
 	return obj.(*models.Instance)
+}
+
+// withSignature adds the provided request ID to the context.
+func withSignature(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, signatureKey, id)
+}
+
+// getSignature reads the request ID from the context.
+func getSignature(ctx context.Context) string {
+	obj := ctx.Value(signatureKey)
+	if obj == nil {
+		return ""
+	}
+
+	return obj.(string)
+}
+
+// withNetlifyID adds the provided request ID to the context.
+func withNetlifyID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, netlifyIDKey, id)
+}
+
+// getNetlifyID reads the request ID from the context.
+func getNetlifyID(ctx context.Context) string {
+	obj := ctx.Value(netlifyIDKey)
+	if obj == nil {
+		return ""
+	}
+
+	return obj.(string)
+}
+
+// withExternalProviderType adds the provided request ID to the context.
+func withExternalProviderType(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, externalProviderTypeKey, id)
+}
+
+// getExternalProviderType reads the request ID from the context.
+func getExternalProviderType(ctx context.Context) string {
+	obj := ctx.Value(externalProviderTypeKey)
+	if obj == nil {
+		return ""
+	}
+
+	return obj.(string)
 }

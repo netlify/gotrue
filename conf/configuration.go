@@ -9,8 +9,8 @@ import (
 	"github.com/netlify/netlify-commons/nconf"
 )
 
-// ExternalConfiguration holds all config related to external account providers.
-type ExternalConfiguration struct {
+// OAuthProviderConfiguration holds all config related to external account providers.
+type OAuthProviderConfiguration struct {
 	ClientID    string `json:"client_id" split_words:"true"`
 	Secret      string `json:"secret"`
 	RedirectURI string `json:"redirect_uri" split_words:"true"`
@@ -43,8 +43,9 @@ type GlobalConfiguration struct {
 		Endpoint string
 	}
 	DB                DBConfiguration
+	External          ExternalProviderConfiguration
 	Logging           nconf.LoggingConfig `envconfig:"LOG"`
-	OperatorToken     string              `split_words:"true"`
+	OperatorToken     string              `split_words:"true" required:"true"`
 	MultiInstanceMode bool
 }
 
@@ -54,6 +55,14 @@ type EmailContentConfiguration struct {
 	Confirmation string `json:"confirmation"`
 	Recovery     string `json:"recovery"`
 	EmailChange  string `json:"email_change" split_words:"true"`
+}
+
+type ExternalProviderConfiguration struct {
+	Bitbucket   OAuthProviderConfiguration `json:"bitbucket"`
+	Github      OAuthProviderConfiguration `json:"github"`
+	Gitlab      OAuthProviderConfiguration `json:"gitlab"`
+	Google      OAuthProviderConfiguration `json:"google"`
+	RedirectURL string                     `json:"redirect_url"`
 }
 
 // Configuration holds all the per-instance configuration.
@@ -67,17 +76,12 @@ type Configuration struct {
 		Port         int                       `json:"port"`
 		User         string                    `json:"user"`
 		Pass         string                    `json:"pass"`
-		MemberFolder string                    `json:"member_folder" split_words:"true"`
 		AdminEmail   string                    `json:"admin_email" split_words:"true"`
 		Subjects     EmailContentConfiguration `json:"subjects"`
 		Templates    EmailContentConfiguration `json:"templates"`
+		URLPaths     EmailContentConfiguration `json:"url_paths"`
 	} `json:"mailer"`
-	External struct {
-		Bitbucket ExternalConfiguration `json:"bitbucket"`
-		Github    ExternalConfiguration `json:"github"`
-		Gitlab    ExternalConfiguration `json:"gitlab"`
-		Google    ExternalConfiguration `json:"google"`
-	} `json:"external"`
+	External ExternalProviderConfiguration `json:"external"`
 }
 
 func loadEnvironment(filename string) error {
@@ -138,10 +142,6 @@ func (config *Configuration) ApplyDefaults() {
 		config.Mailer.MaxFrequency = 15 * time.Minute
 	}
 
-	if config.Mailer.MemberFolder == "" {
-		config.Mailer.MemberFolder = "/member"
-	}
-
 	if config.Mailer.Templates.Invite == "" {
 		config.Mailer.Templates.Invite = "/.netlify/gotrue/templates/invite.html"
 	}
@@ -153,5 +153,18 @@ func (config *Configuration) ApplyDefaults() {
 	}
 	if config.Mailer.Templates.EmailChange == "" {
 		config.Mailer.Templates.EmailChange = "/.netlify/gotrue/templates/email-change.html"
+	}
+
+	if config.Mailer.URLPaths.Invite == "" {
+		config.Mailer.URLPaths.Invite = "/"
+	}
+	if config.Mailer.URLPaths.Confirmation == "" {
+		config.Mailer.URLPaths.Confirmation = "/"
+	}
+	if config.Mailer.URLPaths.Recovery == "" {
+		config.Mailer.URLPaths.Recovery = "/"
+	}
+	if config.Mailer.URLPaths.EmailChange == "" {
+		config.Mailer.URLPaths.EmailChange = "/"
 	}
 }

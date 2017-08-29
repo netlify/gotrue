@@ -32,13 +32,10 @@ func (ts *UserTestSuite) TearDownSuite() {
 }
 
 func (ts *UserTestSuite) SetupTest() {
-	api, err := NewAPIFromConfigFile("test.env", "v1")
+	api, config, err := NewAPIFromConfigFile("test.env", "v1")
 	require.NoError(ts.T(), err)
 
 	ts.API = api
-
-	config, err := conf.LoadConfig("test.env")
-	require.NoError(ts.T(), err)
 	ts.Config = config
 
 	// Cleanup existing user

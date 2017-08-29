@@ -49,7 +49,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.issueRefreshToken(ctx, user, w)
+	return a.sendRefreshToken(ctx, user, w)
 }
 
 func (a *API) signupVerify(params *VerifyParams) (*models.User, error) {

@@ -34,8 +34,6 @@ func (a *API) Token(w http.ResponseWriter, r *http.Request) error {
 		return a.ResourceOwnerPasswordGrant(ctx, w, r)
 	case "refresh_token":
 		return a.RefreshTokenGrant(ctx, w, r)
-	case "authorization_code":
-		return a.AuthorizationCodeGrant(ctx, w, r)
 	default:
 		return oauthError("unsupported_grant_type", "")
 	}
@@ -56,7 +54,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	if !user.IsRegistered() {
+	if !user.IsConfirmed() {
 		return oauthError("invalid_grant", "Email not confirmed")
 	}
 
@@ -66,54 +64,12 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 
 	now := time.Now()
 	user.LastSignInAt = &now
-	return a.issueRefreshToken(ctx, user, w)
-}
-
-// AuthorizationCodeGrant implements the authorization_code grant for use with external OAuth providers
-func (a *API) AuthorizationCodeGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	code := r.FormValue("code")
-	providerName := r.FormValue("provider")
-
-	if code == "" {
-		return oauthError("invalid_request", "Authorization code required").WithInternalMessage("No authorization code found: %v", r)
-	} else if providerName == "" {
-		return oauthError("invalid_request", "External provider name required").WithInternalMessage("No provider name found: %v", r)
-	}
-
-	provider, err := a.Provider(ctx, providerName)
-	if err != nil {
-		return badRequestError("Invalid provider: %s", providerName)
-	}
-
-	tok, err := provider.GetOAuthToken(ctx, code)
-	if err != nil {
-		return internalServerError("Unable to authenticate via %s", providerName).WithInternalError(err).WithInternalMessage("Error exchanging code with external provider")
-	}
-
-	data, err := provider.GetUserData(ctx, tok)
-	if err != nil {
-		return internalServerError("Error getting user email from %s", providerName).WithInternalError(err).WithInternalMessage("Error getting email address from external provider")
-	}
-
-	aud := a.requestAud(ctx, r)
-	instanceID := getInstanceID(ctx)
-	user, err := a.db.FindUserByEmailAndAudience(instanceID, data.Email, aud)
-	if err != nil {
-		return internalServerError(err.Error())
-	}
-
-	if !user.IsRegistered() {
-		return oauthError("invalid_grant", "Email not confirmed")
-	}
-
-	now := time.Now()
-	user.LastSignInAt = &now
-	return a.issueRefreshToken(ctx, user, w)
+	return a.sendRefreshToken(ctx, user, w)
 }
 
 // RefreshTokenGrant implements the refresh_token grant type flow
 func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 	tokenStr := r.FormValue("refresh_token")
 
 	if tokenStr == "" {
@@ -167,23 +123,31 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, secret stri
 	return token.SignedString([]byte(secret))
 }
 
-func (a *API) issueRefreshToken(ctx context.Context, user *models.User, w http.ResponseWriter) error {
-	config := getConfig(ctx)
+func (a *API) issueRefreshToken(ctx context.Context, user *models.User) (*AccessTokenResponse, error) {
+	config := a.getConfig(ctx)
 	refreshToken, err := a.db.GrantAuthenticatedUser(user)
 	if err != nil {
-		return internalServerError("Database error granting user").WithInternalError(err)
+		return nil, internalServerError("Database error granting user").WithInternalError(err)
 	}
 
 	tokenString, err := generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
 	if err != nil {
 		a.db.RevokeToken(refreshToken)
-		return internalServerError("error generating jwt token").WithInternalError(err)
+		return nil, internalServerError("error generating jwt token").WithInternalError(err)
 	}
 
-	return sendJSON(w, http.StatusOK, &AccessTokenResponse{
+	return &AccessTokenResponse{
 		Token:        tokenString,
 		TokenType:    "bearer",
 		ExpiresIn:    config.JWT.Exp,
 		RefreshToken: refreshToken.Token,
-	})
+	}, nil
+}
+
+func (a *API) sendRefreshToken(ctx context.Context, user *models.User, w http.ResponseWriter) error {
+	token, err := a.issueRefreshToken(ctx, user)
+	if err != nil {
+		return err
+	}
+	return sendJSON(w, http.StatusOK, token)
 }

@@ -18,14 +18,20 @@ type bitbucketProvider struct {
 }
 
 // NewBitbucketProvider creates a Bitbucket account provider.
-func NewBitbucketProvider(ext conf.ExternalConfiguration) Provider {
+func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) Provider {
 	return &bitbucketProvider{
 		&oauth2.Config{
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint:     bitbucket.Endpoint,
+			RedirectURL:  ext.RedirectURI,
+			Scopes:       []string{"account"},
 		},
 	}
+}
+
+func (g bitbucketProvider) VerifiesEmails() bool {
+	return false
 }
 
 func (g bitbucketProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {

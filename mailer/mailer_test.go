@@ -9,21 +9,18 @@ import (
 func TestGetSiteURL(t *testing.T) {
 	cases := []struct {
 		SiteURL  string
-		Folder   string
-		Filename string
+		Path     string
+		Fragment string
 		Expected string
 	}{
-		{"https://test.example.com", "/.netlify/gotrue/templates", "confirm.html", "https://test.example.com/.netlify/gotrue/templates/confirm.html"},
-		{"https://test.example.com/removedpath", "/.netlify/gotrue/templates", "confirm.html", "https://test.example.com/.netlify/gotrue/templates/confirm.html"},
-		{"https://test.example.com/", "/trailingslash/", "confirm.html", "https://test.example.com/trailingslash/confirm.html"},
-		{"https://test.example.com/", "/f/", "/extrafolder/confirm.html", "https://test.example.com/f/extrafolder/confirm.html"},
-		{"https://test.example.com/", "f/", "/confirm.html", "https://test.example.com/f/confirm.html"},
-		{"https://test.example.com/", "f", "/confirm.html", "https://test.example.com/f/confirm.html"},
-		{"https://test.example.com", "f", "confirm.html", "https://test.example.com/f/confirm.html"},
+		{"https://test.example.com", "/.netlify/gotrue/templates/confirm.html", "", "https://test.example.com/.netlify/gotrue/templates/confirm.html"},
+		{"https://test.example.com/removedpath", "/.netlify/gotrue/templates/confirm.html", "", "https://test.example.com/.netlify/gotrue/templates/confirm.html"},
+		{"https://test.example.com/", "/trailingslash/", "", "https://test.example.com/trailingslash/"},
+		{"https://test.example.com", "f", "fragment", "https://test.example.com/f#fragment"},
 	}
 
 	for _, c := range cases {
-		act, err := getSiteURL(c.SiteURL, c.Folder, c.Filename)
+		act, err := getSiteURL(c.SiteURL, c.Path, c.Fragment)
 		assert.NoError(t, err, c.Expected)
 		assert.Equal(t, c.Expected, act)
 	}

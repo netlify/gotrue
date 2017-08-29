@@ -14,15 +14,20 @@ type googleProvider struct {
 }
 
 // NewGoogleProvider creates a Google account provider.
-func NewGoogleProvider(ext conf.ExternalConfiguration) Provider {
+func NewGoogleProvider(ext conf.OAuthProviderConfiguration) Provider {
 	return &googleProvider{
 		&oauth2.Config{
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint:     google.Endpoint,
 			Scopes:       []string{"profile", "email"},
+			RedirectURL:  ext.RedirectURI,
 		},
 	}
+}
+
+func (g googleProvider) VerifiesEmails() bool {
+	return true
 }
 
 func (g googleProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {

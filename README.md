@@ -177,11 +177,21 @@ Controls the minimum amount of time that must pass before sending another signup
 
 If you do not require email confirmation, you may set this to `true`. Defaults to `false`.
 
-`MAILER_MEMBER_FOLDER` - `string`
+`MAILER_URLPATHS_INVITE` - `string`
 
-The folder on `site_url` where the `confirm`, `recover`, and `confirm-email`
-pages are located. This is used in combination with `site_url` to generate the 
-URLs used in the emails. Defaults to `/member`.
+URL path to use in the user invite email. Defaults to `/`.
+
+`MAILER_URLPATHS_CONFIRMATION` - `string`
+
+URL path to use in the signup confirmation email. Defaults to `/`.
+
+`MAILER_URLPATHS_RECOVERY` - `string`
+
+URL path to use in the password reset email. Defaults to `/`.
+
+`MAILER_URLPATHS_EMAIL_CHANGE` - `string`
+
+URL path to use in the email change confirmation email. Defaults to `/`.
 
 `MAILER_SUBJECTS_INVITE` - `string`
 

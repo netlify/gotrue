@@ -15,14 +15,20 @@ type githubProvider struct {
 }
 
 // NewGithubProvider creates a Github account provider.
-func NewGithubProvider(ext conf.ExternalConfiguration) Provider {
+func NewGithubProvider(ext conf.OAuthProviderConfiguration) Provider {
 	return &githubProvider{
 		&oauth2.Config{
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint:     github.Endpoint,
+			RedirectURL:  ext.RedirectURI,
+			Scopes:       []string{"user:email"},
 		},
 	}
+}
+
+func (g githubProvider) VerifiesEmails() bool {
+	return true
 }
 
 func (g githubProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {

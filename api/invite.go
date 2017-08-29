@@ -17,7 +17,7 @@ type InviteParams struct {
 // Invite is the endpoint for inviting a new user
 func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 	instanceID := getInstanceID(ctx)
 	params := &InviteParams{}
 
