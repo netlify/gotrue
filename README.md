@@ -54,7 +54,7 @@ DATABASE_URL=gotrue.db
 
 `DB_DRIVER` - `string` **required**
 
-Chooses what dialect of database you want. Choose from `mongo`, `sqlite3`, `mysql`, or `postgres`.
+Chooses what dialect of database you want. Choose from `sqlite3`, `mysql`, or `postgres`.
 
 `DATABASE_URL` (no prefix) / `DB_DATABASE_URL` - `string` **required**
 

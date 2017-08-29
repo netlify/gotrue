@@ -12,35 +12,35 @@ import (
 
 // User respresents a registered user with email/password authentication
 type User struct {
-	InstanceID string `json:"-" bson:"instance_id"`
-	ID         string `json:"id" bson:"_id,omitempty"`
+	InstanceID string `json:"-"`
+	ID         string `json:"id"`
 
-	Aud               string     `json:"aud" bson:"aud"`
-	Role              string     `json:"role" bson:"role"`
-	Email             string     `json:"email" bson:"email"`
-	EncryptedPassword string     `json:"-" bson:"encrypted_password"`
-	ConfirmedAt       *time.Time `json:"confirmed_at" bson:"confirmed_at"`
-	InvitedAt         *time.Time `json:"invited_at" bson:"invited_at"`
+	Aud               string     `json:"aud"`
+	Role              string     `json:"role"`
+	Email             string     `json:"email"`
+	EncryptedPassword string     `json:"-"`
+	ConfirmedAt       *time.Time `json:"confirmed_at"`
+	InvitedAt         *time.Time `json:"invited_at"`
 
-	ConfirmationToken  string     `json:"-" bson:"confirmation_token,omitempty"`
-	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty" bson:"confirmation_sent_at,omitempty"`
+	ConfirmationToken  string     `json:"-"`
+	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty"`
 
-	RecoveryToken  string     `json:"-" bson:"recovery_token,omitempty"`
-	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty" bson:"recovery_sent_at,omitempty"`
+	RecoveryToken  string     `json:"-"`
+	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty"`
 
-	EmailChangeToken  string     `json:"-" bson:"email_change_token,omitempty"`
-	EmailChange       string     `json:"new_email,omitempty" bson:"new_email,omitempty"`
-	EmailChangeSentAt *time.Time `json:"email_change_sent_at,omitempty" bson:"email_change_sent_at,omitempty"`
+	EmailChangeToken  string     `json:"-"`
+	EmailChange       string     `json:"new_email,omitempty"`
+	EmailChangeSentAt *time.Time `json:"email_change_sent_at,omitempty"`
 
-	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty" bson:"last_sign_in_at,omitempty"`
+	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty"`
 
-	AppMetaData  map[string]interface{} `json:"app_metadata,omitempty" sql:"-" bson:"app_metadata,omitempty"`
-	UserMetaData map[string]interface{} `json:"user_metadata,omitempty" sql:"-" bson:"user_metadata,omitempty"`
+	AppMetaData  map[string]interface{} `json:"app_metadata,omitempty" sql:"-"`
+	UserMetaData map[string]interface{} `json:"user_metadata,omitempty" sql:"-"`
 
-	IsSuperAdmin bool `json:"-" bson:"is_super_admin"`
+	IsSuperAdmin bool `json:"-"`
 
-	CreatedAt time.Time `json:"created_at" bson:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // NewUser initializes a new user from an email, password and user data.

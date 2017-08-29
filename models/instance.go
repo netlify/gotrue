@@ -11,12 +11,12 @@ import (
 const baseConfigKey = ""
 
 type Instance struct {
-	ID string `json:"id" bson:"_id,omitempty"`
+	ID string `json:"id"`
 	// Netlify UUID
-	UUID string `json:"uuid,omitempty" bson:"uuid,omitempty"`
+	UUID string `json:"uuid,omitempty"`
 
 	// force usage of text column type
-	RawBaseConfig string              `json:"-" bson:"-" gorm:"size:65535"`
+	RawBaseConfig string              `json:"-" gorm:"size:65535"`
 	BaseConfig    *conf.Configuration `json:"config"`
 
 	CreatedAt time.Time  `json:"created_at"`
