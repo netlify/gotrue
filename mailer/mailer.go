@@ -97,7 +97,7 @@ func (m *TemplateMailer) InviteMail(user *models.User) error {
 		return nil
 	}
 
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Invite, "#invite_token="+user.ConfirmationToken)
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Invite, "invite_token="+user.ConfirmationToken)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
 		return nil
 	}
 
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Confirmation, "#confirmation_token="+user.ConfirmationToken)
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Confirmation, "confirmation_token="+user.ConfirmationToken)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
 
 // EmailChangeMail sends an email change confirmation mail to a user
 func (m *TemplateMailer) EmailChangeMail(user *models.User) error {
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.EmailChange, "#email_change_token="+user.EmailChangeToken)
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.EmailChange, "email_change_token="+user.EmailChangeToken)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (m *TemplateMailer) EmailChangeMail(user *models.User) error {
 
 // RecoveryMail sends a password recovery mail
 func (m *TemplateMailer) RecoveryMail(user *models.User) error {
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Recovery, "#recovery_token="+user.RecoveryToken)
+	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Recovery, "recovery_token="+user.RecoveryToken)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (m noopMailer) Send(user *models.User, subject, body string, data map[strin
 	return nil
 }
 
-func getSiteURL(siteURL, filepath, extra string) (string, error) {
+func getSiteURL(siteURL, filepath, fragment string) (string, error) {
 	site, err := url.Parse(siteURL)
 	if err != nil {
 		return "", err
@@ -243,5 +243,7 @@ func getSiteURL(siteURL, filepath, extra string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return site.ResolveReference(path).String() + extra, nil
+	u := site.ResolveReference(path)
+	u.Fragment = fragment
+	return u.String(), nil
 }
