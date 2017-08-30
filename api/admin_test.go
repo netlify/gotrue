@@ -223,6 +223,8 @@ func (ts *AdminTestSuite) TestAdminUserGet() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	assert.Equal(ts.T(), data["email"], "test1@example.com")
+	assert.NotNil(ts.T(), data["app_metadata"])
+	assert.NotNil(ts.T(), data["user_metadata"])
 }
 
 // TestAdminUserUpdate tests API /admin/user route (UPDATE)
