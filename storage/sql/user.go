@@ -34,21 +34,23 @@ func (u *userObj) AfterFind() (err error) {
 	return err
 }
 
-func (u *userObj) BeforeUpdate() (err error) {
+func (u *userObj) BeforeUpdate() error {
 	if u.AppMetaData != nil {
 		data, err := json.Marshal(u.AppMetaData)
-		if err == nil {
-			u.RawAppMetaData = string(data)
+		if err != nil {
+			return err
 		}
+		u.RawAppMetaData = string(data)
 	}
 	if u.UserMetaData != nil {
 		data, err := json.Marshal(u.UserMetaData)
-		if err == nil {
-			u.RawUserMetaData = string(data)
+		if err != nil {
+			return err
 		}
+		u.RawUserMetaData = string(data)
 	}
 
-	return err
+	return nil
 }
 
 func (u *userObj) BeforeSave() error {
