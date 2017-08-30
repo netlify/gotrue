@@ -57,7 +57,7 @@ func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
 		require.NoError(ts.T(), ts.API.db.DeleteUser(u), "Error deleting user")
 	}
 
-	u, err := models.NewUser("", email, "test", ts.Config.JWT.Aud, nil)
+	u, err := models.NewUser("", email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test User"})
 	require.NoError(ts.T(), err, "Error making new user")
 
 	u.IsSuperAdmin = true
@@ -89,10 +89,15 @@ func (ts *AdminTestSuite) TestAdminUsers() {
 	assert.Equal(ts.T(), "</admin/users?page=1>; rel=\"last\"", w.HeaderMap.Get("Link"))
 	assert.Equal(ts.T(), "1", w.HeaderMap.Get("X-Total-Count"))
 
-	data := make(map[string]interface{})
+	data := struct {
+		Users []*models.User `json:"users"`
+		Aud   string         `json:"aud"`
+	}{}
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-	for _, user := range data["users"].([]interface{}) {
-		assert.NotEmpty(ts.T(), user)
+	for _, user := range data.Users {
+		ts.NotNil(user)
+		ts.Require().NotNil(user.UserMetaData)
+		ts.Equal("Test User", user.UserMetaData["full_name"])
 	}
 }
 

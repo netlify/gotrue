@@ -35,7 +35,7 @@ type Connection struct {
 
 // Automigrate creates any missing tables and/or columns.
 func (conn *Connection) Automigrate() error {
-	conn.db = conn.db.AutoMigrate(&userObj{}, &models.RefreshToken{}, &models.Instance{})
+	conn.db = conn.db.AutoMigrate(&models.User{}, &models.RefreshToken{}, &models.Instance{})
 	return conn.db.Error
 }
 
@@ -64,20 +64,17 @@ func (conn *Connection) CountOtherUsers(instanceID string, id string) (int, erro
 	return userCount, nil
 }
 
-func (conn *Connection) createUserWithTransaction(tx *gorm.DB, user *models.User) (*userObj, error) {
-	obj := conn.newUserObj(user)
-	if result := tx.Create(obj); result.Error != nil {
+func (conn *Connection) createUserWithTransaction(tx *gorm.DB, user *models.User) (*models.User, error) {
+	if result := tx.Create(user); result.Error != nil {
 		tx.Rollback()
 		return nil, errors.Wrap(result.Error, "Error creating user")
 	}
 
-	return obj, nil
+	return user, nil
 }
 
 func (conn *Connection) findUser(query string, args ...interface{}) (*models.User, error) {
-	obj := &userObj{
-		User: &models.User{},
-	}
+	obj := &models.User{}
 	values := append([]interface{}{query}, args...)
 
 	if result := conn.db.First(obj, values...); result.Error != nil {
@@ -87,7 +84,7 @@ func (conn *Connection) findUser(query string, args ...interface{}) (*models.Use
 		return nil, errors.Wrap(result.Error, "error finding user")
 	}
 
-	return obj.User, nil
+	return obj, nil
 }
 
 // DeleteUser deletes a user.
@@ -118,6 +115,7 @@ func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageP
 	} else {
 		rsp = q.Find(&users)
 	}
+
 	return users, rsp.Error
 }
 
@@ -260,10 +258,7 @@ func (conn *Connection) UpdateUser(user *models.User) error {
 }
 
 func (conn *Connection) updateUserWithTransaction(tx *gorm.DB, user *models.User) error {
-	obj := &userObj{
-		User: user,
-	}
-	if result := tx.Save(obj); result.Error != nil {
+	if result := tx.Save(user); result.Error != nil {
 		tx.Rollback()
 		return errors.Wrap(result.Error, "Error updating user record")
 	}
