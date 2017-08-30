@@ -27,7 +27,7 @@ func (a *API) loadUser(w http.ResponseWriter, r *http.Request) (context.Context,
 	u, err := a.db.FindUserByInstanceIDAndID(instanceID, userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return nil, notFoundError("Usre not found")
+			return nil, notFoundError("User not found")
 		}
 		return nil, internalServerError("Database error loading user").WithInternalError(err)
 	}
@@ -122,7 +122,6 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	instanceID := getInstanceID(ctx)
-
 	params, err := a.getAdminParams(r)
 	if err != nil {
 		return err
