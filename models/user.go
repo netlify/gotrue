@@ -34,8 +34,8 @@ type User struct {
 
 	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty"`
 
-	AppMetaData  map[string]interface{} `json:"app_metadata,omitempty" sql:"-"`
-	UserMetaData map[string]interface{} `json:"user_metadata,omitempty" sql:"-"`
+	AppMetaData  map[string]interface{} `json:"app_metadata" sql:"-"`
+	UserMetaData map[string]interface{} `json:"user_metadata" sql:"-"`
 
 	IsSuperAdmin bool `json:"-"`
 
@@ -85,7 +85,11 @@ func (u *User) UpdateUserMetaData(updates map[string]interface{}) {
 		u.UserMetaData = updates
 	} else if updates != nil {
 		for key, value := range updates {
-			u.UserMetaData[key] = value
+			if value != nil {
+				u.UserMetaData[key] = value
+			} else {
+				delete(u.UserMetaData, key)
+			}
 		}
 	}
 }
@@ -96,7 +100,11 @@ func (u *User) UpdateAppMetaData(updates map[string]interface{}) {
 		u.AppMetaData = updates
 	} else if updates != nil {
 		for key, value := range updates {
-			u.AppMetaData[key] = value
+			if value != nil {
+				u.AppMetaData[key] = value
+			} else {
+				delete(u.AppMetaData, key)
+			}
 		}
 	}
 }

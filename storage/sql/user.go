@@ -21,10 +21,14 @@ func (u *userObj) BeforeCreate(tx *gorm.DB) error {
 func (u *userObj) AfterFind() (err error) {
 	if u.RawAppMetaData != "" {
 		err = json.Unmarshal([]byte(u.RawAppMetaData), &u.AppMetaData)
+	} else {
+		u.AppMetaData = make(map[string]interface{})
 	}
 
 	if err == nil && u.RawUserMetaData != "" {
 		err = json.Unmarshal([]byte(u.RawUserMetaData), &u.UserMetaData)
+	} else {
+		u.UserMetaData = make(map[string]interface{})
 	}
 
 	return err
