@@ -26,7 +26,7 @@ type adminCheckParams struct {
 
 func (a *API) requireAdmin(ctx context.Context, w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	// Find the administrative user
-	adminUser, err := getUser(ctx, a.db)
+	adminUser, err := getUserFromClaims(ctx, a.db)
 	if err != nil {
 		return nil, unauthorizedError("Invalid admin user")
 	}

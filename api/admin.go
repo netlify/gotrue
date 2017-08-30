@@ -1,34 +1,38 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi"
 	"github.com/netlify/gotrue/models"
 )
 
-// adminUserParams are used to handle admin requests that relate to user accounts
-// The User field is used for sub-user authentication and the others are used in the Update/Create endpoints
-//
-// To create a new user the request would look like:
-//     {"email": "email@provider.com", "password": "password"}
-//
-// And to authenticate as another user as an administrator you would send:
-//     {"user": {"email": "email@provider.com", "aud": "myaudience"}}
-type adminTargetUser struct {
-	Aud   string `json:"aud"`
-	Email string `json:"email"`
-	ID    string `json:"id"`
-}
-
 type adminUserParams struct {
+	Aud          string                 `json:"aud"`
 	Role         string                 `json:"role"`
 	Email        string                 `json:"email"`
 	Password     string                 `json:"password"`
 	Confirm      bool                   `json:"confirm"`
 	UserMetaData map[string]interface{} `json:"user_metadata"`
 	AppMetaData  map[string]interface{} `json:"app_metadata"`
-	User         adminTargetUser        `json:"user"`
+}
+
+func (a *API) loadUser(w http.ResponseWriter, r *http.Request) (context.Context, error) {
+	userID := chi.URLParam(r, "user_id")
+	logEntrySetField(r, "user_id", userID)
+	instanceID := getInstanceID(r.Context())
+
+	u, err := a.db.FindUserByInstanceIDAndID(instanceID, userID)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			return nil, notFoundError("Usre not found")
+		}
+		return nil, internalServerError("Database error loading user").WithInternalError(err)
+	}
+
+	return withUser(r.Context(), u), nil
 }
 
 func (a *API) getAdminParams(r *http.Request) (*adminUserParams, error) {
@@ -38,25 +42,6 @@ func (a *API) getAdminParams(r *http.Request) (*adminUserParams, error) {
 		return nil, badRequestError("Could not decode admin user params: %v", err)
 	}
 	return &params, nil
-}
-
-// Returns the the target user
-func (a *API) getAdminTargetUser(instanceID string, params *adminUserParams) (*models.User, error) {
-	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.User.Email, params.User.Aud)
-	if err != nil {
-		if models.IsNotFoundError(err) {
-			if user, err = a.db.FindUserByID(params.User.ID); err != nil {
-				if models.IsNotFoundError(err) {
-					return nil, badRequestError("Unable to find user by email: %s and id: %s in audience: %s", params.User.Email, params.User.ID, params.User.Aud)
-				}
-				return nil, internalServerError("Database error finding user").WithInternalError(err)
-			}
-		} else {
-			return nil, internalServerError("Database error finding user").WithInternalError(err)
-		}
-	}
-
-	return user, nil
 }
 
 // adminUsers responds with a list of all users in a given audience
@@ -89,36 +74,15 @@ func (a *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 
 // adminUserGet returns information about a single user
 func (a *API) adminUserGet(w http.ResponseWriter, r *http.Request) error {
-	ctx := r.Context()
-	instanceID := getInstanceID(r.Context())
+	user := getUser(r.Context())
 
-	aud := r.FormValue("aud")
-	if aud == "" {
-		aud = a.requestAud(ctx, r)
-	}
-
-	params := &adminUserParams{
-		User: adminTargetUser{
-			ID:    r.FormValue("id"),
-			Email: r.FormValue("email"),
-			Aud:   aud,
-		},
-	}
-	user, err := a.getAdminTargetUser(instanceID, params)
-	if err != nil {
-		return err
-	}
 	return sendJSON(w, http.StatusOK, user)
 }
 
 // adminUserUpdate updates a single user object
 func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
-	instanceID := getInstanceID(r.Context())
+	user := getUser(r.Context())
 	params, err := a.getAdminParams(r)
-	if err != nil {
-		return err
-	}
-	user, err := a.getAdminTargetUser(instanceID, params)
 	if err != nil {
 		return err
 	}
@@ -158,6 +122,7 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	instanceID := getInstanceID(ctx)
+
 	params, err := a.getAdminParams(r)
 	if err != nil {
 		return err
@@ -169,8 +134,8 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	aud := a.requestAud(ctx, r)
-	if params.User.Aud != "" {
-		aud = params.User.Aud
+	if params.Aud != "" {
+		aud = params.Aud
 	}
 
 	if exists, err := a.db.IsDuplicatedEmail(instanceID, params.Email, aud); err != nil {
@@ -208,15 +173,7 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 
 // adminUserDelete delete a user
 func (a *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
-	instanceID := getInstanceID(r.Context())
-	params, err := a.getAdminParams(r)
-	if err != nil {
-		return err
-	}
-	user, err := a.getAdminTargetUser(instanceID, params)
-	if err != nil {
-		return err
-	}
+	user := getUser(r.Context())
 
 	if err := a.db.DeleteUser(user); err != nil {
 		return internalServerError("Database error deleting user").WithInternalError(err)

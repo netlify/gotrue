@@ -75,6 +75,14 @@ func (s *StorageTestSuite) TestFindUserByID() {
 	require.Equal(s.T(), u.ID, n.ID)
 }
 
+func (s *StorageTestSuite) TestFindUserByInstanceIDAndID() {
+	u := s.createUser()
+
+	n, err := s.C.FindUserByInstanceIDAndID(u.InstanceID, u.ID)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), u.ID, n.ID)
+}
+
 func (s *StorageTestSuite) TestFindUserByRecoveryToken() {
 	u := s.createUser()
 	u.GenerateRecoveryToken()
@@ -208,7 +216,7 @@ func (s *StorageTestSuite) TestUpdateUser() {
 	err := s.C.UpdateUser(u)
 	require.NoError(s.T(), err)
 
-	nu, err := s.C.FindUserByID(u.ID)
+	nu, err := s.C.FindUserByInstanceIDAndID(u.InstanceID, u.ID)
 	require.NoError(s.T(), err)
 
 	require.NotNil(s.T(), nu.UserMetaData, "expected user metadata to not be nil")

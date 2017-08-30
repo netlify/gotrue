@@ -127,13 +127,18 @@ func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User,
 }
 
 // FindUserByEmailAndAudience finds a user with the matching email and audience.
-func (conn *Connection) FindUserByEmailAndAudience(instanceID string, email, aud string) (*models.User, error) {
+func (conn *Connection) FindUserByEmailAndAudience(instanceID, email, aud string) (*models.User, error) {
 	return conn.findUser("instance_id = ? and email = ? and aud = ?", instanceID, email, aud)
 }
 
 // FindUserByID finds a user matching the provided ID.
 func (conn *Connection) FindUserByID(id string) (*models.User, error) {
 	return conn.findUser("id = ?", id)
+}
+
+// FindUserByInstanceIDAndID finds a user matching the provided ID.
+func (conn *Connection) FindUserByInstanceIDAndID(instanceID, id string) (*models.User, error) {
+	return conn.findUser("instance_id = ? and id = ?", instanceID, id)
 }
 
 // FindUserByRecoveryToken finds a user with the matching recovery token.

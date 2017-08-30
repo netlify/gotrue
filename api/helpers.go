@@ -30,7 +30,7 @@ func sendJSON(w http.ResponseWriter, status int, obj interface{}) error {
 	return err
 }
 
-func getUser(ctx context.Context, conn storage.Connection) (*models.User, error) {
+func getUserFromClaims(ctx context.Context, conn storage.Connection) (*models.User, error) {
 	claims := getClaims(ctx)
 	if claims == nil {
 		return nil, errors.New("Invalid token")
