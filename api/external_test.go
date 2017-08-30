@@ -214,7 +214,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 	// ensure user has been created with metadata
 	user, err := ts.API.db.FindUserByEmailAndAudience("", "gitlab@example.com", ts.Config.JWT.Aud)
 	ts.Require().NoError(err)
-	ts.Equal("Gitlab Test", user.UserMetaData["name"])
+	ts.Equal("Gitlab Test", user.UserMetaData["full_name"])
 	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
 }
 
