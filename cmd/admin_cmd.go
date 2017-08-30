@@ -115,7 +115,7 @@ func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 
 	user, err := db.FindUserByEmailAndAudience(instanceID, args[0], getAudience(config))
 	if err != nil {
-		user, err = db.FindUserByID(args[0])
+		user, err = db.FindUserByInstanceIDAndID(instanceID, args[0])
 		if err != nil {
 			logrus.Fatalf("Error finding user (%s): %+v", args[0], err)
 		}
@@ -137,7 +137,7 @@ func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configur
 
 	user, err := db.FindUserByEmailAndAudience(instanceID, args[0], getAudience(config))
 	if err != nil {
-		user, err = db.FindUserByID(args[0])
+		user, err = db.FindUserByInstanceIDAndID(instanceID, args[0])
 		if err != nil {
 			logrus.Fatalf("Error finding user (%s): %+v", args[0], err)
 		}

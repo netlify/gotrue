@@ -13,6 +13,7 @@ type Connection interface {
 	FindUserByConfirmationToken(token string) (*models.User, error)
 	FindUserByEmailAndAudience(instanceID string, email, aud string) (*models.User, error)
 	FindUserByID(id string) (*models.User, error)
+	FindUserByInstanceIDAndID(instanceID, id string) (*models.User, error)
 	FindUserByRecoveryToken(token string) (*models.User, error)
 	FindUserWithRefreshToken(token string) (*models.User, *models.RefreshToken, error)
 	FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination, sortParams *models.SortParams) ([]*models.User, error)

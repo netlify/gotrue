@@ -19,20 +19,24 @@ func (a *API) requireAuthentication(w http.ResponseWriter, r *http.Request) (con
 }
 
 type adminCheckParams struct {
-	User struct {
-		Aud string `json:"aud"`
-	} `json:"user"`
+	Aud string `json:"aud"`
 }
 
 func (a *API) requireAdmin(ctx context.Context, w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	// Find the administrative user
-	adminUser, err := getUser(ctx, a.db)
+	adminUser, err := getUserFromClaims(ctx, a.db)
 	if err != nil {
 		return nil, unauthorizedError("Invalid admin user")
 	}
 
 	aud := a.requestAud(ctx, r)
 	if r.Body != nil && r.Body != http.NoBody {
+		c, err := addGetBody(w, r)
+		if err != nil {
+			return nil, internalServerError("Error getting body").WithInternalError(err)
+		}
+		ctx = c
+
 		params := adminCheckParams{}
 		bod, err := r.GetBody()
 		if err != nil {
@@ -42,8 +46,8 @@ func (a *API) requireAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 		if err != nil {
 			return nil, badRequestError("Could not decode admin user params: %v", err)
 		}
-		if params.User.Aud != "" {
-			aud = params.User.Aud
+		if params.Aud != "" {
+			aud = params.Aud
 		}
 	}
 

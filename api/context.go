@@ -25,6 +25,7 @@ const (
 	signatureKey            = contextKey("signature")
 	netlifyIDKey            = contextKey("netlify_id")
 	externalProviderTypeKey = contextKey("external_provider_type")
+	userKey                 = contextKey("user")
 )
 
 // withToken adds the JWT token to the context.
@@ -110,6 +111,20 @@ func getInstance(ctx context.Context) *models.Instance {
 		return nil
 	}
 	return obj.(*models.Instance)
+}
+
+// withUser adds the user id to the context.
+func withUser(ctx context.Context, u *models.User) context.Context {
+	return context.WithValue(ctx, userKey, u)
+}
+
+// getUser reads the user id from the context.
+func getUser(ctx context.Context) *models.User {
+	obj := ctx.Value(userKey)
+	if obj == nil {
+		return nil
+	}
+	return obj.(*models.User)
 }
 
 // withSignature adds the provided request ID to the context.
