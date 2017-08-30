@@ -1,12 +1,13 @@
 package models
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/pborman/uuid"
-
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -34,8 +35,11 @@ type User struct {
 
 	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty"`
 
-	AppMetaData  map[string]interface{} `json:"app_metadata" sql:"-"`
-	UserMetaData map[string]interface{} `json:"user_metadata" sql:"-"`
+	AppMetaData    map[string]interface{} `json:"app_metadata" sql:"-"`
+	RawAppMetaData string                 `json:"-"`
+
+	UserMetaData    map[string]interface{} `json:"user_metadata" sql:"-"`
+	RawUserMetaData string                 `json:"-"`
 
 	IsSuperAdmin bool `json:"-"`
 
@@ -59,6 +63,67 @@ func NewUser(instanceID string, email, password, aud string, userData map[string
 
 	user.GenerateConfirmationToken()
 	return user, nil
+}
+
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	return u.BeforeUpdate()
+}
+
+func (u *User) AfterFind() (err error) {
+	if u.RawAppMetaData != "" {
+		err = json.Unmarshal([]byte(u.RawAppMetaData), &u.AppMetaData)
+	} else {
+		u.AppMetaData = make(map[string]interface{})
+	}
+
+	if err == nil && u.RawUserMetaData != "" {
+		err = json.Unmarshal([]byte(u.RawUserMetaData), &u.UserMetaData)
+	} else {
+		u.UserMetaData = make(map[string]interface{})
+	}
+
+	return err
+}
+
+func (u *User) BeforeUpdate() error {
+	if u.AppMetaData != nil {
+		data, err := json.Marshal(u.AppMetaData)
+		if err != nil {
+			return err
+		}
+		u.RawAppMetaData = string(data)
+	}
+	if u.UserMetaData != nil {
+		data, err := json.Marshal(u.UserMetaData)
+		if err != nil {
+			return err
+		}
+		u.RawUserMetaData = string(data)
+	}
+
+	return nil
+}
+
+func (u *User) BeforeSave() error {
+	if u.ConfirmedAt != nil && u.ConfirmedAt.IsZero() {
+		u.ConfirmedAt = nil
+	}
+	if u.InvitedAt != nil && u.InvitedAt.IsZero() {
+		u.InvitedAt = nil
+	}
+	if u.ConfirmationSentAt != nil && u.ConfirmationSentAt.IsZero() {
+		u.ConfirmationSentAt = nil
+	}
+	if u.RecoverySentAt != nil && u.RecoverySentAt.IsZero() {
+		u.RecoverySentAt = nil
+	}
+	if u.EmailChangeSentAt != nil && u.EmailChangeSentAt.IsZero() {
+		u.EmailChangeSentAt = nil
+	}
+	if u.LastSignInAt != nil && u.LastSignInAt.IsZero() {
+		u.LastSignInAt = nil
+	}
+	return nil
 }
 
 // IsConfirmed checks if a user has already being

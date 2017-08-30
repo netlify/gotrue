@@ -42,10 +42,10 @@ func TestSQLTestSuite(t *testing.T) {
 }
 
 func beforeTest() {
-	conn.db.DropTableIfExists(&userObj{})
+	conn.db.DropTableIfExists(&models.User{})
 	conn.db.DropTableIfExists(&models.RefreshToken{})
 	conn.db.DropTableIfExists(&models.Instance{})
-	conn.db.CreateTable(&userObj{})
+	conn.db.CreateTable(&models.User{})
 	conn.db.CreateTable(&models.RefreshToken{})
 	conn.db.CreateTable(&models.Instance{})
 }
