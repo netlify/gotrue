@@ -212,7 +212,7 @@ func (ts *AdminTestSuite) TestAdminUserGet() {
 
 	// Setup request
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/user/%s", u.ID), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/users/%s", u.ID), nil)
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
 
@@ -244,7 +244,7 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 
 	// Setup request
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/admin/user/%s", u.ID), &buffer)
+	req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/admin/users/%s", u.ID), &buffer)
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
 
@@ -273,7 +273,7 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 
 	// Setup request
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/admin/user/%s", u.ID), nil)
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/admin/users/%s", u.ID), nil)
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
 
