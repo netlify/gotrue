@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
-	"github.com/imdario/mergo"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/pborman/uuid"
@@ -93,9 +92,7 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.BaseConfig != nil {
-		if err := mergo.MergeWithOverwrite(i.BaseConfig, params.BaseConfig); err != nil {
-			return internalServerError("Error merging instance configurations").WithInternalError(err)
-		}
+		i.BaseConfig = params.BaseConfig
 	}
 
 	if err := a.db.UpdateInstance(i); err != nil {
