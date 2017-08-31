@@ -195,8 +195,10 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 }
 
 func (a *API) redirectErrors(handler apiHandler, w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	config := a.getConfig(ctx)
 	log := getLogEntry(r)
-	errorID := getRequestID(r.Context())
+	errorID := getRequestID(ctx)
 	err := handler(w, r)
 	if err != nil {
 		q := url.Values{}
@@ -223,6 +225,6 @@ func (a *API) redirectErrors(handler apiHandler, w http.ResponseWriter, r *http.
 			q.Set("error", "server_error")
 			q.Set("error_description", err.Error())
 		}
-		http.Redirect(w, r, a.config.External.RedirectURL+"#"+q.Encode(), http.StatusFound)
+		http.Redirect(w, r, config.External.RedirectURL+"#"+q.Encode(), http.StatusFound)
 	}
 }
