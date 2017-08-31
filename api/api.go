@@ -151,7 +151,7 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 		return nil, nil, err
 	}
 
-	ctx, err := WithInstanceConfig(context.Background(), config, "")
+	ctx, err := WithInstanceConfig(context.Background(), globalConfig.SMTP, config, "")
 	if err != nil {
 		logrus.Fatalf("Error loading instance config: %+v", err)
 	}
@@ -167,10 +167,10 @@ func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
-func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanceID string) (context.Context, error) {
+func WithInstanceConfig(ctx context.Context, smtp conf.SMTPConfiguration, config *conf.Configuration, instanceID string) (context.Context, error) {
 	ctx = withConfig(ctx, config)
 
-	mailer := mailer.NewMailer(config)
+	mailer := mailer.NewMailer(smtp, config)
 	ctx = withMailer(ctx, mailer)
 	ctx = withInstanceID(ctx, instanceID)
 

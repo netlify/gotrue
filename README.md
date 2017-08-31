@@ -144,32 +144,35 @@ Sending email is not required, but highly recommended for password recovery.
 If enabled, you must provide the required values below.
 
 ```
-GOTRUE_MAILER_ADMIN_EMAIL=support@example.com
-GOTRUE_MAILER_PORT=25
+GOTRUE_SMTP_HOST=smtp.mandrillapp.com
+GOTRUE_SMTP_PORT=587
+GOTRUE_SMTP_USER=smtp-delivery@example.com
+GOTRUE_SMTP_PASS=correcthorsebatterystaple
+GOTRUE_SMTP_ADMIN_EMAIL=support@example.com
 GOTRUE_MAILER_SUBJECTS_CONFIRMATION="Please confirm"
 ```
 
-`MAILER_ADMIN_EMAIL` - `string` **required**
+`SMTP_ADMIN_EMAIL` - `string` **required**
 
 The `From` email address for all emails sent.
 
-`MAILER_HOST` - `string` **required**
+`SMTP_HOST` - `string` **required**
 
 The mail server hostname to send emails through.
 
-`MAILER_PORT` - `number` **required**
+`SMTP_PORT` - `number` **required**
 
 The port number to connect to the mail server on.
 
-`MAILER_USER` - `string`
+`SMTP_USER` - `string`
 
 If the mail server requires authentication, the username to use.
 
-`MAILER_PASS` - `string`
+`SMTP_PASS` - `string`
 
 If the mail server requires authentication, the password to use.
 
-`MAILER_MAX_FREQUENCY` - `number`
+`SMTP_MAX_FREQUENCY` - `number`
 
 Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email. The value is the number of seconds. Defaults to 900 (15 minutes).
 

@@ -26,7 +26,7 @@ func serve(globalConfig *conf.GlobalConfiguration, config *conf.Configuration) {
 	}
 	defer db.Close()
 
-	ctx, err := api.WithInstanceConfig(context.Background(), config, "")
+	ctx, err := api.WithInstanceConfig(context.Background(), globalConfig.SMTP, config, "")
 	if err != nil {
 		logrus.Fatalf("Error loading instance config: %+v", err)
 	}

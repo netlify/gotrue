@@ -94,7 +94,7 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 	logEntrySetField(r, "site_url", config.SiteURL)
 
 	ctx = withNetlifyID(ctx, claims.NetlifyID)
-	ctx, err = WithInstanceConfig(ctx, config, instanceID)
+	ctx, err = WithInstanceConfig(ctx, a.config.SMTP, config, instanceID)
 	if err != nil {
 		return nil, internalServerError("Error loading instance config").WithInternalError(err)
 	}

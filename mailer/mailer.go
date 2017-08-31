@@ -46,6 +46,7 @@ type TemplateMailer struct {
 	SiteURL        string
 	Config         *conf.Configuration
 	TemplateMailer *mailme.Mailer
+	MaxFrequency   time.Duration
 }
 
 type noopMailer struct {
@@ -58,21 +59,22 @@ type MailSubjects struct {
 }
 
 // NewMailer returns a new gotrue mailer
-func NewMailer(conf *conf.Configuration) Mailer {
-	if conf.Mailer.Host == "" {
+func NewMailer(smtp conf.SMTPConfiguration, instanceConfig *conf.Configuration) Mailer {
+	if smtp.Host == "" {
 		return &noopMailer{}
 	}
 
 	return &TemplateMailer{
-		SiteURL: conf.SiteURL,
-		Config:  conf,
+		SiteURL:      instanceConfig.SiteURL,
+		MaxFrequency: smtp.MaxFrequency,
+		Config:       instanceConfig,
 		TemplateMailer: &mailme.Mailer{
-			Host:    conf.Mailer.Host,
-			Port:    conf.Mailer.Port,
-			User:    conf.Mailer.User,
-			Pass:    conf.Mailer.Pass,
-			From:    conf.Mailer.AdminEmail,
-			BaseURL: conf.SiteURL,
+			Host:    smtp.Host,
+			Port:    smtp.Port,
+			User:    smtp.User,
+			Pass:    smtp.Pass,
+			From:    smtp.AdminEmail,
+			BaseURL: instanceConfig.SiteURL,
 		},
 	}
 }
@@ -93,7 +95,7 @@ func (m TemplateMailer) ValidateEmail(email string) error {
 
 // InviteMail sends a invite mail to a new user
 func (m *TemplateMailer) InviteMail(user *models.User) error {
-	if user.ConfirmationSentAt != nil && !user.ConfirmationSentAt.Add(m.Config.Mailer.MaxFrequency).Before(time.Now()) {
+	if user.ConfirmationSentAt != nil && !user.ConfirmationSentAt.Add(m.MaxFrequency).Before(time.Now()) {
 		return nil
 	}
 
@@ -120,7 +122,7 @@ func (m *TemplateMailer) InviteMail(user *models.User) error {
 
 // ConfirmationMail sends a signup confirmation mail to a new user
 func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
-	if user.ConfirmationSentAt != nil && !user.ConfirmationSentAt.Add(m.Config.Mailer.MaxFrequency).Before(time.Now()) {
+	if user.ConfirmationSentAt != nil && !user.ConfirmationSentAt.Add(m.MaxFrequency).Before(time.Now()) {
 		return nil
 	}
 

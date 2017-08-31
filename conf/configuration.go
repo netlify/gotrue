@@ -47,6 +47,7 @@ type GlobalConfiguration struct {
 	Logging           nconf.LoggingConfig `envconfig:"LOG"`
 	OperatorToken     string              `split_words:"true" required:"true"`
 	MultiInstanceMode bool
+	SMTP              SMTPConfiguration
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.
@@ -65,21 +66,24 @@ type ExternalProviderConfiguration struct {
 	RedirectURL string                     `json:"redirect_url"`
 }
 
+type SMTPConfiguration struct {
+	MaxFrequency time.Duration `json:"max_frequency" split_words:"true"`
+	Host         string        `json:"host"`
+	Port         int           `json:"port"`
+	User         string        `json:"user"`
+	Pass         string        `json:"pass"`
+	AdminEmail   string        `json:"admin_email" split_words:"true"`
+}
+
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
 	SiteURL string           `json:"site_url" split_words:"true" required:"true"`
 	JWT     JWTConfiguration `json:"jwt"`
 	Mailer  struct {
-		MaxFrequency time.Duration             `json:"max_frequency" split_words:"true"`
-		Autoconfirm  bool                      `json:"autoconfirm"`
-		Host         string                    `json:"host"`
-		Port         int                       `json:"port"`
-		User         string                    `json:"user"`
-		Pass         string                    `json:"pass"`
-		AdminEmail   string                    `json:"admin_email" split_words:"true"`
-		Subjects     EmailContentConfiguration `json:"subjects"`
-		Templates    EmailContentConfiguration `json:"templates"`
-		URLPaths     EmailContentConfiguration `json:"url_paths"`
+		Autoconfirm bool                      `json:"autoconfirm"`
+		Subjects    EmailContentConfiguration `json:"subjects"`
+		Templates   EmailContentConfiguration `json:"templates"`
+		URLPaths    EmailContentConfiguration `json:"url_paths"`
 	} `json:"mailer"`
 	External ExternalProviderConfiguration `json:"external"`
 }
@@ -108,8 +112,13 @@ func LoadGlobal(filename string) (*GlobalConfiguration, error) {
 	if err := envconfig.Process("gotrue", config); err != nil {
 		return nil, err
 	}
+
 	if _, err := nconf.ConfigureLogging(&config.Logging); err != nil {
 		return nil, err
+	}
+
+	if config.SMTP.MaxFrequency == 0 {
+		config.SMTP.MaxFrequency = 15 * time.Minute
 	}
 	return config, nil
 }
@@ -136,10 +145,6 @@ func (config *Configuration) ApplyDefaults() {
 
 	if config.JWT.Exp == 0 {
 		config.JWT.Exp = 3600
-	}
-
-	if config.Mailer.MaxFrequency == 0 {
-		config.Mailer.MaxFrequency = 15 * time.Minute
 	}
 
 	if config.Mailer.Templates.Invite == "" {
