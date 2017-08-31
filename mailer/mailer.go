@@ -64,16 +64,37 @@ func NewMailer(smtp conf.SMTPConfiguration, instanceConfig *conf.Configuration) 
 		return &noopMailer{}
 	}
 
+	smtpHost := instanceConfig.SMTP.Host
+	if smtpHost == "" {
+		smtpHost = smtp.Host
+	}
+	smtpPort := instanceConfig.SMTP.Port
+	if smtpPort == 0 {
+		smtpPort = smtp.Port
+	}
+	smtpUser := instanceConfig.SMTP.User
+	if smtpUser == "" {
+		smtpUser = smtp.User
+	}
+	smtpPass := instanceConfig.SMTP.Pass
+	if smtpPass == "" {
+		smtpPass = smtp.Pass
+	}
+	smtpAdminEmail := instanceConfig.SMTP.AdminEmail
+	if smtpAdminEmail == "" {
+		smtpAdminEmail = smtp.AdminEmail
+	}
+
 	return &TemplateMailer{
 		SiteURL:      instanceConfig.SiteURL,
 		MaxFrequency: smtp.MaxFrequency,
 		Config:       instanceConfig,
 		TemplateMailer: &mailme.Mailer{
-			Host:    smtp.Host,
-			Port:    smtp.Port,
-			User:    smtp.User,
-			Pass:    smtp.Pass,
-			From:    smtp.AdminEmail,
+			Host:    smtpHost,
+			Port:    smtpPort,
+			User:    smtpUser,
+			Pass:    smtpPass,
+			From:    smtpAdminEmail,
 			BaseURL: instanceConfig.SiteURL,
 		},
 	}

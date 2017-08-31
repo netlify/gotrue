@@ -77,8 +77,9 @@ type SMTPConfiguration struct {
 
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
-	SiteURL string           `json:"site_url" split_words:"true" required:"true"`
-	JWT     JWTConfiguration `json:"jwt"`
+	SiteURL string            `json:"site_url" split_words:"true" required:"true"`
+	JWT     JWTConfiguration  `json:"jwt"`
+	SMTP    SMTPConfiguration `json:"smtp"`
 	Mailer  struct {
 		Autoconfirm bool                      `json:"autoconfirm"`
 		Subjects    EmailContentConfiguration `json:"subjects"`
