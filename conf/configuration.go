@@ -69,7 +69,7 @@ type ExternalProviderConfiguration struct {
 type SMTPConfiguration struct {
 	MaxFrequency time.Duration `json:"max_frequency" split_words:"true"`
 	Host         string        `json:"host"`
-	Port         int           `json:"port"`
+	Port         int           `json:"port" envconfig:"PORT" default:"587"`
 	User         string        `json:"user"`
 	Pass         string        `json:"pass"`
 	AdminEmail   string        `json:"admin_email" split_words:"true"`
@@ -172,5 +172,9 @@ func (config *Configuration) ApplyDefaults() {
 	}
 	if config.Mailer.URLPaths.EmailChange == "" {
 		config.Mailer.URLPaths.EmailChange = "/"
+	}
+
+	if config.SMTP.MaxFrequency == 0 {
+		config.SMTP.MaxFrequency = 15 * time.Minute
 	}
 }
