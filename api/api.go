@@ -188,6 +188,11 @@ func (a *API) getConfig(ctx context.Context) *conf.Configuration {
 	if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
 		return nil
 	}
+
+	if extConfig.RedirectURL == "" {
+		extConfig.RedirectURL = config.SiteURL
+	}
+
 	config.External = extConfig
 	return config
 }
