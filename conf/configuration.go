@@ -69,7 +69,7 @@ type ExternalProviderConfiguration struct {
 type SMTPConfiguration struct {
 	MaxFrequency time.Duration `json:"max_frequency" split_words:"true"`
 	Host         string        `json:"host"`
-	Port         int           `json:"port" envconfig:"PORT" default:"587"`
+	Port         int           `json:"port" default:"587"`
 	User         string        `json:"user"`
 	Pass         string        `json:"pass"`
 	AdminEmail   string        `json:"admin_email" split_words:"true"`
