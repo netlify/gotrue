@@ -60,7 +60,7 @@ type MailSubjects struct {
 
 // NewMailer returns a new gotrue mailer
 func NewMailer(smtp conf.SMTPConfiguration, instanceConfig *conf.Configuration) Mailer {
-	if smtp.Host == "" {
+	if smtp.Host == "" && instanceConfig.SMTP.Host == "" {
 		return &noopMailer{}
 	}
 
@@ -84,10 +84,14 @@ func NewMailer(smtp conf.SMTPConfiguration, instanceConfig *conf.Configuration) 
 	if smtpAdminEmail == "" {
 		smtpAdminEmail = smtp.AdminEmail
 	}
+	smtpMaxFrequency := instanceConfig.SMTP.MaxFrequency
+	if smtpMaxFrequency == 0 {
+		smtpMaxFrequency = smtp.MaxFrequency
+	}
 
 	return &TemplateMailer{
 		SiteURL:      instanceConfig.SiteURL,
-		MaxFrequency: smtp.MaxFrequency,
+		MaxFrequency: smtpMaxFrequency,
 		Config:       instanceConfig,
 		TemplateMailer: &mailme.Mailer{
 			Host:    smtpHost,
