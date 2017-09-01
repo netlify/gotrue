@@ -107,15 +107,7 @@ func NewMailer(smtp conf.SMTPConfiguration, instanceConfig *conf.Configuration) 
 // ValidateEmail returns nil if the email is valid,
 // otherwise an error indicating the reason it is invalid
 func (m TemplateMailer) ValidateEmail(email string) error {
-	if err := checkmail.ValidateFormat(email); err != nil {
-		return err
-	}
-
-	if err := checkmail.ValidateHost(email); err != nil {
-		return err
-	}
-
-	return nil
+	return checkmail.ValidateFormat(email)
 }
 
 // InviteMail sends a invite mail to a new user
