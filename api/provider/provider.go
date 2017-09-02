@@ -14,6 +14,7 @@ const (
 
 type UserProvidedData struct {
 	Email    string
+	Verified bool
 	Metadata map[string]string
 }
 
@@ -22,7 +23,6 @@ type Provider interface {
 	AuthCodeURL(string, ...oauth2.AuthCodeOption) string
 	GetUserData(context.Context, *oauth2.Token) (*UserProvidedData, error)
 	GetOAuthToken(context.Context, string) (*oauth2.Token, error)
-	VerifiesEmails() bool
 }
 
 func makeRequest(ctx context.Context, tok *oauth2.Token, g *oauth2.Config, url string, dst interface{}) error {

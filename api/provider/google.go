@@ -9,6 +9,8 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
+const googleBaseURL = "https://www.googleapis.com/plus/v1/people/me"
+
 type googleProvider struct {
 	*oauth2.Config
 }
@@ -24,10 +26,6 @@ func NewGoogleProvider(ext conf.OAuthProviderConfiguration) Provider {
 			RedirectURL:  ext.RedirectURI,
 		},
 	}
-}
-
-func (g googleProvider) VerifiesEmails() bool {
-	return true
 }
 
 func (g googleProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {
@@ -46,23 +44,25 @@ func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 		} `json:"emails"`
 	}{}
 
-	if err := makeRequest(ctx, tok, g.Config, "https://www.googleapis.com/plus/v1/people/me", &u); err != nil {
+	if err := makeRequest(ctx, tok, g.Config, googleBaseURL, &u); err != nil {
 		return nil, err
 	}
 
-	var email string
-	if len(u.Emails) > 0 {
-		email = u.Emails[0].Value
-	}
-	if email == "" {
-		return nil, errors.New("No email address returned by Google")
-	}
-
-	return &UserProvidedData{
-		Email: email,
+	data := &UserProvidedData{
+		Verified: true,
 		Metadata: map[string]string{
 			nameKey:      u.Name,
 			avatarURLKey: u.Avatar.URL,
 		},
-	}, nil
+	}
+
+	if len(u.Emails) > 0 {
+		data.Email = u.Emails[0].Value
+	}
+
+	if data.Email == "" {
+		return nil, errors.New("Unable to find email with Google provider")
+	}
+
+	return data, nil
 }
