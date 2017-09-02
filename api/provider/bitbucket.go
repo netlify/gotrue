@@ -3,8 +3,6 @@ package provider
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
@@ -13,8 +11,26 @@ import (
 
 // Bitbucket
 
+const (
+	bitbucketBaseURL   = "https://api.bitbucket.org/2.0/user"
+	bitbucketEmailsURL = bitbucketBaseURL + "/emails"
+)
+
 type bitbucketProvider struct {
 	*oauth2.Config
+}
+
+type bitbucketUser struct {
+	Name   string `json:"display_name"`
+	Avatar struct {
+		Href string `json:"href"`
+	} `json:"avatar"`
+}
+
+type bitbucketEmail struct {
+	Email    string `json:"email"`
+	Primary  bool   `json:"is_primary"`
+	Verified bool   `json:"is_confirmed"`
 }
 
 // NewBitbucketProvider creates a Bitbucket account provider.
@@ -25,13 +41,9 @@ func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) Provider {
 			ClientSecret: ext.Secret,
 			Endpoint:     bitbucket.Endpoint,
 			RedirectURL:  ext.RedirectURI,
-			Scopes:       []string{"account"},
+			Scopes:       []string{"account", "email"},
 		},
 	}
-}
-
-func (g bitbucketProvider) VerifiesEmails() bool {
-	return false
 }
 
 func (g bitbucketProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {
@@ -39,51 +51,33 @@ func (g bitbucketProvider) GetOAuthToken(ctx context.Context, code string) (*oau
 }
 
 func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
-	u := struct {
-		User struct {
-			Username  string `json:"username"`
-			FirstName string `json:"first_name"`
-			LastName  string `json:"last_name"`
-			AvatarURL string `json:"avatar"`
-		}
-	}{}
-
-	if err := makeRequest(ctx, tok, g.Config, "https://api.bitbucket.org/1.0/user", &u); err != nil {
+	var u bitbucketUser
+	if err := makeRequest(ctx, tok, g.Config, bitbucketBaseURL, &u); err != nil {
 		return nil, err
 	}
 
-	email, err := getUserEmail(ctx, tok, g.Config, fmt.Sprintf("https://api.bitbucket.org/1.0/users/%s/emails", u.User.Username))
-	if err != nil {
-		return nil, err
-	}
-
-	name := strings.TrimSpace(strings.Join([]string{u.User.FirstName, u.User.LastName}, " "))
-
-	return &UserProvidedData{
-		Email: email,
+	data := &UserProvidedData{
 		Metadata: map[string]string{
-			nameKey:      name,
-			avatarURLKey: u.User.AvatarURL,
+			nameKey:      u.Name,
+			avatarURLKey: u.Avatar.Href,
 		},
-	}, nil
-}
-
-func getUserEmail(ctx context.Context, tok *oauth2.Token, g *oauth2.Config, url string) (string, error) {
-	emails := []struct {
-		Primary bool   `json:"primary"`
-		Email   string `json:"email"`
-	}{}
-
-	if err := makeRequest(ctx, tok, g, url, &emails); err != nil {
-		return "", err
 	}
 
-	for _, v := range emails {
-		if !v.Primary {
-			continue
+	var emails []*bitbucketEmail
+	if err := makeRequest(ctx, tok, g.Config, bitbucketEmailsURL, &emails); err != nil {
+		return nil, err
+	}
+
+	for _, e := range emails {
+		if e.Primary {
+			data.Email = e.Email
+			data.Verified = e.Verified
 		}
-		return v.Email, nil
 	}
 
-	return "", errors.New("No email address returned by API call to " + url)
+	if data.Email == "" {
+		return nil, errors.New("Unable to find email with Bitbucket provider")
+	}
+
+	return data, nil
 }

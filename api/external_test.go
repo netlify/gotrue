@@ -19,25 +19,18 @@ type ExternalTestSuite struct {
 	Config *conf.Configuration
 }
 
-func (ts *ExternalTestSuite) SetupSuite() {
-	ts.Require().NoError(os.Setenv("GOTRUE_DB_DATABASE_URL", createTestDB()))
-}
-
-func (ts *ExternalTestSuite) TearDownSuite() {
-	os.Remove(ts.API.config.DB.URL)
-}
-
 func (ts *ExternalTestSuite) SetupTest() {
+	ts.Require().NoError(os.Setenv("GOTRUE_DB_DATABASE_URL", createTestDB()))
+
 	api, config, err := NewAPIFromConfigFile("test.env", "v1")
 	ts.Require().NoError(err)
 	ts.API = api
 	ts.Config = config
 
-	// Cleanup existing user
-	u, err := ts.API.db.FindUserByEmailAndAudience("", "gitlab@example.com", config.JWT.Aud)
-	if err == nil {
-		ts.Require().NoError(api.db.DeleteUser(u))
-	}
+}
+
+func (ts *ExternalTestSuite) TearDownTest() {
+	os.Remove(ts.API.config.DB.URL)
 }
 
 // TestSignupExternalUnsupported tests API /authorize for an unsupported external provider
@@ -85,7 +78,7 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucket() {
 	ts.Equal(ts.Config.External.Bitbucket.RedirectURI, q.Get("redirect_uri"))
 	ts.Equal(ts.Config.External.Bitbucket.ClientID, q.Get("client_id"))
 	ts.Equal("code", q.Get("response_type"))
-	ts.Equal("account", q.Get("scope"))
+	ts.Equal("account email", q.Get("scope"))
 
 	claims := ExternalProviderClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
@@ -110,7 +103,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab() {
 	ts.Equal(ts.Config.External.Gitlab.RedirectURI, q.Get("redirect_uri"))
 	ts.Equal(ts.Config.External.Gitlab.ClientID, q.Get("client_id"))
 	ts.Equal("code", q.Get("response_type"))
-	ts.Equal("", q.Get("scope"))
+	ts.Equal("user:email", q.Get("scope"))
 
 	claims := ExternalProviderClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
@@ -164,7 +157,10 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 		case "/api/v4/user":
 			userCount++
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, `{"email":"gitlab@example.com","name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`)
+			fmt.Fprint(w, `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`)
+		case "/api/v4/user/emails":
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `[{"email":"gitlab@example.com"}]`)
 		default:
 			w.WriteHeader(500)
 			ts.Fail("unknown gitlab oauth call %s", r.URL.Path)
@@ -215,6 +211,79 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 	user, err := ts.API.db.FindUserByEmailAndAudience("", "gitlab@example.com", ts.Config.JWT.Aud)
 	ts.Require().NoError(err)
 	ts.Equal("Gitlab Test", user.UserMetaData["full_name"])
+	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalGitHub_AuthorizationCode() {
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login/oauth/access_token":
+			tokenCount++
+			ts.Equal(code, r.FormValue("code"))
+			ts.Equal("authorization_code", r.FormValue("grant_type"))
+			ts.Equal(ts.Config.External.Github.RedirectURI, r.FormValue("redirect_uri"))
+
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `{"access_token":"github_token","expires_in":100000}`)
+		case "/api/v3/user":
+			userCount++
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `{"name":"GitHub Test","avatar_url":"http://example.com/avatar"}`)
+		case "/api/v3/user/emails":
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `[{"email":"github@example.com", "primary": true, "validated": true}]`)
+		default:
+			w.WriteHeader(500)
+			ts.Fail("unknown github oauth call %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	ts.Config.External.Github.URL = server.URL
+
+	// get redirect url w/ state
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=github", nil)
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusFound, w.Code)
+	u, err := url.Parse(w.Header().Get("Location"))
+	ts.Require().NoError(err, "redirect url parse failed")
+	q := u.Query()
+	state := q.Get("state")
+
+	// auth server callback
+	testURL, err := url.Parse("http://localhost/callback")
+	ts.Require().NoError(err)
+	v := testURL.Query()
+	v.Set("code", code)
+	v.Set("state", state)
+	testURL.RawQuery = v.Encode()
+	req = httptest.NewRequest(http.MethodGet, testURL.String(), nil)
+	w = httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusFound, w.Code)
+	u, err = url.Parse(w.Header().Get("Location"))
+	ts.Require().NoError(err, "redirect url parse failed")
+
+	// ensure redirect has #access_token=...
+	v, err = url.ParseQuery(u.Fragment)
+	ts.Require().NoError(err)
+	ts.Require().Empty(v.Get("error_description"))
+	ts.Require().Empty(v.Get("error"))
+
+	ts.NotEmpty(v.Get("access_token"))
+	ts.NotEmpty(v.Get("refresh_token"))
+	ts.NotEmpty(v.Get("expires_in"))
+	ts.Equal("bearer", v.Get("token_type"))
+
+	ts.Equal(1, tokenCount)
+	ts.Equal(1, userCount)
+
+	// ensure user has been created with metadata
+	user, err := ts.API.db.FindUserByEmailAndAudience("", "github@example.com", ts.Config.JWT.Aud)
+	ts.Require().NoError(err)
+	ts.Equal("GitHub Test", user.UserMetaData["full_name"])
 	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
 }
 

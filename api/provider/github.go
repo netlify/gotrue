@@ -2,33 +2,57 @@ package provider
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/github"
 )
 
 // Github
 
+const (
+	defaultGitHubAuthBase = "github.com"
+	defaultGitHubApiBase  = "api.github.com"
+)
+
 type githubProvider struct {
 	*oauth2.Config
+	APIHost string
+}
+
+type githubUser struct {
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+type githubUserEmail struct {
+	Email    string `json:"email"`
+	Primary  bool   `json:"primary"`
+	Verified bool   `json:"verified"`
 }
 
 // NewGithubProvider creates a Github account provider.
 func NewGithubProvider(ext conf.OAuthProviderConfiguration) Provider {
+	authHost := chooseHost(ext.URL, defaultGitHubAuthBase)
+	apiHost := chooseHost(ext.URL, defaultGitHubApiBase)
+	if !strings.HasSuffix(apiHost, defaultGitHubApiBase) {
+		apiHost += "/api/v3"
+	}
+
 	return &githubProvider{
-		&oauth2.Config{
+		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
-			Endpoint:     github.Endpoint,
-			RedirectURL:  ext.RedirectURI,
-			Scopes:       []string{"user:email"},
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  authHost + "/login/oauth/authorize",
+				TokenURL: authHost + "/login/oauth/access_token",
+			},
+			RedirectURL: ext.RedirectURI,
+			Scopes:      []string{"user:email"},
 		},
+		APIHost: apiHost,
 	}
-}
-
-func (g githubProvider) VerifiesEmails() bool {
-	return true
 }
 
 func (g githubProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {
@@ -36,22 +60,34 @@ func (g githubProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2
 }
 
 func (g githubProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
-	u := struct {
-		Email     string `json:"email"`
-		Username  string `json:"username"`
-		Name      string `json:"name"`
-		AvatarURL string `json:"avatar_url"`
-	}{}
-
-	if err := makeRequest(ctx, tok, g.Config, "https://api.github.com/user", &u); err != nil {
+	var u githubUser
+	if err := makeRequest(ctx, tok, g.Config, g.APIHost+"/user", &u); err != nil {
 		return nil, err
 	}
 
-	return &UserProvidedData{
-		Email: u.Email,
+	data := &UserProvidedData{
 		Metadata: map[string]string{
 			nameKey:      u.Name,
 			avatarURLKey: u.AvatarURL,
 		},
-	}, nil
+	}
+
+	var emails []*githubUserEmail
+	if err := makeRequest(ctx, tok, g.Config, g.APIHost+"/user/emails", &emails); err != nil {
+		return nil, err
+	}
+
+	for _, e := range emails {
+		if e.Primary {
+			data.Email = e.Email
+			data.Verified = e.Verified
+			break
+		}
+	}
+
+	if data.Email == "" {
+		return nil, errors.New("Unable to find email with GitHub provider")
+	}
+
+	return data, nil
 }

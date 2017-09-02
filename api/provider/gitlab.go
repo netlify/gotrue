@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
@@ -9,14 +10,16 @@ import (
 
 // Gitlab
 
+const defaultGitLabAuthBase = "gitlab.com"
+
 type gitlabProvider struct {
 	*oauth2.Config
-	External conf.OAuthProviderConfiguration
+	Host string
 }
 
-func defaultBase(base string) string {
+func chooseHost(base, defaultHost string) string {
 	if base == "" {
-		return "https://gitlab.com"
+		return "https://" + defaultHost
 	}
 
 	baseLen := len(base)
@@ -29,23 +32,20 @@ func defaultBase(base string) string {
 
 // NewGitlabProvider creates a Gitlab account provider.
 func NewGitlabProvider(ext conf.OAuthProviderConfiguration) Provider {
-	base := defaultBase(ext.URL)
+	host := chooseHost(ext.URL, defaultGitLabAuthBase)
 	return &gitlabProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint: oauth2.Endpoint{
-				AuthURL:  base + "/oauth/authorize",
-				TokenURL: base + "/oauth/token",
+				AuthURL:  host + "/oauth/authorize",
+				TokenURL: host + "/oauth/token",
 			},
 			RedirectURL: ext.RedirectURI,
+			Scopes:      []string{"user:email"},
 		},
-		External: ext,
+		Host: host,
 	}
-}
-
-func (g gitlabProvider) VerifiesEmails() bool {
-	return false
 }
 
 func (g gitlabProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {
@@ -53,22 +53,31 @@ func (g gitlabProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2
 }
 
 func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
-	user := struct {
-		Email     string `json:"email"`
-		Name      string `json:"name"`
-		AvatarURL string `json:"avatar_url"`
-	}{}
-	base := defaultBase(g.External.URL)
+	var u githubUser
 
-	if err := makeRequest(ctx, tok, g.Config, base+"/api/v4/user", &user); err != nil {
+	if err := makeRequest(ctx, tok, g.Config, g.Host+"/api/v4/user", &u); err != nil {
 		return nil, err
 	}
 
-	return &UserProvidedData{
-		Email: user.Email,
+	data := &UserProvidedData{
 		Metadata: map[string]string{
-			nameKey:      user.Name,
-			avatarURLKey: user.AvatarURL,
+			nameKey:      u.Name,
+			avatarURLKey: u.AvatarURL,
 		},
-	}, nil
+	}
+
+	var emails []*githubUserEmail
+	if err := makeRequest(ctx, tok, g.Config, g.Host+"/api/v4/user/emails", &emails); err != nil {
+		return nil, err
+	}
+
+	if len(emails) > 0 {
+		data.Email = emails[0].Email
+	}
+
+	if data.Email == "" {
+		return nil, errors.New("Unable to find email with GitLab provider")
+	}
+
+	return data, nil
 }
