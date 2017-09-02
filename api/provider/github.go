@@ -34,7 +34,11 @@ type githubUserEmail struct {
 }
 
 // NewGithubProvider creates a Github account provider.
-func NewGithubProvider(ext conf.OAuthProviderConfiguration) Provider {
+func NewGithubProvider(ext conf.OAuthProviderConfiguration) (Provider, error) {
+	if err := ext.Validate(); err != nil {
+		return nil, err
+	}
+
 	authHost := chooseHost(ext.URL, defaultGitHubAuthBase)
 	apiHost := chooseHost(ext.URL, defaultGitHubApiBase)
 	if !strings.HasSuffix(apiHost, defaultGitHubApiBase) {
@@ -53,7 +57,7 @@ func NewGithubProvider(ext conf.OAuthProviderConfiguration) Provider {
 			Scopes:      []string{"user:email"},
 		},
 		APIHost: apiHost,
-	}
+	}, nil
 }
 
 func (g githubProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
