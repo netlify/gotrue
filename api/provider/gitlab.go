@@ -31,7 +31,11 @@ func chooseHost(base, defaultHost string) string {
 }
 
 // NewGitlabProvider creates a Gitlab account provider.
-func NewGitlabProvider(ext conf.OAuthProviderConfiguration) Provider {
+func NewGitlabProvider(ext conf.OAuthProviderConfiguration) (Provider, error) {
+	if err := ext.Validate(); err != nil {
+		return nil, err
+	}
+
 	host := chooseHost(ext.URL, defaultGitLabAuthBase)
 	return &gitlabProvider{
 		Config: &oauth2.Config{
@@ -45,7 +49,7 @@ func NewGitlabProvider(ext conf.OAuthProviderConfiguration) Provider {
 			Scopes:      []string{"read_user"},
 		},
 		Host: host,
-	}
+	}, nil
 }
 
 func (g gitlabProvider) GetOAuthToken(code string) (*oauth2.Token, error) {

@@ -12,6 +12,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
+	"github.com/sirupsen/logrus"
 )
 
 type ExternalProviderClaims struct {
@@ -32,7 +33,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 	providerType := r.URL.Query().Get("provider")
 	provider, err := a.Provider(ctx, providerType)
 	if err != nil {
-		return badRequestError("Unsupported provider: %+v", err)
+		return badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
 	}
 
 	log := getLogEntry(r)
@@ -82,8 +83,14 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 	providerType := getExternalProviderType(ctx)
 	provider, err := a.Provider(ctx, providerType)
 	if err != nil {
-		return badRequestError("Unsupported provider: %+v", err)
+		return badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
 	}
+
+	log := getLogEntry(r)
+	log.WithFields(logrus.Fields{
+		"provider": providerType,
+		"code":     oauthCode,
+	}).Debug("Exchanging oauth code")
 
 	tok, err := provider.GetOAuthToken(oauthCode)
 	if err != nil {
@@ -185,13 +192,13 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 
 	switch name {
 	case "bitbucket":
-		return provider.NewBitbucketProvider(config.External.Bitbucket), nil
+		return provider.NewBitbucketProvider(config.External.Bitbucket)
 	case "github":
-		return provider.NewGithubProvider(config.External.Github), nil
+		return provider.NewGithubProvider(config.External.Github)
 	case "gitlab":
-		return provider.NewGitlabProvider(config.External.Gitlab), nil
+		return provider.NewGitlabProvider(config.External.Gitlab)
 	case "google":
-		return provider.NewGoogleProvider(config.External.Google), nil
+		return provider.NewGoogleProvider(config.External.Google)
 	default:
 		return nil, fmt.Errorf("Provider %s could not be found", name)
 	}

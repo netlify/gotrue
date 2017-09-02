@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -177,4 +178,17 @@ func (config *Configuration) ApplyDefaults() {
 	if config.SMTP.MaxFrequency == 0 {
 		config.SMTP.MaxFrequency = 15 * time.Minute
 	}
+}
+
+func (o *OAuthProviderConfiguration) Validate() error {
+	if o.ClientID == "" {
+		return errors.New("Missing Oauth client ID")
+	}
+	if o.Secret == "" {
+		return errors.New("Missing Oauth secret")
+	}
+	if o.RedirectURI == "" {
+		return errors.New("Missing redirect URI")
+	}
+	return nil
 }

@@ -23,7 +23,11 @@ type googleUser struct {
 }
 
 // NewGoogleProvider creates a Google account provider.
-func NewGoogleProvider(ext conf.OAuthProviderConfiguration) Provider {
+func NewGoogleProvider(ext conf.OAuthProviderConfiguration) (Provider, error) {
+	if err := ext.Validate(); err != nil {
+		return nil, err
+	}
+
 	return &googleProvider{
 		&oauth2.Config{
 			ClientID:     ext.ClientID,
@@ -34,7 +38,7 @@ func NewGoogleProvider(ext conf.OAuthProviderConfiguration) Provider {
 			},
 			RedirectURL: ext.RedirectURI,
 		},
-	}
+	}, nil
 }
 
 func (g googleProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
