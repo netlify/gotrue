@@ -21,7 +21,7 @@ func sort(r *http.Request, allowedFields map[string]bool, defaultSort []models.S
 			if _, ok := allowedFields[field]; !ok {
 				return nil, fmt.Errorf("bad field for sort '%v'", field)
 			}
-			dir := models.Ascending
+			dir := models.Descending
 			if len(parts) == 2 {
 				switch strings.ToLower(parts[1]) {
 				case string(models.Ascending):
