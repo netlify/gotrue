@@ -84,11 +84,8 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		return badRequestError("Unsupported provider: %+v", err)
 	}
-	params := &SignupParams{
-		Provider: providerType,
-	}
 
-	tok, err := provider.GetOAuthToken(ctx, oauthCode)
+	tok, err := provider.GetOAuthToken(oauthCode)
 	if err != nil {
 		return internalServerError("Unable to exchange external code").WithInternalError(err)
 	}
@@ -99,7 +96,10 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		return internalServerError("Error getting user email from external provider").WithInternalError(err)
 	}
 
-	params.Email = userData.Email
+	params := &SignupParams{
+		Provider: providerType,
+		Email:    userData.Email,
+	}
 	if params.Data == nil {
 		params.Data = make(map[string]interface{})
 	}

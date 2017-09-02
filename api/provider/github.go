@@ -56,8 +56,8 @@ func NewGithubProvider(ext conf.OAuthProviderConfiguration) Provider {
 	}
 }
 
-func (g githubProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {
-	return g.Exchange(ctx, code)
+func (g githubProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
+	return g.Exchange(oauth2.NoContext, code)
 }
 
 func (g githubProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
