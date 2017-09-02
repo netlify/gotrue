@@ -9,21 +9,17 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-const googleBaseURL = "https://www.googleapis.com/plus/v1/people/me"
+const googleBaseURL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 type googleProvider struct {
 	*oauth2.Config
 }
 
 type googleUser struct {
-	Name   string `json:"displayName"`
-	Avatar struct {
-		URL string `json:"url"`
-	} `json:"image"`
-	Emails []struct {
-		Type  string `json:"type"`
-		Value string `json:"value"`
-	} `json:"emails"`
+	Name          string `json:"displayName"`
+	AvatarURL     string `json:"picture"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
 }
 
 // NewGoogleProvider creates a Google account provider.
@@ -34,7 +30,6 @@ func NewGoogleProvider(ext conf.OAuthProviderConfiguration) Provider {
 			ClientSecret: ext.Secret,
 			Endpoint:     google.Endpoint,
 			Scopes: []string{
-				"https://www.googleapis.com/auth/userinfo.profile",
 				"https://www.googleapis.com/auth/userinfo.email",
 			},
 			RedirectURL: ext.RedirectURI,
@@ -53,15 +48,12 @@ func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 	}
 
 	data := &UserProvidedData{
-		Verified: true,
+		Email:    u.Email,
+		Verified: u.EmailVerified,
 		Metadata: map[string]string{
 			nameKey:      u.Name,
-			avatarURLKey: u.Avatar.URL,
+			avatarURLKey: u.AvatarURL,
 		},
-	}
-
-	if len(u.Emails) > 0 {
-		data.Email = u.Emails[0].Value
 	}
 
 	if data.Email == "" {
