@@ -103,7 +103,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab() {
 	ts.Equal(ts.Config.External.Gitlab.RedirectURI, q.Get("redirect_uri"))
 	ts.Equal(ts.Config.External.Gitlab.ClientID, q.Get("client_id"))
 	ts.Equal("code", q.Get("response_type"))
-	ts.Equal("user:email", q.Get("scope"))
+	ts.Equal("read_user", q.Get("scope"))
 
 	claims := ExternalProviderClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}

@@ -42,7 +42,7 @@ func NewGitlabProvider(ext conf.OAuthProviderConfiguration) Provider {
 				TokenURL: host + "/oauth/token",
 			},
 			RedirectURL: ext.RedirectURI,
-			Scopes:      []string{"user:email"},
+			Scopes:      []string{"read_user"},
 		},
 		Host: host,
 	}
