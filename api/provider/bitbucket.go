@@ -33,6 +33,10 @@ type bitbucketEmail struct {
 	Verified bool   `json:"is_confirmed"`
 }
 
+type bitbucketEmails struct {
+	Values []bitbucketEmail `json:"values"`
+}
+
 // NewBitbucketProvider creates a Bitbucket account provider.
 func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) Provider {
 	return &bitbucketProvider{
@@ -63,15 +67,17 @@ func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (
 		},
 	}
 
-	var emails []*bitbucketEmail
+	var emails bitbucketEmails
 	if err := makeRequest(ctx, tok, g.Config, bitbucketEmailsURL, &emails); err != nil {
 		return nil, err
 	}
 
-	for _, e := range emails {
-		if e.Primary {
-			data.Email = e.Email
-			data.Verified = e.Verified
+	if len(emails.Values) > 0 {
+		for _, e := range emails.Values {
+			if e.Primary {
+				data.Email = e.Email
+				data.Verified = e.Verified
+			}
 		}
 	}
 

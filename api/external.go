@@ -35,6 +35,9 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		return badRequestError("Unsupported provider: %+v", err)
 	}
 
+	log := getLogEntry(r)
+	log.WithField("provider", providerType).Info("Redirecting to external provider")
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ExternalProviderClaims{
 		NetlifyMicroserviceClaims: NetlifyMicroserviceClaims{
 			StandardClaims: jwt.StandardClaims{

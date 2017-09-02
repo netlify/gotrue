@@ -22,8 +22,11 @@ func NewGoogleProvider(ext conf.OAuthProviderConfiguration) Provider {
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint:     google.Endpoint,
-			Scopes:       []string{"profile", "email"},
-			RedirectURL:  ext.RedirectURI,
+			Scopes: []string{
+				"https://www.googleapis.com/auth/userinfo.profile",
+				"https://www.googleapis.com/auth/userinfo.email",
+			},
+			RedirectURL: ext.RedirectURI,
 		},
 	}
 }
