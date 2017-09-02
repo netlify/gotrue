@@ -22,7 +22,7 @@ type UserProvidedData struct {
 type Provider interface {
 	AuthCodeURL(string, ...oauth2.AuthCodeOption) string
 	GetUserData(context.Context, *oauth2.Token) (*UserProvidedData, error)
-	GetOAuthToken(context.Context, string) (*oauth2.Token, error)
+	GetOAuthToken(string) (*oauth2.Token, error)
 }
 
 func makeRequest(ctx context.Context, tok *oauth2.Token, g *oauth2.Config, url string, dst interface{}) error {

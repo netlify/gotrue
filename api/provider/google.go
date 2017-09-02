@@ -15,6 +15,17 @@ type googleProvider struct {
 	*oauth2.Config
 }
 
+type googleUser struct {
+	Name   string `json:"displayName"`
+	Avatar struct {
+		URL string `json:"url"`
+	} `json:"image"`
+	Emails []struct {
+		Type  string `json:"type"`
+		Value string `json:"value"`
+	} `json:"emails"`
+}
+
 // NewGoogleProvider creates a Google account provider.
 func NewGoogleProvider(ext conf.OAuthProviderConfiguration) Provider {
 	return &googleProvider{
@@ -31,22 +42,12 @@ func NewGoogleProvider(ext conf.OAuthProviderConfiguration) Provider {
 	}
 }
 
-func (g googleProvider) GetOAuthToken(ctx context.Context, code string) (*oauth2.Token, error) {
-	return g.Exchange(ctx, code)
+func (g googleProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
+	return g.Exchange(oauth2.NoContext, code)
 }
 
 func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
-	u := struct {
-		Name   string `json:"displayName"`
-		Avatar struct {
-			URL string `json:"url"`
-		} `json:"image"`
-		Emails []struct {
-			Type  string `json:"type"`
-			Value string `json:"value"`
-		} `json:"emails"`
-	}{}
-
+	var u googleUser
 	if err := makeRequest(ctx, tok, g.Config, googleBaseURL, &u); err != nil {
 		return nil, err
 	}
