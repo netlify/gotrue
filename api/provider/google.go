@@ -16,7 +16,7 @@ type googleProvider struct {
 }
 
 type googleUser struct {
-	Name          string `json:"displayName"`
+	Name          string `json:"name"`
 	AvatarURL     string `json:"picture"`
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"email_verified"`
