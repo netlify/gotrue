@@ -90,7 +90,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 
 	tok, err := provider.GetOAuthToken(ctx, oauthCode)
 	if err != nil {
-		return internalServerError("Unable to exchange external code")
+		return internalServerError("Unable to exchange external code").WithInternalError(err)
 	}
 
 	aud := a.requestAud(ctx, r)
