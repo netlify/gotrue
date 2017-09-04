@@ -148,7 +148,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		}
 		if user == nil {
 			if config.DisableSignups {
-				return unauthorizedError("Signups not allowed for this instance")
+				return forbiddenError("Signups not allowed for this instance")
 			}
 
 			user, err = a.signupNewUser(ctx, params, aud)

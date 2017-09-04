@@ -23,7 +23,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	config := a.getConfig(ctx)
 
 	if config.DisableSignups {
-		return unauthorizedError("Signups not allowed for this instance")
+		return forbiddenError("Signups not allowed for this instance")
 	}
 
 	instanceID := getInstanceID(ctx)
