@@ -26,6 +26,10 @@ The base URL your site is located at. Currently used in combination with other s
 The shared secret with an operator (usually Netlify) for this microservice. Used to verify requests have been proxied through the operator and
 the payload values can be trusted.
 
+`DISABLE_SIGNUPS` - `bool`
+
+When signup is enabled the only way to create new users is through invites.
+
 ### API
 
 ```
@@ -121,6 +125,10 @@ GOTRUE_EXTERNAL_GITHUB_SECRET=clientsecretvaluessssh
 ```
 
 No external providers are required, but you must provide the required values if you choose to enable any.
+
+`EXTERNAL_X_ENABLED` - `bool`
+
+Whether this external provider is enabled or not
 
 `EXTERNAL_X_CLIENT_ID` - `string` **required**
 
@@ -268,6 +276,23 @@ Default Content (if template is unavailable):
 ## Endpoints
 
 GoTrue exposes the following endpoints:
+
+* **GET /settings**
+
+  Returns the publicly available settings for this gotrue instance.
+
+  ```json
+  {
+    "external": {
+      "bitbucket": true,
+      "github": true,
+      "gitlab": true,
+      "google": true
+    },
+    "signup_enabled": true,
+    "autoconfirm": false
+  }
+  ```
 
 * **POST /signup**
 

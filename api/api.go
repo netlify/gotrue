@@ -76,6 +76,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 			r.Use(api.loadInstanceConfig)
 		}
 
+		r.Get("/settings", api.Settings)
 		r.Get("/authorize", api.ExternalProviderRedirect)
 		r.Post("/signup", api.Signup)
 		r.Post("/invite", api.Invite)

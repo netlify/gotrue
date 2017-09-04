@@ -21,6 +21,11 @@ type SignupParams struct {
 func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
+
+	if !config.SignupEnabled {
+		return forbiddenError("Signups not allowed for this instance")
+	}
+
 	instanceID := getInstanceID(ctx)
 	params := &SignupParams{}
 
@@ -78,6 +83,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud string) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
+
 	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		return nil, internalServerError("Database error creating user").WithInternalError(err)

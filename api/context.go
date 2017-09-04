@@ -20,6 +20,7 @@ const (
 	requestIDKey            = contextKey("request_id")
 	configKey               = contextKey("config")
 	mailerKey               = contextKey("mailer")
+	inviteTokenKey          = contextKey("invite_token")
 	instanceIDKey           = contextKey("instance_id")
 	instanceKey             = contextKey("instance")
 	signatureKey            = contextKey("signature")
@@ -74,6 +75,14 @@ func withConfig(ctx context.Context, config *conf.Configuration) context.Context
 // withMailer adds the mailer to the context.
 func withMailer(ctx context.Context, mailer mailer.Mailer) context.Context {
 	return context.WithValue(ctx, mailerKey, mailer)
+}
+
+func getConfig(ctx context.Context) *conf.Configuration {
+	obj := ctx.Value(configKey)
+	if obj == nil {
+		return nil
+	}
+	return obj.(*conf.Configuration)
 }
 
 // getMailer reads the mailer from the context.
@@ -150,6 +159,19 @@ func withNetlifyID(ctx context.Context, id string) context.Context {
 // getNetlifyID reads the request ID from the context.
 func getNetlifyID(ctx context.Context) string {
 	obj := ctx.Value(netlifyIDKey)
+	if obj == nil {
+		return ""
+	}
+
+	return obj.(string)
+}
+
+func withInviteToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, inviteTokenKey, token)
+}
+
+func getInviteToken(ctx context.Context) string {
+	obj := ctx.Value(inviteTokenKey)
 	if obj == nil {
 		return ""
 	}

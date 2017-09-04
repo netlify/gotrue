@@ -71,6 +71,10 @@ func unauthorizedError(fmtString string, args ...interface{}) *HTTPError {
 	return httpError(http.StatusUnauthorized, fmtString, args...)
 }
 
+func forbiddenError(fmtString string, args ...interface{}) *HTTPError {
+	return httpError(http.StatusForbidden, fmtString, args...)
+}
+
 func unprocessableEntityError(fmtString string, args ...interface{}) *HTTPError {
 	return httpError(http.StatusUnprocessableEntity, fmtString, args...)
 }
