@@ -16,9 +16,9 @@ type Settings struct {
 }
 
 func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
-	config := getConfig(r.Context())
+	config := a.getConfig(r.Context())
 
-	return sendJSON(w, 200, &Settings{
+	return sendJSON(w, http.StatusOK, &Settings{
 		ExternalProviders: ExternalProviderSettings{
 			BitBucket: config.External.Bitbucket.Enabled,
 			GitHub:    config.External.Github.Enabled,
