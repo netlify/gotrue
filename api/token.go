@@ -62,8 +62,6 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return oauthError("invalid_grant", "Invalid Password")
 	}
 
-	now := time.Now()
-	user.LastSignInAt = &now
 	return a.sendRefreshToken(ctx, user, w)
 }
 
@@ -125,6 +123,10 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, secret stri
 
 func (a *API) issueRefreshToken(ctx context.Context, user *models.User) (*AccessTokenResponse, error) {
 	config := a.getConfig(ctx)
+
+	now := time.Now()
+	user.LastSignInAt = &now
+
 	refreshToken, err := a.db.GrantAuthenticatedUser(user)
 	if err != nil {
 		return nil, internalServerError("Database error granting user").WithInternalError(err)
