@@ -26,9 +26,9 @@ The base URL your site is located at. Currently used in combination with other s
 The shared secret with an operator (usually Netlify) for this microservice. Used to verify requests have been proxied through the operator and
 the payload values can be trusted.
 
-`DISABLE_SIGNUPS` - `bool`
+`SIGNUP_ENABLED` - `bool`
 
-When signup is enabled the only way to create new users is through invites.
+When signup is disabled the only way to create new users is through invites. Defaults to `true`, all signups enabled.
 
 ### API
 
