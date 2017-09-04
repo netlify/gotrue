@@ -22,7 +22,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
 
-	if config.DisableSignups {
+	if !config.SignupEnabled {
 		return forbiddenError("Signups not allowed for this instance")
 	}
 

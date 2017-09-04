@@ -25,7 +25,7 @@ func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
 			GitLab:    config.External.Gitlab.Enabled,
 			Google:    config.External.Google.Enabled,
 		},
-		SignupEnabled: !config.DisableSignups,
+		SignupEnabled: config.SignupEnabled,
 		Autoconfirm:   config.Mailer.Autoconfirm,
 	})
 }

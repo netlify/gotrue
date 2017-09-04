@@ -147,7 +147,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			return internalServerError("Error checking for duplicate users").WithInternalError(err)
 		}
 		if user == nil {
-			if config.DisableSignups {
+			if !config.SignupEnabled {
 				return forbiddenError("Signups not allowed for this instance")
 			}
 
