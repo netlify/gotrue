@@ -17,7 +17,8 @@ import (
 
 type ExternalProviderClaims struct {
 	NetlifyMicroserviceClaims
-	Provider string `json:"provider"`
+	Provider    string `json:"provider"`
+	InviteToken string `json:"invite_token,omitempty"`
 }
 
 // SignupParams are the parameters the Signup endpoint accepts
@@ -36,6 +37,19 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		return badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
 	}
 
+	inviteToken := r.URL.Query().Get("invite_token")
+	if inviteToken != "" {
+		_, userErr := a.db.FindUserByConfirmationToken(inviteToken)
+		if userErr != nil {
+			if models.IsNotFoundError(userErr) {
+				return notFoundError(userErr.Error())
+			}
+			return internalServerError("Database error finding user").WithInternalError(userErr)
+		}
+	} else if config.DisableSignups {
+		return unauthorizedError("Signups not allowed for this instance")
+	}
+
 	log := getLogEntry(r)
 	log.WithField("provider", providerType).Info("Redirecting to external provider")
 
@@ -48,7 +62,8 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 			InstanceID: getInstanceID(ctx),
 			NetlifyID:  getNetlifyID(ctx),
 		},
-		Provider: providerType,
+		Provider:    providerType,
+		InviteToken: inviteToken,
 	})
 	tokenString, err := token.SignedString([]byte(a.config.OperatorToken))
 	if err != nil {
@@ -103,48 +118,62 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		return internalServerError("Error getting user email from external provider").WithInternalError(err)
 	}
 
-	params := &SignupParams{
-		Provider: providerType,
-		Email:    userData.Email,
-	}
-	if params.Data == nil {
-		params.Data = make(map[string]interface{})
-	}
-	for k, v := range userData.Metadata {
-		if v != "" {
-			params.Data[k] = v
-		}
-	}
-
-	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
-	if err != nil && !models.IsNotFoundError(err) {
-		return internalServerError("Error checking for duplicate users").WithInternalError(err)
-	}
-	if user == nil {
-		user, err = a.signupNewUser(ctx, params, aud)
+	var user *models.User
+	inviteToken := getInviteToken(ctx)
+	if inviteToken != "" {
+		user, err = a.db.FindUserByConfirmationToken(inviteToken)
 		if err != nil {
-			return err
-		}
-	}
-
-	if !user.IsConfirmed() {
-		if !userData.Verified && !config.Mailer.Autoconfirm {
-			mailer := getMailer(ctx)
-			if err := mailer.ConfirmationMail(user); err != nil {
-				return internalServerError("Error sending confirmation mail").WithInternalError(err)
+			if models.IsNotFoundError(err) {
+				return notFoundError(err.Error())
 			}
-			now := time.Now()
-			user.ConfirmationSentAt = &now
-
-			if err := a.db.UpdateUser(user); err != nil {
-				return internalServerError("Error updating user in database").WithInternalError(err)
-			}
-			// email must be verified to issue a token
-			http.Redirect(w, r, config.External.RedirectURL, http.StatusFound)
+			return internalServerError("Database error finding user").WithInternalError(err)
 		}
 
-		// fall through to auto-confirm and issue token
 		user.Confirm()
+	} else {
+		params := &SignupParams{
+			Provider: providerType,
+			Email:    userData.Email,
+		}
+		if params.Data == nil {
+			params.Data = make(map[string]interface{})
+		}
+		for k, v := range userData.Metadata {
+			if v != "" {
+				params.Data[k] = v
+			}
+		}
+
+		user, err = a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
+		if err != nil && !models.IsNotFoundError(err) {
+			return internalServerError("Error checking for duplicate users").WithInternalError(err)
+		}
+		if user == nil {
+			user, err = a.signupNewUser(ctx, params, aud)
+			if err != nil {
+				return err
+			}
+		}
+
+		if !user.IsConfirmed() {
+			if !userData.Verified && !config.Mailer.Autoconfirm {
+				mailer := getMailer(ctx)
+				if confirmationErr := mailer.ConfirmationMail(user); confirmationErr != nil {
+					return internalServerError("Error sending confirmation mail").WithInternalError(confirmationErr)
+				}
+				now := time.Now()
+				user.ConfirmationSentAt = &now
+
+				if confirmationErr := a.db.UpdateUser(user); confirmationErr != nil {
+					return internalServerError("Error updating user in database").WithInternalError(confirmationErr)
+				}
+				// email must be verified to issue a token
+				http.Redirect(w, r, config.External.RedirectURL, http.StatusFound)
+			}
+
+			// fall through to auto-confirm and issue token
+			user.Confirm()
+		}
 	}
 
 	now := time.Now()
@@ -167,6 +196,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 // extracting the provider requested
 func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	ctx := r.Context()
+	config := getConfig(ctx)
 	state := r.URL.Query().Get("state")
 	if state == "" {
 		return nil, badRequestError("OAuth state parameter missing")
@@ -179,6 +209,11 @@ func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Co
 	})
 	if err != nil || claims.Provider == "" {
 		return nil, badRequestError("OAuth state is invalid: %v", err)
+	}
+	if claims.InviteToken != "" {
+		ctx = withInviteToken(ctx, claims.InviteToken)
+	} else if config.DisableSignups {
+		return nil, unauthorizedError("Signups not allowed for this instance")
 	}
 
 	ctx = withExternalProviderType(ctx, claims.Provider)

@@ -16,6 +16,7 @@ type OAuthProviderConfiguration struct {
 	Secret      string `json:"secret"`
 	RedirectURI string `json:"redirect_uri" split_words:"true"`
 	URL         string `json:"url"`
+	Enabled     bool   `json:"enabled"`
 }
 
 // DBConfiguration holds all the database related configuration.
@@ -87,7 +88,8 @@ type Configuration struct {
 		Templates   EmailContentConfiguration `json:"templates"`
 		URLPaths    EmailContentConfiguration `json:"url_paths"`
 	} `json:"mailer"`
-	External ExternalProviderConfiguration `json:"external"`
+	External       ExternalProviderConfiguration `json:"external"`
+	DisableSignups bool                          `json:"disable_signups"`
 }
 
 func loadEnvironment(filename string) error {
@@ -181,6 +183,9 @@ func (config *Configuration) ApplyDefaults() {
 }
 
 func (o *OAuthProviderConfiguration) Validate() error {
+	if !o.Enabled {
+		return errors.New("Provider is not enabled")
+	}
 	if o.ClientID == "" {
 		return errors.New("Missing Oauth client ID")
 	}
