@@ -147,8 +147,6 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		user.Confirm()
 	}
 
-	now := time.Now()
-	user.LastSignInAt = &now
 	token, err := a.issueRefreshToken(ctx, user)
 	if err != nil {
 		return oauthError("server_error", err.Error())
