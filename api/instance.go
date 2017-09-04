@@ -107,8 +107,6 @@ func (a *API) DeleteInstance(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error deleting instance").WithInternalError(err)
 	}
 
-	// TODO do we delete everything associated with an instance too?
-
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

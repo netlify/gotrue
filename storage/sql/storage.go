@@ -3,6 +3,7 @@ package sql
 import (
 	// this is where we do the connections
 
+	"fmt"
 	"net/url"
 
 	// import drivers we might need
@@ -303,7 +304,26 @@ func (conn *Connection) UpdateInstance(instance *models.Instance) error {
 }
 
 func (conn *Connection) DeleteInstance(instance *models.Instance) error {
-	return conn.db.Delete(instance).Error
+	tx := conn.db.Begin()
+
+	delModels := map[string]interface{}{
+		"user":          models.User{},
+		"refresh token": models.RefreshToken{},
+	}
+
+	for name, dm := range delModels {
+		if result := tx.Delete(dm, "instance_id = ?", instance.ID); result.Error != nil {
+			tx.Rollback()
+			return errors.Wrap(result.Error, fmt.Sprintf("Error deleting %s records", name))
+		}
+	}
+
+	if result := tx.Delete(instance); result.Error != nil {
+		tx.Rollback()
+		return errors.Wrap(result.Error, "Error deleting instance record")
+	}
+
+	return tx.Commit().Error
 }
 
 // Dial will connect to that storage engine
