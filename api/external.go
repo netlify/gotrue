@@ -46,8 +46,6 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 			}
 			return internalServerError("Database error finding user").WithInternalError(userErr)
 		}
-	} else if config.DisableSignups {
-		return unauthorizedError("Signups not allowed for this instance")
 	}
 
 	log := getLogEntry(r)
@@ -149,6 +147,10 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			return internalServerError("Error checking for duplicate users").WithInternalError(err)
 		}
 		if user == nil {
+			if config.DisableSignups {
+				return unauthorizedError("Signups not allowed for this instance")
+			}
+
 			user, err = a.signupNewUser(ctx, params, aud)
 			if err != nil {
 				return err
@@ -196,7 +198,6 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 // extracting the provider requested
 func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	ctx := r.Context()
-	config := getConfig(ctx)
 	state := r.URL.Query().Get("state")
 	if state == "" {
 		return nil, badRequestError("OAuth state parameter missing")
@@ -212,8 +213,6 @@ func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Co
 	}
 	if claims.InviteToken != "" {
 		ctx = withInviteToken(ctx, claims.InviteToken)
-	} else if config.DisableSignups {
-		return nil, unauthorizedError("Signups not allowed for this instance")
 	}
 
 	ctx = withExternalProviderType(ctx, claims.Provider)
