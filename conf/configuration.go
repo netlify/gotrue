@@ -89,7 +89,7 @@ type Configuration struct {
 		URLPaths    EmailContentConfiguration `json:"url_paths"`
 	} `json:"mailer"`
 	External      ExternalProviderConfiguration `json:"external"`
-	SignupEnabled bool                          `json:"signup_enabled" default:"true" split_words:"true"`
+	DisableSignup bool                          `json:"disable_signup" split_words:"true"`
 }
 
 func loadEnvironment(filename string) error {
