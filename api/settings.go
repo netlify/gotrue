@@ -11,7 +11,7 @@ type ExternalProviderSettings struct {
 
 type Settings struct {
 	ExternalProviders ExternalProviderSettings `json:"external"`
-	SignupEnabled     bool                     `json:"signup_enabled"`
+	DisableSignup     bool                     `json:"disable_signup"`
 	Autoconfirm       bool                     `json:"autoconfirm"`
 }
 
@@ -25,7 +25,7 @@ func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
 			GitLab:    config.External.Gitlab.Enabled,
 			Google:    config.External.Google.Enabled,
 		},
-		SignupEnabled: !config.DisableSignup,
+		DisableSignup: config.DisableSignup,
 		Autoconfirm:   config.Mailer.Autoconfirm,
 	})
 }

@@ -289,7 +289,7 @@ GoTrue exposes the following endpoints:
       "gitlab": true,
       "google": true
     },
-    "signup_enabled": true,
+    "disable_signup": false,
     "autoconfirm": false
   }
   ```
