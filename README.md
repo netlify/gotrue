@@ -222,7 +222,7 @@ Email subject to use for email change confirmation. Defaults to `Confirm Email C
 
 `MAILER_TEMPLATES_INVITE` - `string`
 
-URL path to an email template to use when inviting a user. Defaults to `/.netlify/gotrue/templates/invite.html`
+URL path to an email template to use when inviting a user. 
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
 
 Default Content (if template is unavailable):
@@ -235,7 +235,7 @@ Default Content (if template is unavailable):
 
 `MAILER_TEMPLATES_CONFIRMATION` - `string`
 
-URL path to an email template to use when confirming a signup. Defaults to `/.netlify/gotrue/templates/confirm.html`
+URL path to an email template to use when confirming a signup. 
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
 
 Default Content (if template is unavailable):
@@ -248,7 +248,7 @@ Default Content (if template is unavailable):
 
 `MAILER_TEMPLATES_RECOVERY` - `string`
 
-URL path to an email template to use when resetting a password. Defaults to `/.netlify/gotrue/templates/recover.html`
+URL path to an email template to use when resetting a password. 
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
 
 Default Content (if template is unavailable):
@@ -261,7 +261,7 @@ Default Content (if template is unavailable):
 
 `MAILER_TEMPLATES_EMAIL_CHANGE` - `string`
 
-URL path to an email template to use when confirming the change of an email address. Defaults to `/.netlify/gotrue/templates/email-change.html`
+URL path to an email template to use when confirming the change of an email address. 
 `SiteURL`, `Email`, `NewEmail`, and `ConfirmationURL` variables are available.
 
 Default Content (if template is unavailable):

@@ -151,19 +151,6 @@ func (config *Configuration) ApplyDefaults() {
 		config.JWT.Exp = 3600
 	}
 
-	if config.Mailer.Templates.Invite == "" {
-		config.Mailer.Templates.Invite = "/.netlify/gotrue/templates/invite.html"
-	}
-	if config.Mailer.Templates.Confirmation == "" {
-		config.Mailer.Templates.Confirmation = "/.netlify/gotrue/templates/confirm.html"
-	}
-	if config.Mailer.Templates.Recovery == "" {
-		config.Mailer.Templates.Recovery = "/.netlify/gotrue/templates/recover.html"
-	}
-	if config.Mailer.Templates.EmailChange == "" {
-		config.Mailer.Templates.EmailChange = "/.netlify/gotrue/templates/email-change.html"
-	}
-
 	if config.Mailer.URLPaths.Invite == "" {
 		config.Mailer.URLPaths.Invite = "/"
 	}

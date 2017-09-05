@@ -13,8 +13,8 @@ func TestGetSiteURL(t *testing.T) {
 		Fragment string
 		Expected string
 	}{
-		{"https://test.example.com", "/.netlify/gotrue/templates/confirm.html", "", "https://test.example.com/.netlify/gotrue/templates/confirm.html"},
-		{"https://test.example.com/removedpath", "/.netlify/gotrue/templates/confirm.html", "", "https://test.example.com/.netlify/gotrue/templates/confirm.html"},
+		{"https://test.example.com", "/templates/confirm.html", "", "https://test.example.com/templates/confirm.html"},
+		{"https://test.example.com/removedpath", "/templates/confirm.html", "", "https://test.example.com/templates/confirm.html"},
 		{"https://test.example.com/", "/trailingslash/", "", "https://test.example.com/trailingslash/"},
 		{"https://test.example.com", "f", "fragment", "https://test.example.com/f#fragment"},
 	}
