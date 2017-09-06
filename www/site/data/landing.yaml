@@ -17,7 +17,5 @@ sections:
   - headline: Endpoints
     body: GoTrue exposes several endpoints. Details can be found in the [documentation](https://github.com/netlify/gotrue/blob/master/README.md).
   - headline: Client-Side JavaScript Access with GoTrue JS
-    body: The easiest way to access the GoTrue API from the client is with the GoTrue JS library. Details and sample commands can be found in the [documentation](https://github.com/netlify/gotrue/blob/master/README.md).
-  - headline: Proxy with Gotiator API
-    body: If you need to authenticate with many services, a simple proxy setup can help manage this. Check the [Gotiator API repo](https://github.com/netlify/gotiator) for more information.
+    body: The easiest way to access the GoTrue API from the client is with the GoTrue JS library. Details and sample commands can be found in the [documentation](https://github.com/netlify/gotrue/blob/master/README.md)<br><br>For any Netlify site you can enable GoTrue with the click of a button via Netlify Identity. [Read More](https://www.netlify.com/docs/identity).
 ---
