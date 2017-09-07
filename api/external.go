@@ -127,6 +127,24 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			return internalServerError("Database error finding user").WithInternalError(err)
 		}
 
+		if user.Email != userData.Email {
+			return badRequestError("Invited email does not match email from external provider").WithInternalMessage("invited=%s external=%s", user.Email, userData.Email)
+		}
+
+		if user.AppMetaData == nil {
+			user.AppMetaData = make(map[string]interface{})
+		}
+		user.AppMetaData["provider"] = providerType
+		if user.UserMetaData == nil {
+			user.UserMetaData = make(map[string]interface{})
+		}
+		for k, v := range userData.Metadata {
+			if v != "" {
+				user.UserMetaData[k] = v
+			}
+		}
+
+		// confirm because they were able to respond to invite email
 		user.Confirm()
 	} else {
 		params := &SignupParams{
@@ -258,7 +276,7 @@ func (a *API) redirectErrors(handler apiHandler, w http.ResponseWriter, r *http.
 			} else {
 				log.WithError(e.Cause()).Info(e.Error())
 			}
-			q.Set("error_description", err.Error())
+			q.Set("error_description", e.Message)
 		case *OAuthError:
 			q.Set("error", e.Err)
 			q.Set("error_description", e.Description)

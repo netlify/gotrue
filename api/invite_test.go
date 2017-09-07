@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -176,6 +177,173 @@ func (ts *InviteTestSuite) TestVerifyInvite_NoPassword() {
 	ts.API.handler.ServeHTTP(w, req)
 
 	assert.Equal(ts.T(), w.Code, http.StatusUnprocessableEntity)
+}
+
+func (ts *InviteTestSuite) TestInviteExternalGitlab() {
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/oauth/token":
+			tokenCount++
+			ts.Equal(code, r.FormValue("code"))
+			ts.Equal("authorization_code", r.FormValue("grant_type"))
+			ts.Equal(ts.Config.External.Gitlab.RedirectURI, r.FormValue("redirect_uri"))
+
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `{"access_token":"gitlab_token","expires_in":100000}`)
+		case "/api/v4/user":
+			userCount++
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`)
+		case "/api/v4/user/emails":
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `[{"email":"gitlab@example.com"}]`)
+		default:
+			w.WriteHeader(500)
+			ts.Fail("unknown gitlab oauth call %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	ts.Config.External.Gitlab.URL = server.URL
+
+	// invite user
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(InviteParams{
+		Email: "gitlab@example.com",
+	}))
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/invite", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusOK, w.Code)
+
+	// Find test user
+	user, err := ts.API.db.FindUserByEmailAndAudience("", "gitlab@example.com", ts.Config.JWT.Aud)
+	require.NoError(ts.T(), err)
+
+	// get redirect url w/ state
+	req = httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=gitlab&invite_token="+user.ConfirmationToken, nil)
+	w = httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusFound, w.Code)
+	u, err := url.Parse(w.Header().Get("Location"))
+	ts.Require().NoError(err, "redirect url parse failed")
+	q := u.Query()
+	state := q.Get("state")
+
+	// auth server callback
+	testURL, err := url.Parse("http://localhost/callback")
+	ts.Require().NoError(err)
+	v := testURL.Query()
+	v.Set("code", code)
+	v.Set("state", state)
+	testURL.RawQuery = v.Encode()
+	req = httptest.NewRequest(http.MethodGet, testURL.String(), nil)
+	w = httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusFound, w.Code)
+	u, err = url.Parse(w.Header().Get("Location"))
+	ts.Require().NoError(err, "redirect url parse failed")
+
+	// ensure redirect has #access_token=...
+	v, err = url.ParseQuery(u.Fragment)
+	ts.Require().NoError(err)
+	ts.Require().Empty(v.Get("error_description"))
+	ts.Require().Empty(v.Get("error"))
+
+	ts.NotEmpty(v.Get("access_token"))
+	ts.NotEmpty(v.Get("refresh_token"))
+	ts.NotEmpty(v.Get("expires_in"))
+	ts.Equal("bearer", v.Get("token_type"))
+
+	ts.Equal(1, tokenCount)
+	ts.Equal(1, userCount)
+
+	// ensure user has been created with metadata
+	user, err = ts.API.db.FindUserByEmailAndAudience("", "gitlab@example.com", ts.Config.JWT.Aud)
+	ts.Require().NoError(err)
+	ts.Equal("Gitlab Test", user.UserMetaData["full_name"])
+	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
+	ts.Equal("gitlab", user.AppMetaData["provider"])
+}
+
+func (ts *InviteTestSuite) TestInviteExternalGitlab_MismatchedEmails() {
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/oauth/token":
+			tokenCount++
+			ts.Equal(code, r.FormValue("code"))
+			ts.Equal("authorization_code", r.FormValue("grant_type"))
+			ts.Equal(ts.Config.External.Gitlab.RedirectURI, r.FormValue("redirect_uri"))
+
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `{"access_token":"gitlab_token","expires_in":100000}`)
+		case "/api/v4/user":
+			userCount++
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`)
+		case "/api/v4/user/emails":
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `[{"email":"gitlab+mismatch@example.com"}]`)
+		default:
+			w.WriteHeader(500)
+			ts.Fail("unknown gitlab oauth call %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	ts.Config.External.Gitlab.URL = server.URL
+
+	// invite user
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(InviteParams{
+		Email: "gitlab@example.com",
+	}))
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/invite", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusOK, w.Code)
+
+	// Find test user
+	user, err := ts.API.db.FindUserByEmailAndAudience("", "gitlab@example.com", ts.Config.JWT.Aud)
+	require.NoError(ts.T(), err)
+
+	// get redirect url w/ state
+	req = httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=gitlab&invite_token="+user.ConfirmationToken, nil)
+	w = httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusFound, w.Code)
+	u, err := url.Parse(w.Header().Get("Location"))
+	ts.Require().NoError(err, "redirect url parse failed")
+	q := u.Query()
+	state := q.Get("state")
+
+	// auth server callback
+	testURL, err := url.Parse("http://localhost/callback")
+	ts.Require().NoError(err)
+	v := testURL.Query()
+	v.Set("code", code)
+	v.Set("state", state)
+	testURL.RawQuery = v.Encode()
+	req = httptest.NewRequest(http.MethodGet, testURL.String(), nil)
+	w = httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusFound, w.Code)
+	u, err = url.Parse(w.Header().Get("Location"))
+	ts.Require().NoError(err, "redirect url parse failed")
+
+	// ensure redirect has #access_token=...
+	v, err = url.ParseQuery(u.Fragment)
+	ts.Require().NoError(err)
+	ts.Require().NotEmpty(v.Get("error_description"))
+	ts.Require().Equal("invalid_request", v.Get("error"))
 }
 
 func TestInvite(t *testing.T) {
