@@ -55,6 +55,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	api := &API{config: globalConfig, db: db, version: version}
 
 	xffmw, _ := xff.Default()
+	logger := newStructuredLogger(logrus.StandardLogger())
 
 	r := newRouter()
 	r.UseBypass(xffmw.Handler)
@@ -64,7 +65,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	r.Get("/health", api.HealthCheck)
 
 	r.Route("/callback", func(r *router) {
-		r.UseBypass(newStructuredLogger(logrus.StandardLogger()))
+		r.UseBypass(logger)
 		r.Use(api.loadOAuthState)
 
 		if globalConfig.MultiInstanceMode {
@@ -74,7 +75,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	})
 
 	r.Route("/", func(r *router) {
-		r.UseBypass(newStructuredLogger(logrus.StandardLogger()))
+		r.UseBypass(logger)
 
 		if globalConfig.MultiInstanceMode {
 			r.Use(api.loadJWSSignatureHeader)
@@ -116,8 +117,9 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 	if globalConfig.MultiInstanceMode {
 		// Operator microservice API
-		r.With(api.verifyOperatorRequest).Get("/", api.GetAppManifest)
+		r.WithBypass(logger).With(api.verifyOperatorRequest).Get("/", api.GetAppManifest)
 		r.Route("/instances", func(r *router) {
+			r.UseBypass(logger)
 			r.Use(api.verifyOperatorRequest)
 
 			r.Post("/", api.CreateInstance)
