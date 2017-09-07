@@ -70,7 +70,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		if globalConfig.MultiInstanceMode {
 			r.Use(api.loadInstanceConfig)
 		}
-		r.Get("/callback", api.ExternalProviderCallback)
+		r.Get("/", api.ExternalProviderCallback)
 	})
 
 	r.Route("/", func(r *router) {
