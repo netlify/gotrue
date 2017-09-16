@@ -4,9 +4,12 @@ import (
 	"context"
 	"net/http"
 	"regexp"
+	"time"
 
+	"github.com/didip/tollbooth"
 	"github.com/go-chi/chi"
 	"github.com/imdario/mergo"
+	"github.com/mhayes/tollbooth_chi"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
@@ -84,7 +87,13 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 		r.Get("/settings", api.Settings)
 		r.Get("/authorize", api.ExternalProviderRedirect)
-		r.Post("/signup", api.Signup)
+		r.Route("/signup", func(r *router) {
+			if globalConfig.Throttle.Enabled {
+				limiter := tollbooth.NewLimiter(globalConfig.Throttle.RequestsPerSecond, time.Second, nil)
+				r.UseBypass(tollbooth_chi.LimitHandler(limiter))
+			}
+			r.Post("/", api.Signup)
+		})
 		r.With(api.requireAdminCredentials).Post("/invite", api.Invite)
 		r.Post("/recover", api.Recover)
 		r.Post("/verify", api.Verify)

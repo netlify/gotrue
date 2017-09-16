@@ -50,6 +50,13 @@ type GlobalConfiguration struct {
 	OperatorToken     string              `split_words:"true" required:"true"`
 	MultiInstanceMode bool
 	SMTP              SMTPConfiguration
+	Throttle          ThrottleConfiguration
+}
+
+// ThrottleConfiguration holds the configuration for limiting calls to sensitive endpoints
+type ThrottleConfiguration struct {
+	Enabled           bool  `default:"false"`
+	RequestsPerSecond int64 `split_words:"true" default:"1"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.

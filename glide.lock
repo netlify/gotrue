@@ -1,5 +1,5 @@
-hash: bc730d92aa029c00a10209d369ee19a9adb25821ae3151b1b48d58c38b9d3652
-updated: 2017-08-29T13:09:01.408410718-04:00
+hash: f5fa1bcf98823c91d1d966cb3337b26f386c633509fb1a7f3a7c7ca8788aaef5
+updated: 2017-09-16T13:39:27.265176816-07:00
 imports:
 - name: cloud.google.com/go
   version: 98f5696b1026056a47f114c4451dbc4703d67191
@@ -13,6 +13,12 @@ imports:
   - spew
 - name: github.com/dgrijalva/jwt-go
   version: d2709f9f1f31ebcda9651b03077758c1f3a0018c
+- name: github.com/didip/tollbooth
+  version: 8a5832d289e4375d2fc658ed42ef08975b66dceb
+  subpackages:
+  - errors
+  - libstring
+  - limiter
 - name: github.com/fsnotify/fsnotify
   version: f12c6236fe7b5cf6bcf30e5935d08cb079d78334
 - name: github.com/go-chi/chi
@@ -69,6 +75,8 @@ imports:
   version: 0723e352fa358f9322c938cc2dadda874e9151a9
 - name: github.com/mattn/go-sqlite3
   version: 3b3f1d01b2696af5501697c35629048c227586ab
+- name: github.com/mhayes/tollbooth_chi
+  version: e1f72331d2a46cfc45b67f08d07646144c707d98
 - name: github.com/mitchellh/mapstructure
   version: ca63d7c062ee3c9f34db231e352b60012b4fd0c1
 - name: github.com/nats-io/nats
@@ -89,6 +97,8 @@ imports:
   - metrics/transport
   - nconf
   - tls
+- name: github.com/patrickmn/go-cache
+  version: a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0
 - name: github.com/pborman/uuid
   version: a97ce2ca70fa5a848076093f05e639a89ca34d06
 - name: github.com/pelletier/go-buffruneio
@@ -180,6 +190,10 @@ imports:
   subpackages:
   - transform
   - unicode/norm
+- name: golang.org/x/time
+  version: 8be79e1e0910c292df4e79c241bb7e8f7e725959
+  subpackages:
+  - rate
 - name: google.golang.org/api
   version: dd6bdadc5852eae2d133075a3690d6ad744add48
   subpackages:

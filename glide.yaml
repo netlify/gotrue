@@ -53,3 +53,9 @@ import:
   version: v1.3.0
 - package: github.com/joho/godotenv
   version: v1.1
+- package: golang.org/x/time
+  subpackages:
+  - rate
+- package: github.com/didip/tollbooth
+  version: ~2.2.0
+- package: github.com/mhayes/tollbooth_chi
