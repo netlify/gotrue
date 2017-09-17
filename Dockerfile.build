@@ -1,0 +1,3 @@
+FROM netlify/go-glide:v0.12.3
+ADD . /go/src/github.com/netlify/gotrue
+RUN cd /go/src/github.com/netlify/gotrue && make deps build
