@@ -2,9 +2,32 @@ package models
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestIsLocked(t *testing.T) {
+	timestamp := time.Now().Add(-time.Duration(5) * time.Minute)
+	u := &User{
+		LockedAt: &timestamp,
+	}
+	require.False(t, u.IsLocked(0), "user should not be locked")
+	require.False(t, u.IsLocked(4), "user should not be locked")
+	require.False(t, u.IsLocked(5), "user should not be locked")
+	require.True(t, u.IsLocked(6), "user should be locked")
+}
+
+func TestResetLock(t *testing.T) {
+	now := time.Now()
+	u := &User{
+		LockedAt:             &now,
+		FailedSignInAttempts: 3,
+	}
+	u.ResetLock()
+	require.Nil(t, u.LockedAt, "LockedAt should not be set")
+	require.Equal(t, 0, u.FailedSignInAttempts, "FailedSignInAttempts should be 0")
+}
 
 func TestUpdateAppMetadata(t *testing.T) {
 	u := &User{}

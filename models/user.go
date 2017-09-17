@@ -198,13 +198,7 @@ func (u *User) IsLocked(minutes int) bool {
 	if u.LockedAt == nil {
 		return false
 	}
-
-	if time.Now().After(u.LockedAt.Add(time.Duration(minutes) * time.Minute)) {
-		u.ResetLock()
-		return false
-	}
-
-	return true
+	return time.Now().Before(u.LockedAt.Add(time.Duration(minutes) * time.Minute))
 }
 
 // ResetLock Resets the lock

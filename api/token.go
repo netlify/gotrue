@@ -77,6 +77,13 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return oauthError("invalid_grant", "Invalid Password")
 	}
 
+	if lock.Enabled {
+		user.ResetLock()
+		if err = a.db.UpdateUser(user); err != nil {
+			return internalServerError("Database error resetting lock").WithInternalError(err)
+		}
+	}
+
 	return a.sendRefreshToken(ctx, user, w)
 }
 
