@@ -41,6 +41,9 @@ type User struct {
 	UserMetaData    map[string]interface{} `json:"user_metadata" sql:"-"`
 	RawUserMetaData string                 `json:"-"`
 
+	FailedSignInAttempts int        `json:"failed_sign_in_attempts"`
+	LockedAt             *time.Time `json:"locked_at"`
+
 	IsSuperAdmin bool `json:"-"`
 
 	CreatedAt time.Time `json:"created_at"`
@@ -188,6 +191,35 @@ func (u *User) EncryptPassword(password string) error {
 func (u *User) Authenticate(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.EncryptedPassword), []byte(password))
 	return err == nil
+}
+
+// IsLocked Check if user is locked, unlock if lock has expired
+func (u *User) IsLocked(minutes int) bool {
+	if u.LockedAt == nil {
+		return false
+	}
+
+	if time.Now().After(u.LockedAt.Add(time.Duration(minutes) * time.Minute)) {
+		u.ResetLock()
+		return false
+	}
+
+	return true
+}
+
+// ResetLock Resets the lock
+func (u *User) ResetLock() {
+	u.LockedAt = nil
+	u.FailedSignInAttempts = 0
+}
+
+// FailedSignIn Record a failed sign in attempt
+func (u *User) FailedSignIn(maxAttempts int) {
+	u.FailedSignInAttempts = u.FailedSignInAttempts + 1
+	if u.FailedSignInAttempts > maxAttempts {
+		now := time.Now()
+		u.LockedAt = &now
+	}
 }
 
 // GenerateConfirmationToken generates a secure confirmation token for confirming

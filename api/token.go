@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -41,6 +42,8 @@ func (a *API) Token(w http.ResponseWriter, r *http.Request) error {
 
 // ResourceOwnerPasswordGrant implements the password grant type flow
 func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	lock := a.config.Lock
+
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
@@ -58,7 +61,19 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return oauthError("invalid_grant", "Email not confirmed")
 	}
 
+	// User was previously locked out
+	if lock.Enabled && user.IsLocked(lock.Duration) {
+		return oauthError("invalid_grant", fmt.Sprintf("Account is locked", lock.Duration))
+	}
+
 	if !user.Authenticate(password) {
+		if lock.Enabled {
+			user.FailedSignIn(lock.MaxSignInAttempts)
+			// User is now officially locked out of their account
+			if err = a.db.UpdateUser(user); err != nil && user.IsLocked(lock.Duration) {
+				return oauthError("invalid_grant", fmt.Sprintf("Account locked for %d minutes", lock.Duration))
+			}
+		}
 		return oauthError("invalid_grant", "Invalid Password")
 	}
 

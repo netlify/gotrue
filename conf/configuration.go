@@ -51,12 +51,19 @@ type GlobalConfiguration struct {
 	MultiInstanceMode bool
 	SMTP              SMTPConfiguration
 	Throttle          ThrottleConfiguration
+	Lock              LockConfiguration
 }
 
 // ThrottleConfiguration holds the configuration for limiting calls to sensitive endpoints
 type ThrottleConfiguration struct {
 	Enabled           bool  `default:"false"`
 	RequestsPerSecond int64 `split_words:"true" default:"1"`
+}
+
+type LockConfiguration struct {
+	Enabled           bool `default:"true"`
+	MaxSignInAttempts int  `split_words:"true" default:"3"`
+	Duration          int  `default:"10"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.
