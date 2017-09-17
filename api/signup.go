@@ -84,6 +84,10 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 
+	if a.config.EmailBlacklist.Enabled && a.isEmailBlacklisted(params.Email) {
+		return nil, forbiddenError("Emails from that domain are not allowed")
+	}
+
 	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		return nil, internalServerError("Database error creating user").WithInternalError(err)

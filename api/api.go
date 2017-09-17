@@ -29,10 +29,11 @@ var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 
 // API is the main REST API
 type API struct {
-	handler http.Handler
-	db      storage.Connection
-	config  *conf.GlobalConfiguration
-	version string
+	handler   http.Handler
+	db        storage.Connection
+	config    *conf.GlobalConfiguration
+	blacklist Blacklist
+	version   string
 }
 
 // ListenAndServe starts the REST API
@@ -55,7 +56,7 @@ func NewAPI(globalConfig *conf.GlobalConfiguration, db storage.Connection) *API 
 
 // NewAPIWithVersion creates a new REST API using the specified version
 func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, db storage.Connection, version string) *API {
-	api := &API{config: globalConfig, db: db, version: version}
+	api := &API{config: globalConfig, db: db, version: version, blacklist: Blacklist{}}
 
 	xffmw, _ := xff.Default()
 	logger := newStructuredLogger(logrus.StandardLogger())

@@ -66,3 +66,11 @@ func (a *API) requestAud(ctx context.Context, r *http.Request) string {
 	// Finally, return the default of none of the above methods are successful
 	return config.JWT.Aud
 }
+
+func (a *API) isEmailBlacklisted(email string) bool {
+	globalConfig := a.config
+	if a.blacklist.UpdateNeeded() {
+		a.blacklist.UpdateFromURL(globalConfig.EmailBlacklist.URL)
+	}
+	return a.blacklist.EmailBlacklisted(email)
+}

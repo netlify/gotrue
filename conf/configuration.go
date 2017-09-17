@@ -52,6 +52,7 @@ type GlobalConfiguration struct {
 	SMTP              SMTPConfiguration
 	Throttle          ThrottleConfiguration
 	Lock              LockConfiguration
+	EmailBlacklist    EmailBlacklistConfiguration
 }
 
 // ThrottleConfiguration holds the configuration for limiting calls to sensitive endpoints
@@ -60,10 +61,17 @@ type ThrottleConfiguration struct {
 	RequestsPerSecond int64 `split_words:"true" default:"1"`
 }
 
+// LockConfiguration holds configuration for locking user accounts after unsuccessful logins
 type LockConfiguration struct {
 	Enabled           bool `default:"true"`
 	MaxSignInAttempts int  `split_words:"true" default:"3"`
 	Duration          int  `default:"10"`
+}
+
+// EmailBlacklistConfiguration holds configuration on which email domains to ban
+type EmailBlacklistConfiguration struct {
+	Enabled bool   `default:"true"`
+	URL     string `default:"https://gist.githubusercontent.com/mhayes/1b8ed9b24d88ad5fd3dceb628e63c3ef/raw/f58622f760531f267c1a38705dd37b1c166cb8c0/blacklist.txt"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.
