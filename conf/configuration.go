@@ -52,7 +52,7 @@ type GlobalConfiguration struct {
 	SMTP              SMTPConfiguration
 	Throttle          ThrottleConfiguration
 	Lock              LockConfiguration
-	EmailBlacklist    EmailBlacklistConfiguration
+	EmailBlacklist    EmailBlacklistConfiguration `split_words:"true"`
 	Password          PasswordConfiguration
 }
 
@@ -77,10 +77,10 @@ type EmailBlacklistConfiguration struct {
 
 // PasswordConfiguration holds configuration for password requirements
 type PasswordConfiguration struct {
-	MinLength    int `default:"0"`
-	MinNumbers   int `default:"0"`
-	MinSymbols   int `default:"0"`
-	MinUppercase int `default:"0"`
+	MinLength    int `default:"0" split_words:"true"`
+	MinNumbers   int `default:"0" split_words:"true"`
+	MinSymbols   int `default:"0" split_words:"true"`
+	MinUppercase int `default:"0" split_words:"true"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.
