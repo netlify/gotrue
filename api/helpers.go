@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -73,4 +74,33 @@ func (a *API) isEmailBlacklisted(email string) bool {
 		a.blacklist.UpdateFromURL(globalConfig.EmailBlacklist.URL)
 	}
 	return a.blacklist.EmailBlacklisted(email)
+}
+
+func (a *API) isPasswordValid(password string) bool {
+	re_min_nums := regexp.MustCompile("[0-9]")
+	re_min_symbols := regexp.MustCompile("[$@$!%*#?&]")
+	re_min_uppercase := regexp.MustCompile("[A-Z]")
+
+	switch {
+	case a.config.Password.MinNumbers > 0:
+		if len(re_min_nums.FindAllString(password, -1)) < a.config.Password.MinNumbers {
+			return false
+		}
+		fallthrough
+	case a.config.Password.MinSymbols > 0:
+		if len(re_min_symbols.FindAllString(password, -1)) < a.config.Password.MinSymbols {
+			return false
+		}
+		fallthrough
+	case a.config.Password.MinUppercase > 0:
+		if len(re_min_uppercase.FindAllString(password, -1)) < a.config.Password.MinUppercase {
+			return false
+		}
+		fallthrough
+	default:
+		if l := len(password); l == 0 || l < a.config.Password.MinLength {
+			return false
+		}
+		return true
+	}
 }

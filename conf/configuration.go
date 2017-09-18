@@ -53,6 +53,7 @@ type GlobalConfiguration struct {
 	Throttle          ThrottleConfiguration
 	Lock              LockConfiguration
 	EmailBlacklist    EmailBlacklistConfiguration
+	Password          PasswordConfiguration
 }
 
 // ThrottleConfiguration holds the configuration for limiting calls to sensitive endpoints
@@ -72,6 +73,14 @@ type LockConfiguration struct {
 type EmailBlacklistConfiguration struct {
 	Enabled bool   `default:"true"`
 	URL     string `default:"https://gist.githubusercontent.com/mhayes/1b8ed9b24d88ad5fd3dceb628e63c3ef/raw/f58622f760531f267c1a38705dd37b1c166cb8c0/blacklist.txt"`
+}
+
+// PasswordConfiguration holds configuration for password requirements
+type PasswordConfiguration struct {
+	MinLength    int `default:"0"`
+	MinNumbers   int `default:"0"`
+	MinSymbols   int `default:"0"`
+	MinUppercase int `default:"0"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.

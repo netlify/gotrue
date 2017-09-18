@@ -61,6 +61,10 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read User ID claim")
 	}
 
+	if params.Password != "" && !a.isPasswordValid(params.Password) {
+		return badRequestError("Password does not meet requirements")
+	}
+
 	user, err := a.db.FindUserByID(claims.Subject)
 	if err != nil {
 		if models.IsNotFoundError(err) {
