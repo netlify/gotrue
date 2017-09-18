@@ -63,7 +63,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 
 	// User was previously locked out
 	if lock.Enabled && user.IsLocked(lock.Duration) {
-		return oauthError("invalid_grant", fmt.Sprintf("Account is locked", lock.Duration))
+		return oauthError("invalid_grant", fmt.Sprintf("Account locked for %d minutes", lock.Duration))
 	}
 
 	if !user.Authenticate(password) {
