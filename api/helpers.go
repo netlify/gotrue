@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -72,31 +73,38 @@ func (a *API) isEmailBlacklisted(email string) bool {
 	return a.blacklist.EmailBlacklisted(email)
 }
 
-func (a *API) isPasswordValid(password string) bool {
-	re_min_nums := regexp.MustCompile("[0-9]")
-	re_min_symbols := regexp.MustCompile("[$@$!%*#?&]")
-	re_min_uppercase := regexp.MustCompile("[A-Z]")
+var minNumsRegexp = regexp.MustCompile("[[:digit:]]")
+var minSymbolsRegexp = regexp.MustCompile("[$@$!%*#?&]")
+var minUppercaseRegexp = regexp.MustCompile("[[:upper:]]")
+var minLowercaseRegexp = regexp.MustCompile("[[:lower:]]")
 
-	switch {
-	case a.config.Password.MinNumbers > 0:
-		if len(re_min_nums.FindAllString(password, -1)) < a.config.Password.MinNumbers {
-			return false
-		}
-		fallthrough
-	case a.config.Password.MinSymbols > 0:
-		if len(re_min_symbols.FindAllString(password, -1)) < a.config.Password.MinSymbols {
-			return false
-		}
-		fallthrough
-	case a.config.Password.MinUppercase > 0:
-		if len(re_min_uppercase.FindAllString(password, -1)) < a.config.Password.MinUppercase {
-			return false
-		}
-		fallthrough
-	default:
-		if l := len(password); l == 0 || l < a.config.Password.MinLength {
-			return false
-		}
-		return true
+func (a *API) isPasswordValid(password string) (string, bool) {
+	errors := []string{}
+	config := a.config.Password
+
+	if l := len(password); l == 0 || l < config.MinLength {
+		errors = append(errors, fmt.Sprintf("at least %d chars", config.MinLength))
 	}
+
+	if len(minNumsRegexp.FindAllString(password, -1)) < config.MinNumbers {
+		errors = append(errors, fmt.Sprintf("contain at least %d numbers", config.MinNumbers))
+	}
+
+	if len(minSymbolsRegexp.FindAllString(password, -1)) < config.MinSymbols {
+		errors = append(errors, fmt.Sprintf("contain at least %d symbols", config.MinSymbols))
+	}
+
+	if len(minUppercaseRegexp.FindAllString(password, -1)) < config.MinUppercase {
+		errors = append(errors, fmt.Sprintf("contain at least %d uppercase characters", config.MinUppercase))
+	}
+
+	if len(minLowercaseRegexp.FindAllString(password, -1)) < config.MinLowercase {
+		errors = append(errors, fmt.Sprintf("contain at least %d lowercase characters", config.MinLowercase))
+	}
+
+	if len(errors) == 0 {
+		return "", true
+	}
+
+	return fmt.Sprintf("Password must %s", strings.Join(errors, ", ")), false
 }

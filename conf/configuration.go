@@ -80,6 +80,7 @@ type PasswordConfiguration struct {
 	MinNumbers   int `default:"0" split_words:"true"`
 	MinSymbols   int `default:"0" split_words:"true"`
 	MinUppercase int `default:"0" split_words:"true"`
+	MinLowercase int `default:"0" split_words:"true"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.

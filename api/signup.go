@@ -39,8 +39,8 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		return unprocessableEntityError("Signup requires a valid email and password")
 	}
 
-	if !a.isPasswordValid(params.Password) {
-		return badRequestError("Password does not meet requirements")
+	if msg, valid := a.isPasswordValid(params.Password); !valid {
+		return badRequestError(msg)
 	}
 
 	mailer := getMailer(ctx)
