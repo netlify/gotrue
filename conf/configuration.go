@@ -71,8 +71,7 @@ type LockConfiguration struct {
 
 // EmailBlacklistConfiguration holds configuration on which email domains to ban
 type EmailBlacklistConfiguration struct {
-	Enabled bool   `default:"false"`
-	URL     string `default:"https://gist.githubusercontent.com/mhayes/1b8ed9b24d88ad5fd3dceb628e63c3ef/raw/f58622f760531f267c1a38705dd37b1c166cb8c0/blacklist.txt"`
+	URL string `default:""`
 }
 
 // PasswordConfiguration holds configuration for password requirements

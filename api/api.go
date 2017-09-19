@@ -143,6 +143,25 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		})
 	}
 
+	blacklistUpdateChannel := time.NewTicker(time.Hour).C
+	go func() {
+
+		if err := api.blacklist.UpdateFromURL(globalConfig.EmailBlacklist.URL); err != nil {
+			logrus.Fatalf("Error loading blacklist: %+v", err)
+		}
+
+		for {
+			select {
+			case <-blacklistUpdateChannel:
+				if api.blacklist.UpdateNeeded() {
+					if err := api.blacklist.UpdateFromURL(globalConfig.EmailBlacklist.URL); err != nil {
+						logrus.Fatalf("Error updating blacklist: %+v", err)
+					}
+				}
+			}
+		}
+	}()
+
 	corsHandler := cors.New(cors.Options{
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", audHeaderName},

@@ -69,10 +69,6 @@ func (a *API) requestAud(ctx context.Context, r *http.Request) string {
 }
 
 func (a *API) isEmailBlacklisted(email string) bool {
-	globalConfig := a.config
-	if a.blacklist.UpdateNeeded() {
-		a.blacklist.UpdateFromURL(globalConfig.EmailBlacklist.URL)
-	}
 	return a.blacklist.EmailBlacklisted(email)
 }
 

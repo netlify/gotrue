@@ -27,16 +27,24 @@ func (l *Blacklist) UpdateNeeded() bool {
 // Update Update blacklist from provided blacklist file url
 func (l *Blacklist) UpdateFromURL(blacklistUrl string) error {
 	domains := make(map[string]bool)
-	resp, err := http.Get(blacklistUrl)
-	if err != nil {
-		return err
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	for _, domain := range strings.Split(string(body), "\n") {
-		domains[domain] = true
+
+	if blacklistUrl != "" {
+		var netClient = &http.Client{
+			Timeout: time.Second * 10,
+		}
+
+		resp, err := netClient.Get(blacklistUrl)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		for _, domain := range strings.Split(string(body), "\n") {
+			domains[domain] = true
+		}
 	}
 	l.Update(domains)
 	return nil
