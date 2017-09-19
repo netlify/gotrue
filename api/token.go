@@ -61,27 +61,31 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return oauthError("invalid_grant", "Email not confirmed")
 	}
 
-	// User was previously locked out
-	if lock.Enabled && user.IsLocked(lock.Duration) {
-		return oauthError("invalid_grant", fmt.Sprintf("Account locked for %d minutes", lock.Duration))
+	if lock.Enabled {
+		if user.IsLocked(lock.Duration) {
+			return oauthError("invalid_grant", fmt.Sprintf("Account locked for %d minutes", lock.Duration))
+		} else if user.LockedAt != nil {
+			user.ResetLock()
+			if err = a.db.UpdateUser(user); err != nil {
+				return internalServerError("Database error resetting lock").WithInternalError(err)
+			}
+		}
 	}
 
 	if !user.Authenticate(password) {
 		if lock.Enabled {
 			user.FailedSignIn(lock.MaxSignInAttempts)
+
+			if err = a.db.UpdateUser(user); err != nil {
+				return internalServerError("Database error updating user").WithInternalError(err)
+			}
+
 			// User is now officially locked out of their account
-			if err = a.db.UpdateUser(user); err != nil && user.IsLocked(lock.Duration) {
+			if user.IsLocked(lock.Duration) {
 				return oauthError("invalid_grant", fmt.Sprintf("Account locked for %d minutes", lock.Duration))
 			}
 		}
 		return oauthError("invalid_grant", "Invalid Password")
-	}
-
-	if lock.Enabled {
-		user.ResetLock()
-		if err = a.db.UpdateUser(user); err != nil {
-			return internalServerError("Database error resetting lock").WithInternalError(err)
-		}
 	}
 
 	return a.sendRefreshToken(ctx, user, w)
