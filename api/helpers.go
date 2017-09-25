@@ -42,9 +42,9 @@ func getUserFromClaims(ctx context.Context, conn storage.Connection) (*models.Us
 
 	if claims.Subject == models.SystemUserID {
 		// System User
-		instance := getInstance(ctx)
+		instanceID := getInstanceID(ctx)
 
-		return models.NewSystemUser(instance.ID, claims.Audience), nil
+		return models.NewSystemUser(instanceID, claims.Audience), nil
 	}
 	return conn.FindUserByID(claims.Subject)
 }
