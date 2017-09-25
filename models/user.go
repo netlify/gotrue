@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const SystemUserID = "0"
 
 // User respresents a registered user with email/password authentication
 type User struct {
@@ -65,6 +68,15 @@ func NewUser(instanceID string, email, password, aud string, userData map[string
 	return user, nil
 }
 
+func NewSystemUser(instanceID, aud string) *User {
+	return &User{
+		InstanceID:   instanceID,
+		ID:           SystemUserID,
+		Aud:          aud,
+		IsSuperAdmin: true,
+	}
+}
+
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return u.BeforeUpdate()
 }
@@ -86,6 +98,10 @@ func (u *User) AfterFind() (err error) {
 }
 
 func (u *User) BeforeUpdate() error {
+	if u.ID == SystemUserID {
+		return errors.New("Cannot persist system user")
+	}
+
 	if u.AppMetaData != nil {
 		data, err := json.Marshal(u.AppMetaData)
 		if err != nil {
@@ -105,6 +121,10 @@ func (u *User) BeforeUpdate() error {
 }
 
 func (u *User) BeforeSave() error {
+	if u.ID == SystemUserID {
+		return errors.New("Cannot persist system user")
+	}
+
 	if u.ConfirmedAt != nil && u.ConfirmedAt.IsZero() {
 		u.ConfirmedAt = nil
 	}
