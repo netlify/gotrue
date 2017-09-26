@@ -39,6 +39,13 @@ func getUserFromClaims(ctx context.Context, conn storage.Connection) (*models.Us
 	if claims.Subject == "" {
 		return nil, errors.New("Invalid claim: id")
 	}
+
+	if claims.Subject == models.SystemUserID {
+		// System User
+		instanceID := getInstanceID(ctx)
+
+		return models.NewSystemUser(instanceID, claims.Audience), nil
+	}
 	return conn.FindUserByID(claims.Subject)
 }
 
