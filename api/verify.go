@@ -23,6 +23,7 @@ type VerifyParams struct {
 func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	params := &VerifyParams{}
+	cookie := r.Header.Get(useCookieHeader)
 	jsonDecoder := json.NewDecoder(r.Body)
 	if err := jsonDecoder.Decode(params); err != nil {
 		return badRequestError("Could not read verification params: %v", err)
@@ -49,6 +50,11 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+
+	if cookie != "" {
+		a.setCookieToken(ctx, user, cookie == useSessionCookie, w)
+	}
+
 	return a.sendRefreshToken(ctx, user, w)
 }
 

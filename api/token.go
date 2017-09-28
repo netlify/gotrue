@@ -24,6 +24,9 @@ type AccessTokenResponse struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+const useCookieHeader = "x-use-cookie"
+const useSessionCookie = "session"
+
 // Token is the endpoint for OAuth access token requests
 func (a *API) Token(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
@@ -43,7 +46,7 @@ func (a *API) Token(w http.ResponseWriter, r *http.Request) error {
 func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
-	remember := r.FormValue("remember")
+	cookie := r.Header.Get(useCookieHeader)
 
 	aud := a.requestAud(ctx, r)
 	instanceID := getInstanceID(ctx)
@@ -65,8 +68,8 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return oauthError("invalid_grant", "Invalid Password")
 	}
 
-	if remember != "" && config.Cookie.Enabled {
-		a.setCookieToken(ctx, user, remember == "session", w)
+	if cookie != "" && config.Cookie.Enabled {
+		a.setCookieToken(ctx, user, cookie == useSessionCookie, w)
 	}
 
 	return a.sendRefreshToken(ctx, user, w)
@@ -76,7 +79,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	config := a.getConfig(ctx)
 	tokenStr := r.FormValue("refresh_token")
-	remember := r.FormValue("remember")
+	cookie := r.Header.Get(useCookieHeader)
 
 	if tokenStr == "" {
 		return oauthError("invalid_request", "refresh_token required")
@@ -105,8 +108,8 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		return internalServerError("error generating jwt token").WithInternalError(err)
 	}
 
-	if remember != "" && config.Cookie.Enabled {
-		a.setCookieToken(ctx, user, remember == "session", w)
+	if cookie != "" && config.Cookie.Enabled {
+		a.setCookieToken(ctx, user, cookie == useSessionCookie, w)
 	}
 
 	return sendJSON(w, http.StatusOK, &AccessTokenResponse{
