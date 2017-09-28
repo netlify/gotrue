@@ -43,9 +43,12 @@ func (a *API) Token(w http.ResponseWriter, r *http.Request) error {
 func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
+	remember := r.FormValue("remember")
 
 	aud := a.requestAud(ctx, r)
 	instanceID := getInstanceID(ctx)
+	config := getConfig(ctx)
+
 	user, err := a.db.FindUserByEmailAndAudience(instanceID, username, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
@@ -62,6 +65,10 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return oauthError("invalid_grant", "Invalid Password")
 	}
 
+	if remember != "" && config.Cookie.Enabled {
+		a.setCookieToken(ctx, user, remember == "session", w)
+	}
+
 	return a.sendRefreshToken(ctx, user, w)
 }
 
@@ -69,6 +76,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	config := a.getConfig(ctx)
 	tokenStr := r.FormValue("refresh_token")
+	remember := r.FormValue("remember")
 
 	if tokenStr == "" {
 		return oauthError("invalid_request", "refresh_token required")
@@ -95,6 +103,10 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	if err != nil {
 		a.db.RollbackRefreshTokenSwap(newToken, token)
 		return internalServerError("error generating jwt token").WithInternalError(err)
+	}
+
+	if remember != "" && config.Cookie.Enabled {
+		a.setCookieToken(ctx, user, remember == "session", w)
 	}
 
 	return sendJSON(w, http.StatusOK, &AccessTokenResponse{
@@ -146,10 +158,46 @@ func (a *API) issueRefreshToken(ctx context.Context, user *models.User) (*Access
 	}, nil
 }
 
+func (a *API) setCookieToken(ctx context.Context, user *models.User, session bool, w http.ResponseWriter) error {
+	config := getConfig(ctx)
+	exp := time.Second * time.Duration(config.Cookie.Duration)
+
+	tokenString, err := generateAccessToken(user, exp, config.JWT.Secret)
+	if err != nil {
+		return err
+	}
+	cookie := &http.Cookie{
+		Name:     config.Cookie.Key,
+		Value:    tokenString,
+		Secure:   true,
+		HttpOnly: true,
+	}
+	if !session && exp > 0 {
+		cookie.Expires = time.Now().Add(exp)
+		cookie.MaxAge = config.Cookie.Duration
+	}
+
+	http.SetCookie(w, cookie)
+	return nil
+}
+
+func (a *API) clearCookieToken(ctx context.Context, w http.ResponseWriter) {
+	config := getConfig(ctx)
+	http.SetCookie(w, &http.Cookie{
+		Name:     config.Cookie.Key,
+		Value:    "",
+		Expires:  time.Now().Add(-1 * time.Hour * 10),
+		MaxAge:   -1,
+		Secure:   true,
+		HttpOnly: true,
+	})
+}
+
 func (a *API) sendRefreshToken(ctx context.Context, user *models.User, w http.ResponseWriter) error {
 	token, err := a.issueRefreshToken(ctx, user)
 	if err != nil {
 		return err
 	}
+
 	return sendJSON(w, http.StatusOK, token)
 }
