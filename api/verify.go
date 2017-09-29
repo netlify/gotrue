@@ -54,7 +54,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if cookie != "" && config.Cookie.Enabled {
-		if err = a.setCookieToken(ctx, user, cookie == useSessionCookie, w); err != nil {
+		if err = a.setCookieToken(config, user, cookie == useSessionCookie, w); err != nil {
 			return internalServerError("Failed to set JWT cookie", err)
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 )
 
@@ -69,7 +70,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	}
 
 	if cookie != "" && config.Cookie.Enabled {
-		if err = a.setCookieToken(ctx, user, cookie == useSessionCookie, w); err != nil {
+		if err = a.setCookieToken(config, user, cookie == useSessionCookie, w); err != nil {
 			return internalServerError("Failed to set JWT cookie", err)
 		}
 	}
@@ -111,7 +112,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	if cookie != "" && config.Cookie.Enabled {
-		if err = a.setCookieToken(ctx, user, cookie == useSessionCookie, w); err != nil {
+		if err = a.setCookieToken(config, user, cookie == useSessionCookie, w); err != nil {
 			return internalServerError("Failed to set JWT cookie", err)
 		}
 	}
@@ -165,8 +166,7 @@ func (a *API) issueRefreshToken(ctx context.Context, user *models.User) (*Access
 	}, nil
 }
 
-func (a *API) setCookieToken(ctx context.Context, user *models.User, session bool, w http.ResponseWriter) error {
-	config := getConfig(ctx)
+func (a *API) setCookieToken(config *conf.Configuration, user *models.User, session bool, w http.ResponseWriter) error {
 	exp := time.Second * time.Duration(config.Cookie.Duration)
 
 	tokenString, err := generateAccessToken(user, exp, config.JWT.Secret)
