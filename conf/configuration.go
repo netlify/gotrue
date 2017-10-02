@@ -90,6 +90,11 @@ type Configuration struct {
 	} `json:"mailer"`
 	External      ExternalProviderConfiguration `json:"external"`
 	DisableSignup bool                          `json:"disable_signup" split_words:"true"`
+	Cookie        struct {
+		Key      string `json:"key" default:"nf_jwt"`
+		Enabled  bool   `json:"enabled" default:"true"`
+		Duration int    `json:"duration" default:"86400"`
+	} `json:"cookies"`
 }
 
 func loadEnvironment(filename string) error {

@@ -22,7 +22,10 @@ type VerifyParams struct {
 // Verify exchanges a confirmation or recovery token to a refresh token
 func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
+	config := getConfig(ctx)
+
 	params := &VerifyParams{}
+	cookie := r.Header.Get(useCookieHeader)
 	jsonDecoder := json.NewDecoder(r.Body)
 	if err := jsonDecoder.Decode(params); err != nil {
 		return badRequestError("Could not read verification params: %v", err)
@@ -49,6 +52,13 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+
+	if cookie != "" && config.Cookie.Enabled {
+		if err = a.setCookieToken(config, user, cookie == useSessionCookie, w); err != nil {
+			return internalServerError("Failed to set JWT cookie", err)
+		}
+	}
+
 	return a.sendRefreshToken(ctx, user, w)
 }
 
