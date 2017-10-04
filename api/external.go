@@ -249,6 +249,8 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 		return provider.NewGitlabProvider(config.External.Gitlab)
 	case "google":
 		return provider.NewGoogleProvider(config.External.Google)
+	case "facebook":
+		return provider.NewFacebookProvider(config.External.Facebook)
 	default:
 		return nil, fmt.Errorf("Provider %s could not be found", name)
 	}
