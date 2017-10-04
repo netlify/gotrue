@@ -65,6 +65,7 @@ type ExternalProviderConfiguration struct {
 	Github      OAuthProviderConfiguration `json:"github"`
 	Gitlab      OAuthProviderConfiguration `json:"gitlab"`
 	Google      OAuthProviderConfiguration `json:"google"`
+	Facebook    OAuthProviderConfiguration `json:"facebook"`
 	RedirectURL string                     `json:"redirect_url"`
 }
 
