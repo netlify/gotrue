@@ -92,9 +92,8 @@ type Configuration struct {
 	External      ExternalProviderConfiguration `json:"external"`
 	DisableSignup bool                          `json:"disable_signup" split_words:"true"`
 	Cookie        struct {
-		Key      string `json:"key" default:"nf_jwt"`
-		Enabled  bool   `json:"enabled" default:"true"`
-		Duration int    `json:"duration" default:"86400"`
+		Key      string `json:"key"`
+		Duration int    `json:"duration"`
 	} `json:"cookies"`
 }
 
@@ -172,6 +171,14 @@ func (config *Configuration) ApplyDefaults() {
 
 	if config.SMTP.MaxFrequency == 0 {
 		config.SMTP.MaxFrequency = 15 * time.Minute
+	}
+
+	if config.Cookie.Key == "" {
+		config.Cookie.Key = "nf_jwt"
+	}
+
+	if config.Cookie.Duration == 0 {
+		config.Cookie.Duration = 86400
 	}
 }
 

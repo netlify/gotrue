@@ -53,7 +53,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	if cookie != "" && config.Cookie.Enabled {
+	if cookie != "" && config.Cookie.Duration > 0 {
 		if err = a.setCookieToken(config, user, cookie == useSessionCookie, w); err != nil {
 			return internalServerError("Failed to set JWT cookie", err)
 		}

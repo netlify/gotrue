@@ -69,7 +69,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return oauthError("invalid_grant", "Invalid Password")
 	}
 
-	if cookie != "" && config.Cookie.Enabled {
+	if cookie != "" && config.Cookie.Duration > 0 {
 		if err = a.setCookieToken(config, user, cookie == useSessionCookie, w); err != nil {
 			return internalServerError("Failed to set JWT cookie", err)
 		}
@@ -111,7 +111,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		return internalServerError("error generating jwt token").WithInternalError(err)
 	}
 
-	if cookie != "" && config.Cookie.Enabled {
+	if cookie != "" && config.Cookie.Duration > 0 {
 		if err = a.setCookieToken(config, user, cookie == useSessionCookie, w); err != nil {
 			return internalServerError("Failed to set JWT cookie", err)
 		}
@@ -179,7 +179,7 @@ func (a *API) setCookieToken(config *conf.Configuration, user *models.User, sess
 		Secure:   true,
 		HttpOnly: true,
 	}
-	if !session && exp > 0 {
+	if !session {
 		cookie.Expires = time.Now().Add(exp)
 		cookie.MaxAge = config.Cookie.Duration
 	}
