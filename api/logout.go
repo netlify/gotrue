@@ -13,9 +13,8 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	a.db.Logout(claims.Subject)
-	w.WriteHeader(http.StatusNoContent)
-
 	a.clearCookieToken(ctx, w)
+	w.WriteHeader(http.StatusNoContent)
 
 	return nil
 }
