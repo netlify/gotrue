@@ -178,6 +178,7 @@ func (a *API) setCookieToken(config *conf.Configuration, user *models.User, sess
 		Value:    tokenString,
 		Secure:   true,
 		HttpOnly: true,
+		Path:     "/",
 	}
 	if !session {
 		cookie.Expires = time.Now().Add(exp)
