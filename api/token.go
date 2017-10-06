@@ -51,7 +51,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 
 	aud := a.requestAud(ctx, r)
 	instanceID := getInstanceID(ctx)
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 
 	user, err := a.db.FindUserByEmailAndAudience(instanceID, username, aud)
 	if err != nil {

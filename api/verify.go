@@ -22,7 +22,7 @@ type VerifyParams struct {
 // Verify exchanges a confirmation or recovery token to a refresh token
 func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	config := getConfig(ctx)
+	config := a.getConfig(ctx)
 
 	params := &VerifyParams{}
 	cookie := r.Header.Get(useCookieHeader)
