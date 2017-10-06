@@ -198,6 +198,7 @@ func (a *API) clearCookieToken(ctx context.Context, w http.ResponseWriter) {
 		MaxAge:   -1,
 		Secure:   true,
 		HttpOnly: true,
+		Path:     "/",
 	})
 }
 
