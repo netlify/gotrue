@@ -96,5 +96,8 @@ func (a *API) recoverVerify(params *VerifyParams) (*models.User, error) {
 	}
 
 	user.Recover()
+	if !user.IsConfirmed() {
+		user.Confirm()
+	}
 	return user, nil
 }
