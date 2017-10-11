@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -114,6 +115,47 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 
 	assert.Equal(ts.T(), w.Code, http.StatusBadRequest)
 	assert.Equal(ts.T(), data["code"], float64(http.StatusBadRequest))
+}
+
+// TestSignupThrottle checks to make sure endpoint isn't called more than 1 time/second
+func (ts *SignupTestSuite) TestSignupThrottle() {
+	ts.T().Skip("Skipping throttle test until GlobalConfiguration can be changed")
+	ts.API.config.Throttle.Enabled = true
+
+	// Request body
+	var buffer bytes.Buffer
+
+	encode := func(userid string) {
+		require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+			"email":    fmt.Sprintf("%s@example.com", userid),
+			"password": userid,
+		}))
+	}
+
+	encode("test2")
+
+	// Setup request
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup response recorder
+	w := httptest.NewRecorder()
+	y := httptest.NewRecorder()
+
+	ts.API.handler.ServeHTTP(y, req)
+	u, err := ts.API.db.FindUserByEmailAndAudience("", "test2@example.com", ts.Config.JWT.Aud)
+	if err == nil {
+		u.Confirm()
+		require.NoError(ts.T(), ts.API.db.UpdateUser(u))
+	}
+
+	encode("test3")
+	ts.API.handler.ServeHTTP(w, req)
+
+	u, err = ts.API.db.FindUserByEmailAndAudience("", "test3@example.com", ts.Config.JWT.Aud)
+	require.Error(ts.T(), err, "expected user not to exist")
+
+	assert.Equal(ts.T(), http.StatusTooManyRequests, w.Code)
 }
 
 func (ts *SignupTestSuite) TestVerifySignup() {

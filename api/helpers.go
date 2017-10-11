@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -72,4 +74,44 @@ func (a *API) requestAud(ctx context.Context, r *http.Request) string {
 
 	// Finally, return the default of none of the above methods are successful
 	return config.JWT.Aud
+}
+
+func (a *API) isEmailBlacklisted(email string) bool {
+	return a.blacklist.EmailBlacklisted(email)
+}
+
+var minNumsRegexp = regexp.MustCompile("[[:digit:]]")
+var minSymbolsRegexp = regexp.MustCompile("[$@$!%*#?&]")
+var minUppercaseRegexp = regexp.MustCompile("[[:upper:]]")
+var minLowercaseRegexp = regexp.MustCompile("[[:lower:]]")
+
+func (a *API) isPasswordValid(password string) (string, bool) {
+	errors := []string{}
+	config := a.config.Password
+
+	if l := len(password); l == 0 || l < config.MinLength {
+		errors = append(errors, fmt.Sprintf("at least %d chars", config.MinLength))
+	}
+
+	if len(minNumsRegexp.FindAllString(password, -1)) < config.MinNumbers {
+		errors = append(errors, fmt.Sprintf("contain at least %d numbers", config.MinNumbers))
+	}
+
+	if len(minSymbolsRegexp.FindAllString(password, -1)) < config.MinSymbols {
+		errors = append(errors, fmt.Sprintf("contain at least %d symbols", config.MinSymbols))
+	}
+
+	if len(minUppercaseRegexp.FindAllString(password, -1)) < config.MinUppercase {
+		errors = append(errors, fmt.Sprintf("contain at least %d uppercase characters", config.MinUppercase))
+	}
+
+	if len(minLowercaseRegexp.FindAllString(password, -1)) < config.MinLowercase {
+		errors = append(errors, fmt.Sprintf("contain at least %d lowercase characters", config.MinLowercase))
+	}
+
+	if len(errors) == 0 {
+		return "", true
+	}
+
+	return fmt.Sprintf("Password must %s", strings.Join(errors, ", ")), false
 }

@@ -39,6 +39,10 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		return unprocessableEntityError("Signup requires a valid email and password")
 	}
 
+	if msg, valid := a.isPasswordValid(params.Password); !valid {
+		return badRequestError(msg)
+	}
+
 	mailer := getMailer(ctx)
 	aud := a.requestAud(ctx, r)
 
@@ -83,6 +87,10 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud string) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
+
+	if a.isEmailBlacklisted(params.Email) {
+		return nil, forbiddenError("Emails from that domain are not allowed")
+	}
 
 	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.Data)
 	if err != nil {
