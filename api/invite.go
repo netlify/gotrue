@@ -54,18 +54,22 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	now := time.Now()
 	user.InvitedAt = &now
 
-	mailer := getMailer(ctx)
-	if err = mailer.ValidateEmail(params.Email); err != nil {
-		return unprocessableEntityError("Unable to validate email address: " + err.Error())
-	}
-
-	if err := mailer.InviteMail(user); err != nil {
-		return internalServerError("Error sending confirmation mail").WithInternalError(err)
-	}
-
 	user.SetRole(config.JWT.DefaultGroupName)
 	if err = a.db.UpdateUser(user); err != nil {
 		return internalServerError("Database error updating user").WithInternalError(err)
+	}
+
+	if config.Mailer.Autoconfirm {
+		user.Confirm()
+	} else {
+		mailer := getMailer(ctx)
+		if err = mailer.ValidateEmail(params.Email); err != nil {
+			return unprocessableEntityError("Unable to validate email address: " + err.Error())
+		}
+
+		if err := mailer.InviteMail(user); err != nil {
+			return internalServerError("Error sending invite mail").WithInternalError(err)
+		}
 	}
 
 	return sendJSON(w, http.StatusOK, user)
