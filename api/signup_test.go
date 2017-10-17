@@ -3,11 +3,14 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
@@ -74,6 +77,84 @@ func (ts *SignupTestSuite) TestSignup() {
 	assert.Equal(ts.T(), "email", data.AppMetaData["provider"])
 }
 
+func (ts *SignupTestSuite) TestWebhookTriggered() {
+	var callCount int
+	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		assert.Equal(ts.T(), "application/json", r.Header.Get("Content-Type"))
+
+		// verify the signature
+		signature := r.Header.Get("x-gotrue-signature")
+		p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+		claims := new(jwt.StandardClaims)
+		token, err := p.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {
+			return []byte(ts.Config.JWT.Secret), nil
+		})
+		assert.True(ts.T(), token.Valid)
+		assert.Equal(ts.T(), "", claims.Subject) // not configured for multitenancy
+		assert.Equal(ts.T(), "gotrue", claims.Issuer)
+		assert.WithinDuration(ts.T(), time.Now(), time.Unix(claims.IssuedAt, 0), 5*time.Second)
+
+		// verify the contents
+		defer squash(r.Body.Close)
+		raw, err := ioutil.ReadAll(r.Body)
+		require.NoError(ts.T(), err)
+		data := map[string]string{}
+		require.NoError(ts.T(), json.Unmarshal(raw, &data))
+		assert.Equal(ts.T(), "", data["instance_id"]) // not configured for multitenancy
+		assert.Equal(ts.T(), "test@example.com", data["email"])
+		assert.Equal(ts.T(), "email", data["provider"])
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer svr.Close()
+	ts.Config.SignupHook = conf.WebhookConfig{
+		URL:        svr.URL,
+		Retries:    1,
+		TimeoutSec: 1,
+	}
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"email":    "test@example.com",
+		"password": "test",
+		"data": map[string]interface{}{
+			"a": 1,
+		},
+	}))
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
+	assert.Equal(ts.T(), 1, callCount)
+}
+
+func (ts *SignupTestSuite) TestFailingWebhook() {
+	ts.Config.SignupHook = conf.WebhookConfig{
+		URL:        "http://notaplace.localhost",
+		Retries:    1,
+		TimeoutSec: 1,
+	}
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"email":    "test@example.com",
+		"password": "test",
+		"data": map[string]interface{}{
+			"a": 1,
+		},
+	}))
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup response recorder
+	w := httptest.NewRecorder()
+
+	ts.API.handler.ServeHTTP(w, req)
+
+	require.Equal(ts.T(), http.StatusBadGateway, w.Code)
+}
+
 // TestSignupTwice checks to make sure the same email cannot be registered twice
 func (ts *SignupTestSuite) TestSignupTwice() {
 	// Request body
@@ -117,7 +198,6 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 }
 
 func (ts *SignupTestSuite) TestVerifySignup() {
-
 	user, err := models.NewUser("", "test@example.com", "testing", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err)
 	require.NoError(ts.T(), ts.API.db.CreateUser(user))

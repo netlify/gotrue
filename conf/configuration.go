@@ -91,6 +91,7 @@ type Configuration struct {
 	} `json:"mailer"`
 	External      ExternalProviderConfiguration `json:"external"`
 	DisableSignup bool                          `json:"disable_signup" split_words:"true"`
+	SignupHook    WebhookConfig                 `split_words:"true"`
 	Cookie        struct {
 		Key      string `json:"key"`
 		Duration int    `json:"duration"`
@@ -109,6 +110,12 @@ func loadEnvironment(filename string) error {
 		}
 	}
 	return err
+}
+
+type WebhookConfig struct {
+	URL        string
+	Retries    int
+	TimeoutSec int
 }
 
 // LoadGlobal loads configuration from file and environment variables.

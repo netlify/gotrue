@@ -84,6 +84,10 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 
+	if err := triggerSignupHook(params, instanceID, config.JWT.Secret, &config.SignupHook); err != nil {
+		return nil, err
+	}
+
 	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.Data)
 	if err != nil {
 		return nil, internalServerError("Database error creating user").WithInternalError(err)
