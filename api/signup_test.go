@@ -79,9 +79,12 @@ func (ts *SignupTestSuite) TestSignup() {
 
 func (ts *SignupTestSuite) TestWebhookTriggered() {
 	var callCount int
+	require := ts.Require()
+	assert := ts.Assert()
+
 	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
-		assert.Equal(ts.T(), "application/json", r.Header.Get("Content-Type"))
+		assert.Equal("application/json", r.Header.Get("Content-Type"))
 
 		// verify the signature
 		signature := r.Header.Get("x-gotrue-signature")
@@ -90,21 +93,47 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		token, err := p.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(ts.Config.JWT.Secret), nil
 		})
-		assert.True(ts.T(), token.Valid)
-		assert.Equal(ts.T(), "", claims.Subject) // not configured for multitenancy
-		assert.Equal(ts.T(), "gotrue", claims.Issuer)
-		assert.WithinDuration(ts.T(), time.Now(), time.Unix(claims.IssuedAt, 0), 5*time.Second)
+		assert.True(token.Valid)
+		assert.Equal("", claims.Subject) // not configured for multitenancy
+		assert.Equal("gotrue", claims.Issuer)
+		assert.WithinDuration(time.Now(), time.Unix(claims.IssuedAt, 0), 5*time.Second)
 
 		// verify the contents
+
 		defer squash(r.Body.Close)
 		raw, err := ioutil.ReadAll(r.Body)
-		require.NoError(ts.T(), err)
-		data := map[string]string{}
-		require.NoError(ts.T(), json.Unmarshal(raw, &data))
-		assert.Equal(ts.T(), "", data["instance_id"]) // not configured for multitenancy
-		assert.Equal(ts.T(), "test@example.com", data["email"])
-		assert.Equal(ts.T(), "email", data["provider"])
+		require.NoError(err)
+		data := map[string]interface{}{}
+		require.NoError(json.Unmarshal(raw, &data))
 
+		assert.Equal(2, len(data))
+		assert.Equal("signup", data["event"])
+
+		u, ok := data["user"].(map[string]interface{})
+		require.True(ok)
+		assert.Len(u, 8)
+		// assert.Equal(t, user.ID, u["id"]) TODO
+		assert.Equal("api.netlify.com", u["aud"])
+		assert.Equal("", u["role"])
+		assert.Equal("test@example.com", u["email"])
+
+		appmeta, ok := u["app_metadata"].(map[string]interface{})
+		require.True(ok)
+		assert.Len(appmeta, 1)
+		assert.EqualValues("email", appmeta["provider"])
+
+		usermeta, ok := u["user_metadata"].(map[string]interface{})
+		require.True(ok)
+		assert.Len(usermeta, 1)
+		assert.EqualValues(1, usermeta["a"])
+
+		created, err := time.Parse(time.RFC3339Nano, u["created_at"].(string))
+		assert.NoError(err)
+		assert.True(created.IsZero())
+
+		updated, err := time.Parse(time.RFC3339Nano, u["created_at"].(string))
+		assert.NoError(err)
+		assert.True(updated.IsZero())
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer svr.Close()
@@ -114,7 +143,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		TimeoutSec: 1,
 	}
 	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+	require.NoError(json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"email":    "test@example.com",
 		"password": "test",
 		"data": map[string]interface{}{
@@ -126,8 +155,8 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), http.StatusOK, w.Code)
-	assert.Equal(ts.T(), 1, callCount)
+	assert.Equal(http.StatusOK, w.Code)
+	assert.Equal(1, callCount)
 }
 
 func (ts *SignupTestSuite) TestFailingWebhook() {

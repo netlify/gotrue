@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/models"
 )
 
 const (
@@ -115,16 +116,20 @@ func (w *Webhook) generateSignature() (string, error) {
 	return tokenString, nil
 }
 
-func triggerSignupHook(params *SignupParams, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) error {
+func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) error {
 	if hconfig.URL == "" {
 		return nil
 	}
 
 	payload := struct {
-		Email      string `json:"email"`
-		InstanceID string `json:"instance_id"`
-		Provider   string `json:"provider"`
-	}{Email: params.Email, InstanceID: instanceID, Provider: params.Provider}
+		Event      string       `json:"event"`
+		InstanceID string       `json:"instance_id,omitempty"`
+		User       *models.User `json:"user"`
+	}{
+		Event:      "signup",
+		InstanceID: instanceID,
+		User:       user,
+	}
 	data, err := json.Marshal(&payload)
 	if err != nil {
 		return internalServerError("Failed to serialize the data for signup webhook").WithInternalError(err)

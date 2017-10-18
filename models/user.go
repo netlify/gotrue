@@ -23,8 +23,8 @@ type User struct {
 	Role              string     `json:"role"`
 	Email             string     `json:"email"`
 	EncryptedPassword string     `json:"-"`
-	ConfirmedAt       *time.Time `json:"confirmed_at"`
-	InvitedAt         *time.Time `json:"invited_at"`
+	ConfirmedAt       *time.Time `json:"confirmed_at,omitempty"`
+	InvitedAt         *time.Time `json:"invited_at,omitempty"`
 
 	ConfirmationToken  string     `json:"-"`
 	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty"`

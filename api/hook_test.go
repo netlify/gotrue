@@ -8,71 +8,36 @@ import (
 	"testing"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSignupHook(t *testing.T) {
+func TestSignupHookSendInstanceID(t *testing.T) {
+	user, err := models.NewUser("myinstance", "test@truth.com", "thisisapassword", "", nil)
+	require.NoError(t, err)
+
 	var callCount int
 	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
-		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
-		assert.Equal(t, "", r.Header.Get("x-gotrue-signature"))
-
 		defer squash(r.Body.Close)
 		raw, err := ioutil.ReadAll(r.Body)
 		require.NoError(t, err)
-		data := map[string]string{}
+
+		data := map[string]interface{}{}
 		require.NoError(t, json.Unmarshal(raw, &data))
+
+		assert.Len(t, data, 3)
 		assert.Equal(t, "myinstance", data["instance_id"])
-		assert.Equal(t, "test@truth.com", data["email"])
-		assert.Equal(t, "someone", data["provider"])
-
 		w.WriteHeader(http.StatusOK)
 	}))
-
 	defer svr.Close()
-	params := &SignupParams{
-		Email:    "test@truth.com",
-		Provider: "someone",
-	}
+
 	config := &conf.WebhookConfig{
 		URL: svr.URL,
 	}
-	require.NoError(t, triggerSignupHook(params, "myinstance", "", config))
-
-	assert.Equal(t, 1, callCount)
-}
-
-func TestSignupHookJWTSignature(t *testing.T) {
-	var callCount int
-	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		callCount++
-		signature := r.Header.Get("x-gotrue-signature")
-		p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
-		claims := new(jwt.StandardClaims)
-		token, err := p.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte("somesecret"), nil
-		})
-		require.NoError(t, err)
-
-		assert.True(t, token.Valid)
-		assert.Equal(t, "myinstance", claims.Subject)
-		assert.WithinDuration(t, time.Now(), time.Unix(claims.IssuedAt, 0), 5*time.Second)
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	defer svr.Close()
-	params := &SignupParams{
-		Email:    "test@truth.com",
-		Provider: "someone",
-	}
-	config := &conf.WebhookConfig{
-		URL: svr.URL,
-	}
-	require.NoError(t, triggerSignupHook(params, "myinstance", "somesecret", config))
+	require.NoError(t, triggerSignupHook(user, "myinstance", "", config))
 
 	assert.Equal(t, 1, callCount)
 }
