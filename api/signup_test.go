@@ -91,7 +91,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 		claims := new(jwt.StandardClaims)
 		token, err := p.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte(ts.Config.JWT.Secret), nil
+			return []byte(ts.Config.SignupHook.Secret), nil
 		})
 		assert.True(token.Valid)
 		assert.Equal("", claims.Subject) // not configured for multitenancy
@@ -141,6 +141,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		URL:        svr.URL,
 		Retries:    1,
 		TimeoutSec: 1,
+		Secret:     "top-secret",
 	}
 	var buffer bytes.Buffer
 	require.NoError(json.NewEncoder(&buffer).Encode(map[string]interface{}{

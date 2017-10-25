@@ -116,6 +116,7 @@ type WebhookConfig struct {
 	URL        string `json:"url"`
 	Retries    int    `json:"retries"`
 	TimeoutSec int    `json:"timeout_sec"`
+	Secret     string `json:"jwt_secret"`
 }
 
 // LoadGlobal loads configuration from file and environment variables.
