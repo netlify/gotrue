@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -33,7 +34,7 @@ type Webhook struct {
 	headers    map[string]string
 }
 
-func (w *Webhook) trigger() error {
+func (w *Webhook) trigger() (io.ReadCloser, error) {
 	timeout := defaultTimeout
 	if w.TimeoutSec > 0 {
 		timeout = time.Duration(w.TimeoutSec) * time.Second
@@ -66,9 +67,9 @@ func (w *Webhook) trigger() error {
 		watcher, req := watchForConnection(req)
 
 		if w.jwtSecret != "" {
-			header, err := w.generateSignature()
-			if err != nil {
-				return err
+			header, jwtErr := w.generateSignature()
+			if jwtErr != nil {
+				return nil, jwtErr
 			}
 			req.Header.Set(headerHookSignature, header)
 		}
@@ -79,14 +80,14 @@ func (w *Webhook) trigger() error {
 			if terr, ok := err.(net.Error); ok && terr.Timeout() {
 				// timed out - try again?
 				if i == w.Retries-1 {
-					return httpError(http.StatusGatewayTimeout, "Failed to perform webhook in time frame (%d seconds)", timeout.Seconds())
+					return nil, httpError(http.StatusGatewayTimeout, "Failed to perform webhook in time frame (%d seconds)", timeout.Seconds())
 				}
 				hooklog.Info("Request timed out")
 				continue
 			} else if watcher.gotConn {
-				return internalServerError("Failed to trigger webhook to %s", w.URL).WithInternalError(err)
+				return nil, internalServerError("Failed to trigger webhook to %s", w.URL).WithInternalError(err)
 			} else {
-				return httpError(http.StatusBadGateway, "Failed to connect to %s", w.URL)
+				return nil, httpError(http.StatusBadGateway, "Failed to connect to %s", w.URL)
 			}
 		}
 		dur := time.Since(start)
@@ -97,14 +98,14 @@ func (w *Webhook) trigger() error {
 		switch rsp.StatusCode {
 		case http.StatusOK, http.StatusNoContent, http.StatusAccepted:
 			rspLog.Infof("Finished processing webhook in %s", dur)
-			return nil
+			return rsp.Body, nil
 		default:
 			rspLog.Infof("Bad response for webhook %d in %s", rsp.StatusCode, dur)
 		}
 	}
 
 	hooklog.Infof("Failed to process webhook for %s after %d attempts", w.URL, w.Retries)
-	return unprocessableEntityError("Failed to handle signup webhook")
+	return nil, unprocessableEntityError("Failed to handle signup webhook")
 }
 
 func (w *Webhook) generateSignature() (string, error) {
@@ -116,7 +117,7 @@ func (w *Webhook) generateSignature() (string, error) {
 	return tokenString, nil
 }
 
-func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) error {
+func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) (io.ReadCloser, error) {
 	if hconfig.URL == "" {
 		return nil
 	}

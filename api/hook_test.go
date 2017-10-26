@@ -37,7 +37,13 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 	config := &conf.WebhookConfig{
 		URL: svr.URL,
 	}
-	require.NoError(t, triggerSignupHook(user, "myinstance", "", config))
+	b, err := triggerSignupHook(user, "myinstance", "", config)
+	defer func() {
+		if b != nil {
+			b.Close()
+		}
+	}()
+	require.NoError(t, err)
 
 	assert.Equal(t, 1, callCount)
 }
@@ -62,7 +68,13 @@ func TestHookRetry(t *testing.T) {
 	w := Webhook{
 		WebhookConfig: config,
 	}
-	require.NoError(t, w.trigger())
+	b, err := w.trigger()
+	defer func() {
+		if b != nil {
+			b.Close()
+		}
+	}()
+	require.NoError(t, err)
 
 	assert.Equal(t, 3, callCount)
 }
@@ -83,7 +95,7 @@ func TestHookTimeout(t *testing.T) {
 	w := Webhook{
 		WebhookConfig: config,
 	}
-	err := w.trigger()
+	b, err := w.trigger()
 	require.Error(t, err)
 	herr, ok := err.(*HTTPError)
 	require.True(t, ok)
@@ -101,7 +113,7 @@ func TestHookNoServer(t *testing.T) {
 	w := Webhook{
 		WebhookConfig: config,
 	}
-	err := w.trigger()
+	b, err := w.trigger()
 	require.Error(t, err)
 	herr, ok := err.(*HTTPError)
 	require.True(t, ok)

@@ -17,6 +17,11 @@ type SignupParams struct {
 	Provider string
 }
 
+type WebhookResponse struct {
+	AppMetaData  map[string]interface{} `json:"app_metadata,omitempty"`
+	UserMetaData map[string]interface{} `json:"user_metadata,omitempty"`
+}
+
 // Signup is the endpoint for registering a new user
 func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
@@ -99,8 +104,23 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 
 	user.SetRole(config.JWT.DefaultGroupName)
 
-	if err := triggerSignupHook(user, instanceID, config.SignupHook.Secret, &config.SignupHook); err != nil {
+	body, err := triggerSignupHook(user, instanceID, config.SignupHook.Secret, &config.SignupHook)
+	if err != nil {
 		return nil, err
+	}
+	defer body.Close()
+	if body != nil {
+		webhookRsp := &WebhookResponse{}
+		decoder := json.NewDecoder(body)
+		if err = decoder.Decode(webhookRsp); err != nil {
+			return nil, internalServerError("Webhook returned malformed JSON: %v", err).WithInternalError(err)
+		}
+		if webhookRsp.UserMetaData != nil {
+			user.UserMetaData = webhookRsp.UserMetaData
+		}
+		if webhookRsp.AppMetaData != nil {
+			user.AppMetaData = webhookRsp.AppMetaData
+		}
 	}
 
 	if err := a.db.CreateUser(user); err != nil {
