@@ -61,7 +61,7 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 
 		req, err := http.NewRequest(http.MethodPost, w.URL, bytes.NewBuffer(w.payload))
 		if err != nil {
-			return internalServerError("Failed to make request object").WithInternalError(err)
+			return nil, internalServerError("Failed to make request object").WithInternalError(err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 		watcher, req := watchForConnection(req)
@@ -80,13 +80,16 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 			if terr, ok := err.(net.Error); ok && terr.Timeout() {
 				// timed out - try again?
 				if i == w.Retries-1 {
+					closeBody(rsp)
 					return nil, httpError(http.StatusGatewayTimeout, "Failed to perform webhook in time frame (%d seconds)", timeout.Seconds())
 				}
 				hooklog.Info("Request timed out")
 				continue
 			} else if watcher.gotConn {
+				closeBody(rsp)
 				return nil, internalServerError("Failed to trigger webhook to %s", w.URL).WithInternalError(err)
 			} else {
+				closeBody(rsp)
 				return nil, httpError(http.StatusBadGateway, "Failed to connect to %s", w.URL)
 			}
 		}
@@ -98,7 +101,11 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 		switch rsp.StatusCode {
 		case http.StatusOK, http.StatusNoContent, http.StatusAccepted:
 			rspLog.Infof("Finished processing webhook in %s", dur)
-			return rsp.Body, nil
+			var body io.ReadCloser
+			if rsp.ContentLength > 0 {
+				body = rsp.Body
+			}
+			return body, nil
 		default:
 			rspLog.Infof("Bad response for webhook %d in %s", rsp.StatusCode, dur)
 		}
@@ -117,9 +124,15 @@ func (w *Webhook) generateSignature() (string, error) {
 	return tokenString, nil
 }
 
+func closeBody(rsp *http.Response) {
+	if rsp != nil && rsp.Body != nil {
+		rsp.Body.Close()
+	}
+}
+
 func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) (io.ReadCloser, error) {
 	if hconfig.URL == "" {
-		return nil
+		return nil, nil
 	}
 
 	payload := struct {
@@ -133,7 +146,7 @@ func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig 
 	}
 	data, err := json.Marshal(&payload)
 	if err != nil {
-		return internalServerError("Failed to serialize the data for signup webhook").WithInternalError(err)
+		return nil, internalServerError("Failed to serialize the data for signup webhook").WithInternalError(err)
 	}
 	w := Webhook{
 		WebhookConfig: hconfig,

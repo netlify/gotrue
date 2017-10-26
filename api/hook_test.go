@@ -95,7 +95,7 @@ func TestHookTimeout(t *testing.T) {
 	w := Webhook{
 		WebhookConfig: config,
 	}
-	b, err := w.trigger()
+	_, err := w.trigger()
 	require.Error(t, err)
 	herr, ok := err.(*HTTPError)
 	require.True(t, ok)
@@ -113,7 +113,7 @@ func TestHookNoServer(t *testing.T) {
 	w := Webhook{
 		WebhookConfig: config,
 	}
-	b, err := w.trigger()
+	_, err := w.trigger()
 	require.Error(t, err)
 	herr, ok := err.(*HTTPError)
 	require.True(t, ok)

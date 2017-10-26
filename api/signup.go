@@ -108,8 +108,8 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 	if err != nil {
 		return nil, err
 	}
-	defer body.Close()
 	if body != nil {
+		defer body.Close()
 		webhookRsp := &WebhookResponse{}
 		decoder := json.NewDecoder(body)
 		if err = decoder.Decode(webhookRsp); err != nil {
