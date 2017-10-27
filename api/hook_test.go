@@ -37,13 +37,8 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 	config := &conf.WebhookConfig{
 		URL: svr.URL,
 	}
-	b, err := triggerSignupHook(user, "myinstance", "", config)
-	defer func() {
-		if b != nil {
-			b.Close()
-		}
-	}()
-	require.NoError(t, err)
+
+	require.NoError(t, triggerSignupHook(user, "myinstance", "", config))
 
 	assert.Equal(t, 1, callCount)
 }

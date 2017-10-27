@@ -34,6 +34,11 @@ type Webhook struct {
 	headers    map[string]string
 }
 
+type WebhookResponse struct {
+	AppMetaData  map[string]interface{} `json:"app_metadata,omitempty"`
+	UserMetaData map[string]interface{} `json:"user_metadata,omitempty"`
+}
+
 func (w *Webhook) trigger() (io.ReadCloser, error) {
 	timeout := defaultTimeout
 	if w.TimeoutSec > 0 {
@@ -130,9 +135,9 @@ func closeBody(rsp *http.Response) {
 	}
 }
 
-func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) (io.ReadCloser, error) {
+func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) error {
 	if hconfig.URL == "" {
-		return nil, nil
+		return nil
 	}
 
 	payload := struct {
@@ -146,7 +151,7 @@ func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig 
 	}
 	data, err := json.Marshal(&payload)
 	if err != nil {
-		return nil, internalServerError("Failed to serialize the data for signup webhook").WithInternalError(err)
+		return internalServerError("Failed to serialize the data for signup webhook").WithInternalError(err)
 	}
 	w := Webhook{
 		WebhookConfig: hconfig,
@@ -160,7 +165,26 @@ func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig 
 		payload: data,
 	}
 
-	return w.trigger()
+	body, err := w.trigger()
+	defer func() {
+		if body != nil {
+			body.Close()
+		}
+	}()
+	if err != nil && body != nil {
+		webhookRsp := &WebhookResponse{}
+		decoder := json.NewDecoder(body)
+		if err = decoder.Decode(webhookRsp); err != nil {
+			return internalServerError("Webhook returned malformed JSON: %v", err).WithInternalError(err)
+		}
+		if webhookRsp.UserMetaData != nil {
+			user.UserMetaData = webhookRsp.UserMetaData
+		}
+		if webhookRsp.AppMetaData != nil {
+			user.AppMetaData = webhookRsp.AppMetaData
+		}
+	}
+	return err
 }
 
 func watchForConnection(req *http.Request) (*connectionWatcher, *http.Request) {
