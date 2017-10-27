@@ -16,10 +16,15 @@ import (
 	"github.com/netlify/gotrue/models"
 )
 
+type HookEvent string
+
 const (
 	headerHookSignature = "x-gotrue-signature"
 	defaultHookRetries  = 3
 	gotrueIssuer        = "gotrue"
+	ValidateEvent       = "validate"
+	SignupEvent         = "signup"
+	LoginEvent          = "login"
 )
 
 var defaultTimeout time.Duration = time.Second * 5
@@ -135,17 +140,17 @@ func closeBody(rsp *http.Response) {
 	}
 }
 
-func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) error {
+func triggerHook(event HookEvent, user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) error {
 	if hconfig.URL == "" {
 		return nil
 	}
 
 	payload := struct {
-		Event      string       `json:"event"`
+		Event      HookEvent    `json:"event"`
 		InstanceID string       `json:"instance_id,omitempty"`
 		User       *models.User `json:"user"`
 	}{
-		Event:      "signup",
+		Event:      event,
 		InstanceID: instanceID,
 		User:       user,
 	}

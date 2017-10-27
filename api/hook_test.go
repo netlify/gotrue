@@ -38,7 +38,7 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 		URL: svr.URL,
 	}
 
-	require.NoError(t, triggerSignupHook(user, "myinstance", "", config))
+	require.NoError(t, triggerHook(SignupEvent, user, "myinstance", "", config))
 
 	assert.Equal(t, 1, callCount)
 }
