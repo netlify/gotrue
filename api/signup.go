@@ -99,8 +99,10 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 
 	user.SetRole(config.JWT.DefaultGroupName)
 
-	if err := triggerHook(SignupEvent, user, instanceID, config.SignupHook.Secret, &config.SignupHook); err != nil {
-		return nil, err
+	if config.Webhook.HasEvent("validate") {
+		if err := triggerHook(ValidateEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := a.db.CreateUser(user); err != nil {

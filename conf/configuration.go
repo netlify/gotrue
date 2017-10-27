@@ -91,7 +91,7 @@ type Configuration struct {
 	} `json:"mailer"`
 	External      ExternalProviderConfiguration `json:"external"`
 	DisableSignup bool                          `json:"disable_signup" split_words:"true"`
-	SignupHook    WebhookConfig                 `json:"signup_hook" split_words:"true"`
+	Webhook       WebhookConfig                 `json:"webhook" split_words:"true"`
 	Cookie        struct {
 		Key      string `json:"key"`
 		Duration int    `json:"duration"`
@@ -113,10 +113,20 @@ func loadEnvironment(filename string) error {
 }
 
 type WebhookConfig struct {
-	URL        string `json:"url"`
-	Retries    int    `json:"retries"`
-	TimeoutSec int    `json:"timeout_sec"`
-	Secret     string `json:"jwt_secret"`
+	URL        string   `json:"url"`
+	Retries    int      `json:"retries"`
+	TimeoutSec int      `json:"timeout_sec"`
+	Secret     string   `json:"jwt_secret"`
+	Events     []string `json:"events"`
+}
+
+func (w *WebhookConfig) HasEvent(event string) bool {
+	for _, name := range w.Events {
+		if event == name {
+			return true
+		}
+	}
+	return false
 }
 
 // LoadGlobal loads configuration from file and environment variables.
