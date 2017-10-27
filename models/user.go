@@ -78,6 +78,9 @@ func NewSystemUser(instanceID, aud string) *User {
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.CreatedAt.IsZero() {
+		u.CreatedAt = time.Now()
+	}
 	return u.BeforeUpdate()
 }
 
@@ -116,6 +119,8 @@ func (u *User) BeforeUpdate() error {
 		}
 		u.RawUserMetaData = string(data)
 	}
+
+	u.UpdatedAt = time.Now()
 
 	return nil
 }

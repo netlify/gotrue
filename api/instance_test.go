@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/pborman/uuid"
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage/dial"
+	"github.com/netlify/gotrue/storage/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -26,30 +25,21 @@ type InstanceTestSuite struct {
 	API *API
 }
 
-func (ts *InstanceTestSuite) SetupSuite() {
-	require.NoError(ts.T(), os.Setenv("GOTRUE_DB_DATABASE_URL", createTestDB()))
-}
+func TestInstance(t *testing.T) {
+	api, _, err := setupAPIForMultiinstanceTest()
+	require.NoError(t, err)
 
-func (ts *InstanceTestSuite) TearDownSuite() {
-	os.Remove(ts.API.config.DB.URL)
+	api.config.OperatorToken = operatorToken
+
+	ts := &InstanceTestSuite{
+		API: api,
+	}
+
+	suite.Run(t, ts)
 }
 
 func (ts *InstanceTestSuite) SetupTest() {
-	globalConfig, err := conf.LoadGlobal("test.env")
-	require.NoError(ts.T(), err)
-	globalConfig.OperatorToken = operatorToken
-	globalConfig.MultiInstanceMode = true
-	db, err := dial.Dial(globalConfig)
-	require.NoError(ts.T(), err)
-
-	api := NewAPI(globalConfig, db)
-	ts.API = api
-
-	// Cleanup existing user
-	i, err := ts.API.db.GetInstanceByUUID(testUUID)
-	if err == nil {
-		require.NoError(ts.T(), api.db.DeleteInstance(i))
-	}
+	test.CleanupTables()
 }
 
 func (ts *InstanceTestSuite) TestCreate() {
@@ -66,7 +56,7 @@ func (ts *InstanceTestSuite) TestCreate() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/instances", &buffer)
+	req := httptest.NewRequest(http.MethodPost, "/instances", &buffer)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+operatorToken)
 
@@ -74,7 +64,7 @@ func (ts *InstanceTestSuite) TestCreate() {
 	w := httptest.NewRecorder()
 
 	ts.API.handler.ServeHTTP(w, req)
-	require.Equal(ts.T(), w.Code, http.StatusCreated)
+	require.Equal(ts.T(), http.StatusCreated, w.Code)
 	resp := models.Instance{}
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&resp))
 	assert.NotNil(ts.T(), resp.BaseConfig)
@@ -97,7 +87,7 @@ func (ts *InstanceTestSuite) TestGet() {
 	})
 	require.NoError(ts.T(), err)
 
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/instances/"+instanceID, nil)
+	req := httptest.NewRequest(http.MethodGet, "/instances/"+instanceID, nil)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+operatorToken)
 
@@ -131,7 +121,7 @@ func (ts *InstanceTestSuite) TestUpdate() {
 		},
 	}))
 
-	req := httptest.NewRequest(http.MethodPut, "http://localhost/instances/"+instanceID, &buffer)
+	req := httptest.NewRequest(http.MethodPut, "/instances/"+instanceID, &buffer)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+operatorToken)
 
@@ -143,8 +133,4 @@ func (ts *InstanceTestSuite) TestUpdate() {
 	require.NoError(ts.T(), err)
 	require.Equal(ts.T(), i.BaseConfig.JWT.Secret, "testsecret")
 	require.Equal(ts.T(), i.BaseConfig.SiteURL, "https://test.mysite.com")
-}
-
-func TestInstance(t *testing.T) {
-	suite.Run(t, new(InstanceTestSuite))
 }

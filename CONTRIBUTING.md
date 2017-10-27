@@ -6,6 +6,7 @@ please read the [code of conduct](CODE_OF_CONDUCT.md).
 ## Setup
 
 > Install Go and Glide https://github.com/Masterminds/glide
+> Install Docker to run tests
 
 ```sh
 $ git clone https://github.com/netlify/gotrue
@@ -17,6 +18,23 @@ $ make deps
 
 ```sh
 $ make build
+```
+
+## Running database migrations for development and testing
+
+- Make sure your database can be accessed with user `root` without a password.
+- Alternatively, you can start MySQL inside a docker container running `hack/mysqld.sh`.
+
+### Migrations for development
+
+```sh
+$ make migrate_dev
+```
+
+### Migrations for testing
+
+```sh
+$ make migrate_test
 ```
 
 ## Testing

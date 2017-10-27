@@ -28,8 +28,9 @@ func (p *Pagination) Offset() uint64 {
 
 type SortDirection string
 
-const Ascending SortDirection = "asc"
-const Descending SortDirection = "desc"
+const Ascending SortDirection = "ASC"
+const Descending SortDirection = "DESC"
+const CreatedAt = "created_at"
 
 type SortParams struct {
 	Fields []SortField

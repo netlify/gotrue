@@ -1,0 +1,30 @@
+create_table("users", func(t) {
+	t.Column("id", "string", {"primary": true})
+	t.Column("instance_id", "string", {})
+	t.Column("aud", "string", {})
+	t.Column("role", "string", {})
+	t.Column("email", "string", {})
+	t.Column("encrypted_password", "string", {})
+	t.Column("confirmed_at", "timestamp", {})
+	t.Column("invited_at", "timestamp", {})
+
+	t.Column("confirmation_token", "string", {})
+	t.Column("confirmation_sent_at", "timestamp", {})
+
+	t.Column("recovery_token", "string", {})
+	t.Column("recovery_sent_at", "timestamp", {})
+
+	t.Column("email_change_token", "string", {})
+	t.Column("email_change", "string", {})
+	t.Column("email_change_sent_at", "timestamp", {})
+
+	t.Column("last_signed_in_at", "timestamp", {})
+
+	t.Column("app_metadata", "string", {})
+	t.Column("user_metadata", "string", {})
+
+	t.Column("is_super_admin", "boolean", {"default": false})
+})
+
+add_index("users", "instance_id", {})
+add_index("users", ["instance_id", "email"], {})

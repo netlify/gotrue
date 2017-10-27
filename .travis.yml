@@ -3,9 +3,13 @@ language: go
 
 go:
   - 1.8
+  - 1.9
+
+services:
+  - mysql
 
 install: make deps
-script: make all
+script: make migrate_test all
 
 notifications:
     email: false
