@@ -91,7 +91,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 		claims := new(jwt.StandardClaims)
 		token, err := p.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte(ts.Config.SignupHook.Secret), nil
+			return []byte(ts.Config.Webhook.Secret), nil
 		})
 		assert.True(token.Valid)
 		assert.Equal("", claims.Subject) // not configured for multitenancy
@@ -107,7 +107,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		require.NoError(json.Unmarshal(raw, &data))
 
 		assert.Equal(2, len(data))
-		assert.Equal("signup", data["event"])
+		assert.Equal("validate", data["event"])
 
 		u, ok := data["user"].(map[string]interface{})
 		require.True(ok)
@@ -137,11 +137,12 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer svr.Close()
-	ts.Config.SignupHook = conf.WebhookConfig{
+	ts.Config.Webhook = conf.WebhookConfig{
 		URL:        svr.URL,
 		Retries:    1,
 		TimeoutSec: 1,
 		Secret:     "top-secret",
+		Events:     []string{"validate"},
 	}
 	var buffer bytes.Buffer
 	require.NoError(json.NewEncoder(&buffer).Encode(map[string]interface{}{
@@ -161,10 +162,11 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 }
 
 func (ts *SignupTestSuite) TestFailingWebhook() {
-	ts.Config.SignupHook = conf.WebhookConfig{
+	ts.Config.Webhook = conf.WebhookConfig{
 		URL:        "http://notaplace.localhost",
 		Retries:    1,
 		TimeoutSec: 1,
+		Events:     []string{"validate", "signup"},
 	}
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{

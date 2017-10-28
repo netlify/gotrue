@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -42,9 +43,9 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 
 	switch params.Type {
 	case signupVerification:
-		user, err = a.signupVerify(params)
+		user, err = a.signupVerify(ctx, params)
 	case recoveryVerification:
-		user, err = a.recoverVerify(params)
+		user, err = a.recoverVerify(ctx, params)
 	default:
 		return unprocessableEntityError("Verify requires a verification type")
 	}
@@ -62,7 +63,10 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	return a.sendRefreshToken(ctx, user, w)
 }
 
-func (a *API) signupVerify(params *VerifyParams) (*models.User, error) {
+func (a *API) signupVerify(ctx context.Context, params *VerifyParams) (*models.User, error) {
+	instanceID := getInstanceID(ctx)
+	config := a.getConfig(ctx)
+
 	user, err := a.db.FindUserByConfirmationToken(params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
@@ -82,11 +86,20 @@ func (a *API) signupVerify(params *VerifyParams) (*models.User, error) {
 		}
 	}
 
+	if config.Webhook.HasEvent("signup") {
+		if err := triggerHook(SignupEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+			return nil, err
+		}
+		a.db.UpdateUser(user)
+	}
+
 	user.Confirm()
 	return user, nil
 }
 
-func (a *API) recoverVerify(params *VerifyParams) (*models.User, error) {
+func (a *API) recoverVerify(ctx context.Context, params *VerifyParams) (*models.User, error) {
+	instanceID := getInstanceID(ctx)
+	config := a.getConfig(ctx)
 	user, err := a.db.FindUserByRecoveryToken(params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
@@ -97,6 +110,12 @@ func (a *API) recoverVerify(params *VerifyParams) (*models.User, error) {
 
 	user.Recover()
 	if !user.IsConfirmed() {
+		if config.Webhook.HasEvent("signup") {
+			if err := triggerHook(SignupEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+				return nil, err
+			}
+			a.db.UpdateUser(user)
+		}
 		user.Confirm()
 	}
 	return user, nil

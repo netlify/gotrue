@@ -75,6 +75,13 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		}
 	}
 
+	if config.Webhook.HasEvent("login") {
+		if err := triggerHook(LoginEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+			return err
+		}
+		a.db.UpdateUser(user)
+	}
+
 	return a.sendRefreshToken(ctx, user, w)
 }
 
