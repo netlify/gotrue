@@ -14,14 +14,8 @@ deps: ## Install dependencies.
 	@go get -u github.com/Masterminds/glide && glide install
 
 image: ## Build the Docker image.
-	echo Building gotrue/gotrue:build
-	docker build -t gotrue/gotrue:build . -f Dockerfile.build
-	docker create --name gotrue-extract gotrue/gotrue:build
-	docker cp gotrue-extract:/go/src/github.com/netlify/gotrue/gotrue ./gotrue
-	docker rm -f gotrue-extract
-	echo Building gotrue/gotrue:latest
-	docker build --no-cache -t gotrue/gotrue:latest .
-	rm ./gotrue
+	docker build .
+
 lint: ## Lint the code
 	golint $(CHECK_FILES)
 
