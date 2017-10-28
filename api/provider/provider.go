@@ -10,6 +10,7 @@ import (
 const (
 	avatarURLKey = "avatar_url"
 	nameKey      = "full_name"
+	aliasKey     = "slug"
 )
 
 type UserProvidedData struct {

@@ -65,6 +65,7 @@ type ExternalProviderConfiguration struct {
 	Github      OAuthProviderConfiguration `json:"github"`
 	Gitlab      OAuthProviderConfiguration `json:"gitlab"`
 	Google      OAuthProviderConfiguration `json:"google"`
+	Facebook    OAuthProviderConfiguration `json:"facebook"`
 	RedirectURL string                     `json:"redirect_url"`
 }
 
@@ -90,6 +91,11 @@ type Configuration struct {
 	} `json:"mailer"`
 	External      ExternalProviderConfiguration `json:"external"`
 	DisableSignup bool                          `json:"disable_signup" split_words:"true"`
+	SignupHook    WebhookConfig                 `json:"signup_hook" split_words:"true"`
+	Cookie        struct {
+		Key      string `json:"key"`
+		Duration int    `json:"duration"`
+	} `json:"cookies"`
 }
 
 func loadEnvironment(filename string) error {
@@ -104,6 +110,12 @@ func loadEnvironment(filename string) error {
 		}
 	}
 	return err
+}
+
+type WebhookConfig struct {
+	URL        string `json:"url"`
+	Retries    int    `json:"retries"`
+	TimeoutSec int    `json:"timeout_sec"`
 }
 
 // LoadGlobal loads configuration from file and environment variables.
@@ -166,6 +178,14 @@ func (config *Configuration) ApplyDefaults() {
 
 	if config.SMTP.MaxFrequency == 0 {
 		config.SMTP.MaxFrequency = 15 * time.Minute
+	}
+
+	if config.Cookie.Key == "" {
+		config.Cookie.Key = "nf_jwt"
+	}
+
+	if config.Cookie.Duration == 0 {
+		config.Cookie.Duration = 86400
 	}
 }
 

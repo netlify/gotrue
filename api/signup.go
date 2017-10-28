@@ -98,6 +98,11 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 	}
 
 	user.SetRole(config.JWT.DefaultGroupName)
+
+	if err := triggerSignupHook(user, instanceID, config.JWT.Secret, &config.SignupHook); err != nil {
+		return nil, err
+	}
+
 	if err := a.db.CreateUser(user); err != nil {
 		return nil, internalServerError("Database error saving new user").WithInternalError(err)
 	}
