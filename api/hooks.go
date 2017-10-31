@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -15,10 +16,15 @@ import (
 	"github.com/netlify/gotrue/models"
 )
 
+type HookEvent string
+
 const (
 	headerHookSignature = "x-gotrue-signature"
 	defaultHookRetries  = 3
 	gotrueIssuer        = "gotrue"
+	ValidateEvent       = "validate"
+	SignupEvent         = "signup"
+	LoginEvent          = "login"
 )
 
 var defaultTimeout time.Duration = time.Second * 5
@@ -33,7 +39,12 @@ type Webhook struct {
 	headers    map[string]string
 }
 
-func (w *Webhook) trigger() error {
+type WebhookResponse struct {
+	AppMetaData  map[string]interface{} `json:"app_metadata,omitempty"`
+	UserMetaData map[string]interface{} `json:"user_metadata,omitempty"`
+}
+
+func (w *Webhook) trigger() (io.ReadCloser, error) {
 	timeout := defaultTimeout
 	if w.TimeoutSec > 0 {
 		timeout = time.Duration(w.TimeoutSec) * time.Second
@@ -60,15 +71,15 @@ func (w *Webhook) trigger() error {
 
 		req, err := http.NewRequest(http.MethodPost, w.URL, bytes.NewBuffer(w.payload))
 		if err != nil {
-			return internalServerError("Failed to make request object").WithInternalError(err)
+			return nil, internalServerError("Failed to make request object").WithInternalError(err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 		watcher, req := watchForConnection(req)
 
 		if w.jwtSecret != "" {
-			header, err := w.generateSignature()
-			if err != nil {
-				return err
+			header, jwtErr := w.generateSignature()
+			if jwtErr != nil {
+				return nil, jwtErr
 			}
 			req.Header.Set(headerHookSignature, header)
 		}
@@ -79,14 +90,17 @@ func (w *Webhook) trigger() error {
 			if terr, ok := err.(net.Error); ok && terr.Timeout() {
 				// timed out - try again?
 				if i == w.Retries-1 {
-					return httpError(http.StatusGatewayTimeout, "Failed to perform webhook in time frame (%d seconds)", timeout.Seconds())
+					closeBody(rsp)
+					return nil, httpError(http.StatusGatewayTimeout, "Failed to perform webhook in time frame (%d seconds)", timeout.Seconds())
 				}
 				hooklog.Info("Request timed out")
 				continue
 			} else if watcher.gotConn {
-				return internalServerError("Failed to trigger webhook to %s", w.URL).WithInternalError(err)
+				closeBody(rsp)
+				return nil, internalServerError("Failed to trigger webhook to %s", w.URL).WithInternalError(err)
 			} else {
-				return httpError(http.StatusBadGateway, "Failed to connect to %s", w.URL)
+				closeBody(rsp)
+				return nil, httpError(http.StatusBadGateway, "Failed to connect to %s", w.URL)
 			}
 		}
 		dur := time.Since(start)
@@ -97,14 +111,18 @@ func (w *Webhook) trigger() error {
 		switch rsp.StatusCode {
 		case http.StatusOK, http.StatusNoContent, http.StatusAccepted:
 			rspLog.Infof("Finished processing webhook in %s", dur)
-			return nil
+			var body io.ReadCloser
+			if rsp.ContentLength > 0 {
+				body = rsp.Body
+			}
+			return body, nil
 		default:
 			rspLog.Infof("Bad response for webhook %d in %s", rsp.StatusCode, dur)
 		}
 	}
 
 	hooklog.Infof("Failed to process webhook for %s after %d attempts", w.URL, w.Retries)
-	return unprocessableEntityError("Failed to handle signup webhook")
+	return nil, unprocessableEntityError("Failed to handle signup webhook")
 }
 
 func (w *Webhook) generateSignature() (string, error) {
@@ -116,17 +134,23 @@ func (w *Webhook) generateSignature() (string, error) {
 	return tokenString, nil
 }
 
-func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) error {
+func closeBody(rsp *http.Response) {
+	if rsp != nil && rsp.Body != nil {
+		rsp.Body.Close()
+	}
+}
+
+func triggerHook(event HookEvent, user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) error {
 	if hconfig.URL == "" {
 		return nil
 	}
 
 	payload := struct {
-		Event      string       `json:"event"`
+		Event      HookEvent    `json:"event"`
 		InstanceID string       `json:"instance_id,omitempty"`
 		User       *models.User `json:"user"`
 	}{
-		Event:      "signup",
+		Event:      event,
 		InstanceID: instanceID,
 		User:       user,
 	}
@@ -146,7 +170,26 @@ func triggerSignupHook(user *models.User, instanceID, jwtSecret string, hconfig 
 		payload: data,
 	}
 
-	return w.trigger()
+	body, err := w.trigger()
+	defer func() {
+		if body != nil {
+			body.Close()
+		}
+	}()
+	if err != nil && body != nil {
+		webhookRsp := &WebhookResponse{}
+		decoder := json.NewDecoder(body)
+		if err = decoder.Decode(webhookRsp); err != nil {
+			return internalServerError("Webhook returned malformed JSON: %v", err).WithInternalError(err)
+		}
+		if webhookRsp.UserMetaData != nil {
+			user.UserMetaData = webhookRsp.UserMetaData
+		}
+		if webhookRsp.AppMetaData != nil {
+			user.AppMetaData = webhookRsp.AppMetaData
+		}
+	}
+	return err
 }
 
 func watchForConnection(req *http.Request) (*connectionWatcher, *http.Request) {

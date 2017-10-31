@@ -144,6 +144,13 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			}
 		}
 
+		if config.Webhook.HasEvent("signup") {
+			if err := triggerHook(SignupEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+				return err
+			}
+			a.db.UpdateUser(user)
+		}
+
 		// confirm because they were able to respond to invite email
 		user.Confirm()
 	} else {
@@ -191,8 +198,22 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				http.Redirect(w, r, config.External.RedirectURL, http.StatusFound)
 			}
 
+			if config.Webhook.HasEvent("signup") {
+				if err := triggerHook(SignupEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+					return err
+				}
+				a.db.UpdateUser(user)
+			}
+
 			// fall through to auto-confirm and issue token
 			user.Confirm()
+		} else {
+			if config.Webhook.HasEvent("login") {
+				if err := triggerHook(LoginEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+					return err
+				}
+				a.db.UpdateUser(user)
+			}
 		}
 	}
 
