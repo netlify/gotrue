@@ -4,5 +4,5 @@ create_table("instances", func(t) {
 
 	t.Column("raw_base_config", "text", {"size": 655535})
 
-	t.Column("deleted_at", "timestamp", {})
+	t.Column("deleted_at", "timestamp", {"null": true})
 })

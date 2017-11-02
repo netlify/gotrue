@@ -16,6 +16,7 @@ type RefreshToken struct {
 
 	Revoked   bool
 	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // TableName returns the database table name for RefreshToken
