@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptrace"
+	"net/url"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -140,9 +141,23 @@ func closeBody(rsp *http.Response) {
 	}
 }
 
-func triggerHook(event HookEvent, user *models.User, instanceID, jwtSecret string, hconfig *conf.WebhookConfig) error {
-	if hconfig.URL == "" {
+func triggerHook(event HookEvent, user *models.User, instanceID string, config *conf.Configuration) error {
+	if config.Webhook.URL == "" {
 		return nil
+	}
+	hookURL, err := url.Parse(config.Webhook.URL)
+	if err != nil {
+		return err
+	}
+
+	if !hookURL.IsAbs() {
+		siteURL, err := url.Parse(config.SiteURL)
+		if err != nil {
+			return err
+		}
+		hookURL.Scheme = siteURL.Scheme
+		hookURL.Host = siteURL.Host
+		hookURL.User = siteURL.User
 	}
 
 	payload := struct {
@@ -159,8 +174,8 @@ func triggerHook(event HookEvent, user *models.User, instanceID, jwtSecret strin
 		return internalServerError("Failed to serialize the data for signup webhook").WithInternalError(err)
 	}
 	w := Webhook{
-		WebhookConfig: hconfig,
-		jwtSecret:     jwtSecret,
+		WebhookConfig: &config.Webhook,
+		jwtSecret:     config.Webhook.Secret,
 		instanceID:    instanceID,
 		claims: &jwt.StandardClaims{
 			IssuedAt: time.Now().Unix(),
@@ -169,6 +184,7 @@ func triggerHook(event HookEvent, user *models.User, instanceID, jwtSecret strin
 		},
 		payload: data,
 	}
+	w.URL = hookURL.String()
 
 	body, err := w.trigger()
 	defer func() {

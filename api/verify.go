@@ -87,7 +87,7 @@ func (a *API) signupVerify(ctx context.Context, params *VerifyParams) (*models.U
 	}
 
 	if config.Webhook.HasEvent("signup") {
-		if err := triggerHook(SignupEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+		if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
 			return nil, err
 		}
 		a.db.UpdateUser(user)
@@ -111,7 +111,7 @@ func (a *API) recoverVerify(ctx context.Context, params *VerifyParams) (*models.
 	user.Recover()
 	if !user.IsConfirmed() {
 		if config.Webhook.HasEvent("signup") {
-			if err := triggerHook(SignupEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+			if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
 				return nil, err
 			}
 			a.db.UpdateUser(user)

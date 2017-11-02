@@ -145,7 +145,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		}
 
 		if config.Webhook.HasEvent("signup") {
-			if err := triggerHook(SignupEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+			if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
 				return err
 			}
 			a.db.UpdateUser(user)
@@ -199,7 +199,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			}
 
 			if config.Webhook.HasEvent("signup") {
-				if err := triggerHook(SignupEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+				if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
 					return err
 				}
 				a.db.UpdateUser(user)
@@ -209,7 +209,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			user.Confirm()
 		} else {
 			if config.Webhook.HasEvent("login") {
-				if err := triggerHook(LoginEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+				if err := triggerHook(LoginEvent, user, instanceID, config); err != nil {
 					return err
 				}
 				a.db.UpdateUser(user)
