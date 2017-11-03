@@ -116,7 +116,7 @@ type WebhookConfig struct {
 	URL        string   `json:"url"`
 	Retries    int      `json:"retries"`
 	TimeoutSec int      `json:"timeout_sec"`
-	Secret     string   `json:"jwt_secret"`
+	Secret     string   `json:"secret"`
 	Events     []string `json:"events"`
 }
 

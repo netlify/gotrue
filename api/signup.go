@@ -100,7 +100,7 @@ func (a *API) signupNewUser(ctx context.Context, params *SignupParams, aud strin
 	user.SetRole(config.JWT.DefaultGroupName)
 
 	if config.Webhook.HasEvent("validate") {
-		if err := triggerHook(ValidateEvent, user, instanceID, config.Webhook.Secret, &config.Webhook); err != nil {
+		if err := triggerHook(ValidateEvent, user, instanceID, config); err != nil {
 			return nil, err
 		}
 	}
