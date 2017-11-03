@@ -11,6 +11,7 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/netlify/gotrue/conf"
@@ -147,13 +148,13 @@ func triggerHook(event HookEvent, user *models.User, instanceID string, config *
 	}
 	hookURL, err := url.Parse(config.Webhook.URL)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "Failed to parse Webhook URL")
 	}
 
 	if !hookURL.IsAbs() {
 		siteURL, err := url.Parse(config.SiteURL)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "Failed to parse Site URL")
 		}
 		hookURL.Scheme = siteURL.Scheme
 		hookURL.Host = siteURL.Host
