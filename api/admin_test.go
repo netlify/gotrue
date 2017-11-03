@@ -150,7 +150,13 @@ func (ts *AdminTestSuite) TestAdminUsers_Pagination() {
 func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
+
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+
+	// Hack the creation time to workaround GORM always setting the timestamps to now on create :(
+	u.CreatedAt = time.Now().Add(5 * time.Minute)
+	require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
+
 	// Setup request
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
@@ -179,6 +185,10 @@ func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+
+	// Hack the creation time to workaround GORM always setting the timestamps to now on create :(
+	u.CreatedAt = time.Now().Add(5 * time.Minute)
+	require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
 
 	// Setup request
 	w := httptest.NewRecorder()
