@@ -327,9 +327,11 @@ func (conn *Connection) DeleteInstance(instance *models.Instance) error {
 }
 
 func (conn *Connection) TruncateAll() {
-	conn.db.Exec("delete from users")
-	conn.db.Exec("delete from refresh_tokens")
-	conn.db.Exec("delete from instances")
+	tx := conn.db.Begin()
+	tx.Exec("delete from users")
+	tx.Exec("delete from refresh_tokens")
+	tx.Exec("delete from instances")
+	tx.Commit()
 }
 
 // Dial will connect to that storage engine

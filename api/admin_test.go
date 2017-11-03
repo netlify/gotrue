@@ -229,12 +229,7 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 
 	data := models.User{}
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-	assert.Equal(ts.T(), data.Email, "test1@example.com")
-
-	u, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test1@example.com", ts.Config.JWT.Aud)
-	require.NoError(ts.T(), err)
-
-	assert.Equal(ts.T(), u.Email, data.Email)
+	assert.Equal(ts.T(), "test1@example.com", data.Email)
 	assert.Equal(ts.T(), "email", data.AppMetaData["provider"])
 }
 
