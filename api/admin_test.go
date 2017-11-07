@@ -12,7 +12,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage/test"
+	"github.com/netlify/gotrue/storage/sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -41,9 +41,12 @@ func TestAdmin(t *testing.T) {
 	suite.Run(t, ts)
 }
 
-func (ts *AdminTestSuite) SetupTest() {
-	test.CleanupTables()
+func (ts *AdminTestSuite) TearDownTest() {
+	sql, _ := ts.API.db.(*sql.Connection)
+	sql.TruncateAll()
+}
 
+func (ts *AdminTestSuite) SetupTest() {
 	// Setup response recorder with super admin privileges
 	ts.token = ts.makeSuperAdmin("test@example.com")
 }
@@ -282,18 +285,17 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), http.StatusOK, w.Code)
 
-	data := make(map[string]interface{})
+	data := models.User{}
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
-	assert.Equal(ts.T(), data["role"], "testing")
+	assert.Equal(ts.T(), "testing", data.Role)
+	assert.NotNil(ts.T(), data.UserMetaData)
+	assert.Equal(ts.T(), "David", data.UserMetaData["name"])
 
-	u, err = ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test1@example.com", ts.Config.JWT.Aud)
-	require.NoError(ts.T(), err)
-	assert.Equal(ts.T(), u.Role, "testing")
-	assert.Equal(ts.T(), u.UserMetaData["name"], "David")
-	assert.Len(ts.T(), u.AppMetaData["roles"], 2)
-	assert.Contains(ts.T(), u.AppMetaData["roles"], "writer")
-	assert.Contains(ts.T(), u.AppMetaData["roles"], "editor")
+	assert.NotNil(ts.T(), data.AppMetaData)
+	assert.Len(ts.T(), data.AppMetaData["roles"], 2)
+	assert.Contains(ts.T(), data.AppMetaData["roles"], "writer")
+	assert.Contains(ts.T(), data.AppMetaData["roles"], "editor")
 }
 
 // TestAdminUserUpdate tests API /admin/user route (UPDATE) as system user
