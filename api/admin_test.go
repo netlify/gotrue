@@ -12,7 +12,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage/sql"
+	"github.com/netlify/gotrue/storage/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -41,23 +41,8 @@ func TestAdmin(t *testing.T) {
 	suite.Run(t, ts)
 }
 
-func (ts *AdminTestSuite) TearDownTest() {
-	sql, _ := ts.API.db.(*sql.Connection)
-	sql.TruncateAll()
-}
-
 func (ts *AdminTestSuite) SetupTest() {
-	// Setup response recorder with super admin privileges
-	ts.token = ts.makeSuperAdmin("test@example.com")
-}
-
-// TestAdminUsersUnauthorized tests API /admin/users route without authentication
-func (ts *AdminTestSuite) TestAdminUsersUnauthorized() {
-	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
-	w := httptest.NewRecorder()
-
-	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusUnauthorized)
+	test.CleanupTables()
 }
 
 func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
@@ -67,7 +52,10 @@ func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
 	u.IsSuperAdmin = true
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
-	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
+	data, err := ts.API.db.FindUserByInstanceIDAndID(ts.instanceID, u.ID)
+	require.NoError(ts.T(), err, "Error checking admin user")
+
+	token, err := generateAccessToken(data, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
 
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
@@ -94,8 +82,18 @@ func (ts *AdminTestSuite) makeSystemUser() string {
 	return token
 }
 
+// TestAdminUsersUnauthorized tests API /admin/users route without authentication
+func (ts *AdminTestSuite) TestAdminUsersUnauthorized() {
+	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
+	w := httptest.NewRecorder()
+
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), w.Code, http.StatusUnauthorized)
+}
+
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers() {
+	ts.token = ts.makeSuperAdmin("test@example.com")
 	// Setup request
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
@@ -122,6 +120,7 @@ func (ts *AdminTestSuite) TestAdminUsers() {
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers_Pagination() {
+	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -151,6 +150,7 @@ func (ts *AdminTestSuite) TestAdminUsers_Pagination() {
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
+	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 
@@ -185,6 +185,7 @@ func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
+	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -215,6 +216,7 @@ func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 
 // TestAdminUserCreate tests API /admin/user route (POST)
 func (ts *AdminTestSuite) TestAdminUserCreate() {
+	ts.token = ts.makeSuperAdmin("test@example.com")
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"email":    "test1@example.com",
@@ -238,6 +240,7 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 
 // TestAdminUserGet tests API /admin/user route (GET)
 func (ts *AdminTestSuite) TestAdminUserGet() {
+	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -261,6 +264,7 @@ func (ts *AdminTestSuite) TestAdminUserGet() {
 
 // TestAdminUserUpdate tests API /admin/user route (UPDATE)
 func (ts *AdminTestSuite) TestAdminUserUpdate() {
+	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -300,6 +304,7 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 
 // TestAdminUserUpdate tests API /admin/user route (UPDATE) as system user
 func (ts *AdminTestSuite) TestAdminUserUpdateAsSystemUser() {
+	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -342,6 +347,7 @@ func (ts *AdminTestSuite) TestAdminUserUpdateAsSystemUser() {
 
 // TestAdminUserDelete tests API /admin/user route (DELETE)
 func (ts *AdminTestSuite) TestAdminUserDelete() {
+	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test-delete@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -358,6 +364,7 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 
 // TestAdminUserCreateWithManagementToken tests API /admin/user route using the management token (POST)
 func (ts *AdminTestSuite) TestAdminUserCreateWithManagementToken() {
+	ts.token = ts.makeSuperAdmin("test@example.com")
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"email":    "test2@example.com",
@@ -374,14 +381,9 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithManagementToken() {
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), http.StatusOK, w.Code)
 
-	_, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test2@example.com", ts.Config.JWT.Aud)
-	require.Error(ts.T(), err)
-
-	u, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test2@example.com", "op-test-aud")
-	require.NoError(ts.T(), err)
-
-	data := make(map[string]interface{})
+	data := models.User{}
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
-	assert.Equal(ts.T(), data["email"], u.Email)
+	assert.NotNil(ts.T(), data.ID)
+	assert.Equal(ts.T(), "test2@example.com", data.Email)
 }
