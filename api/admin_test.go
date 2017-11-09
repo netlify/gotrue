@@ -43,6 +43,7 @@ func TestAdmin(t *testing.T) {
 
 func (ts *AdminTestSuite) SetupTest() {
 	test.CleanupTables()
+	ts.token = ts.makeSuperAdmin("test@example.com")
 }
 
 func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
@@ -52,10 +53,11 @@ func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
 	u.IsSuperAdmin = true
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
-	data, err := ts.API.db.FindUserByInstanceIDAndID(ts.instanceID, u.ID)
-	require.NoError(ts.T(), err, "Error checking admin user")
+	// Hack the creation time to workaround GORM always setting the timestamps to now on create :(
+	u.CreatedAt = time.Now().Add(-5 * time.Minute)
+	require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
 
-	token, err := generateAccessToken(data, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
+	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
 
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
@@ -93,7 +95,6 @@ func (ts *AdminTestSuite) TestAdminUsersUnauthorized() {
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers() {
-	ts.token = ts.makeSuperAdmin("test@example.com")
 	// Setup request
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
@@ -120,7 +121,6 @@ func (ts *AdminTestSuite) TestAdminUsers() {
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers_Pagination() {
-	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -150,15 +150,15 @@ func (ts *AdminTestSuite) TestAdminUsers_Pagination() {
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
-	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
 	// Hack the creation time to workaround GORM always setting the timestamps to now on create :(
-	u.CreatedAt = time.Now().Add(5 * time.Minute)
-	require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
+	//u.CreatedAt = time.Now().Add(5 * time.Minute)
+	//u.UpdatedAt = time.Now().Add(5 * time.Minute)
+	//require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
 
 	// Setup request
 	w := httptest.NewRecorder()
@@ -185,14 +185,14 @@ func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
-	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
 	// Hack the creation time to workaround GORM always setting the timestamps to now on create :(
-	u.CreatedAt = time.Now().Add(5 * time.Minute)
-	require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
+	//u.CreatedAt = time.Now().Add(5 * time.Minute)
+	//u.UpdatedAt = time.Now().Add(5 * time.Minute)
+	//require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
 
 	// Setup request
 	w := httptest.NewRecorder()
@@ -216,7 +216,6 @@ func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 
 // TestAdminUserCreate tests API /admin/user route (POST)
 func (ts *AdminTestSuite) TestAdminUserCreate() {
-	ts.token = ts.makeSuperAdmin("test@example.com")
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"email":    "test1@example.com",
@@ -240,7 +239,6 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 
 // TestAdminUserGet tests API /admin/user route (GET)
 func (ts *AdminTestSuite) TestAdminUserGet() {
-	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -264,7 +262,6 @@ func (ts *AdminTestSuite) TestAdminUserGet() {
 
 // TestAdminUserUpdate tests API /admin/user route (UPDATE)
 func (ts *AdminTestSuite) TestAdminUserUpdate() {
-	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -304,7 +301,6 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 
 // TestAdminUserUpdate tests API /admin/user route (UPDATE) as system user
 func (ts *AdminTestSuite) TestAdminUserUpdateAsSystemUser() {
-	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -347,7 +343,6 @@ func (ts *AdminTestSuite) TestAdminUserUpdateAsSystemUser() {
 
 // TestAdminUserDelete tests API /admin/user route (DELETE)
 func (ts *AdminTestSuite) TestAdminUserDelete() {
-	ts.token = ts.makeSuperAdmin("test@example.com")
 	u, err := models.NewUser(ts.instanceID, "test-delete@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
@@ -364,7 +359,6 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 
 // TestAdminUserCreateWithManagementToken tests API /admin/user route using the management token (POST)
 func (ts *AdminTestSuite) TestAdminUserCreateWithManagementToken() {
-	ts.token = ts.makeSuperAdmin("test@example.com")
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"email":    "test2@example.com",

@@ -1,8 +1,0 @@
-create_table("instances", func(t) {
-	t.Column("id", "string", {"primary": true})
-	t.Column("uuid", "string", {})
-
-	t.Column("raw_base_config", "text", {"size": 655535})
-
-	t.Column("deleted_at", "timestamp", {"null": true})
-})

@@ -24,11 +24,11 @@ DROP TABLE IF EXISTS `instances`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `instances` (
   `id` varchar(255) NOT NULL,
-  `uuid` varchar(255) NOT NULL,
-  `raw_base_config` text NOT NULL,
-  `deleted_at` datetime DEFAULT NULL,
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
+  `uuid` varchar(255) DEFAULT NULL,
+  `raw_base_config` longtext,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -41,13 +41,13 @@ DROP TABLE IF EXISTS `refresh_tokens`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `refresh_tokens` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `instance_id` varchar(255) NOT NULL,
-  `token` varchar(255) NOT NULL,
-  `user_id` varchar(255) NOT NULL,
-  `revoked` tinyint(1) NOT NULL DEFAULT '0',
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
+  `instance_id` varchar(255) DEFAULT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `token` varchar(255) DEFAULT NULL,
+  `user_id` varchar(255) DEFAULT NULL,
+  `revoked` tinyint(1) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `refresh_tokens_instance_id_idx` (`instance_id`),
   KEY `refresh_tokens_instance_id_user_id_idx` (`instance_id`,`user_id`),
@@ -76,27 +76,27 @@ DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `users` (
+  `instance_id` varchar(255) DEFAULT NULL,
   `id` varchar(255) NOT NULL,
-  `instance_id` varchar(255) NOT NULL,
-  `aud` varchar(255) NOT NULL,
-  `role` varchar(255) NOT NULL,
-  `email` varchar(255) NOT NULL,
+  `aud` varchar(255) DEFAULT NULL,
+  `role` varchar(255) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
   `encrypted_password` varchar(255) DEFAULT NULL,
-  `confirmed_at` datetime DEFAULT NULL,
-  `invited_at` datetime DEFAULT NULL,
+  `confirmed_at` timestamp NULL DEFAULT NULL,
+  `invited_at` timestamp NULL DEFAULT NULL,
   `confirmation_token` varchar(255) DEFAULT NULL,
-  `confirmation_sent_at` datetime DEFAULT NULL,
+  `confirmation_sent_at` timestamp NULL DEFAULT NULL,
   `recovery_token` varchar(255) DEFAULT NULL,
-  `recovery_sent_at` datetime DEFAULT NULL,
+  `recovery_sent_at` timestamp NULL DEFAULT NULL,
   `email_change_token` varchar(255) DEFAULT NULL,
   `email_change` varchar(255) DEFAULT NULL,
-  `email_change_sent_at` datetime DEFAULT NULL,
-  `last_sign_in_at` datetime DEFAULT NULL,
-  `raw_app_meta_data` varchar(255) NOT NULL,
-  `raw_user_meta_data` varchar(255) NOT NULL,
-  `is_super_admin` tinyint(1) NOT NULL DEFAULT '0',
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
+  `email_change_sent_at` timestamp NULL DEFAULT NULL,
+  `last_sign_in_at` timestamp NULL DEFAULT NULL,
+  `raw_app_meta_data` varchar(255) DEFAULT NULL,
+  `raw_user_meta_data` varchar(255) DEFAULT NULL,
+  `is_super_admin` tinyint(1) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `users_instance_id_idx` (`instance_id`),
   KEY `users_instance_id_email_idx` (`instance_id`,`email`)
@@ -112,4 +112,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-11-06 16:41:52
+-- Dump completed on 2017-11-08 16:53:33

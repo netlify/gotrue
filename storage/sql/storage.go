@@ -220,10 +220,14 @@ func (conn *Connection) Logout(id string) {
 // RevokeToken revokes a refresh token.
 func (conn *Connection) RevokeToken(token *models.RefreshToken) error {
 	token.Revoked = true
-	if err := conn.db.Save(token).Error; err != nil {
+	tx := conn.db.Begin()
+
+	if err := tx.Save(token).Error; err != nil {
+		tx.Rollback()
 		return errors.Wrap(err, "error revoking refresh token")
 	}
 
+	tx.Commit()
 	return nil
 }
 
