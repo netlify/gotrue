@@ -3,7 +3,7 @@ import:
 - package: github.com/dgrijalva/jwt-go
   version: v3.0.0
 - package: github.com/jinzhu/gorm
-  version: 5b8c0dd6b92d9caa8036c31dcb117f2df7cceefa
+  version: 0a51f6cdc55d1650d9ed3b4c13026cfa9133b01e
 - package: github.com/pborman/uuid
   version: v1.0
 - package: github.com/rs/cors
