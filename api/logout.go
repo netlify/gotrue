@@ -8,12 +8,14 @@ import (
 func (a *API) Logout(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	claims := getClaims(ctx)
+
+	a.clearCookieToken(ctx, w)
+
 	if claims == nil || claims.Subject == "" {
 		return badRequestError("Could not read User ID claim")
 	}
 
 	a.db.Logout(claims.Subject)
-	a.clearCookieToken(ctx, w)
 	w.WriteHeader(http.StatusNoContent)
 
 	return nil
