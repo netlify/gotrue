@@ -12,10 +12,11 @@ import (
 func (a *API) requireAuthentication(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	token, err := a.extractBearerToken(w, r)
 	if err != nil {
+		a.clearCookieToken(r.Context(), w)
 		return nil, err
 	}
 
-	return a.parseJWTClaims(token, r)
+	return a.parseJWTClaims(token, r, w)
 }
 
 type adminCheckParams struct {
@@ -72,7 +73,7 @@ func (a *API) extractBearerToken(w http.ResponseWriter, r *http.Request) (string
 	return matches[1], nil
 }
 
-func (a *API) parseJWTClaims(bearer string, r *http.Request) (context.Context, error) {
+func (a *API) parseJWTClaims(bearer string, r *http.Request, w http.ResponseWriter) (context.Context, error) {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
 
@@ -81,6 +82,7 @@ func (a *API) parseJWTClaims(bearer string, r *http.Request) (context.Context, e
 		return []byte(config.JWT.Secret), nil
 	})
 	if err != nil {
+		a.clearCookieToken(ctx, w)
 		return nil, unauthorizedError("Invalid token: %v", err)
 	}
 

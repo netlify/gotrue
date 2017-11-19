@@ -128,7 +128,7 @@ func (a *API) requireAdminCredentials(w http.ResponseWriter, req *http.Request) 
 		return nil, err
 	}
 
-	c, err = a.parseJWTClaims(t, req)
+	c, err = a.parseJWTClaims(t, req, w)
 	if err != nil {
 		return nil, err
 	}
