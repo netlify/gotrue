@@ -64,6 +64,12 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if config.Mailer.Autoconfirm {
+		if config.Webhook.HasEvent("signup") {
+			if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
+				return err
+			}
+			a.db.UpdateUser(user)
+		}
 		user.Confirm()
 	} else {
 		if err := mailer.ConfirmationMail(user); err != nil {
