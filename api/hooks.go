@@ -193,7 +193,7 @@ func triggerHook(event HookEvent, user *models.User, instanceID string, config *
 			body.Close()
 		}
 	}()
-	if err != nil && body != nil {
+	if err == nil && body != nil {
 		webhookRsp := &WebhookResponse{}
 		decoder := json.NewDecoder(body)
 		if err = decoder.Decode(webhookRsp); err != nil {
