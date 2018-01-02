@@ -27,6 +27,7 @@ const (
 	netlifyIDKey            = contextKey("netlify_id")
 	externalProviderTypeKey = contextKey("external_provider_type")
 	userKey                 = contextKey("user")
+	externalReferrerKey     = contextKey("external_referrer")
 )
 
 // withToken adds the JWT token to the context.
@@ -187,6 +188,19 @@ func withExternalProviderType(ctx context.Context, id string) context.Context {
 // getExternalProviderType reads the request ID from the context.
 func getExternalProviderType(ctx context.Context) string {
 	obj := ctx.Value(externalProviderTypeKey)
+	if obj == nil {
+		return ""
+	}
+
+	return obj.(string)
+}
+
+func withExternalReferrer(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, externalReferrerKey, token)
+}
+
+func getExternalReferrer(ctx context.Context) string {
+	obj := ctx.Value(externalReferrerKey)
 	if obj == nil {
 		return ""
 	}
