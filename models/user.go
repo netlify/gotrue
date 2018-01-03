@@ -39,10 +39,10 @@ type User struct {
 	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty"`
 
 	AppMetaData    map[string]interface{} `json:"app_metadata" sql:"-"`
-	RawAppMetaData string                 `json:"-"`
+	RawAppMetaData string                 `json:"-" gorm:"type:json"`
 
 	UserMetaData    map[string]interface{} `json:"user_metadata" sql:"-"`
-	RawUserMetaData string                 `json:"-"`
+	RawUserMetaData string                 `json:"-" gorm:"type:json"`
 
 	IsSuperAdmin bool `json:"-"`
 
