@@ -1,5 +1,5 @@
-hash: 064712dd27af624ac816100289570789a202e906960a316cce44aeaaf8b1fcc2
-updated: 2017-11-09T10:50:50.144128766-08:00
+hash: cdc3a5f427a631f52c96cc81940727f3124d2e34f9bade39e316dd06d75a1a5c
+updated: 2018-01-03T16:22:37.007105-05:00
 imports:
 - name: cloud.google.com/go
   version: 98f5696b1026056a47f114c4451dbc4703d67191
@@ -63,8 +63,6 @@ imports:
   - oid
 - name: github.com/magiconair/properties
   version: 0723e352fa358f9322c938cc2dadda874e9151a9
-- name: github.com/mattn/go-sqlite3
-  version: 3b3f1d01b2696af5501697c35629048c227586ab
 - name: github.com/mitchellh/mapstructure
   version: db1efb556f84b25a0a13a04aad883943538ad2e0
 - name: github.com/nats-io/nats
