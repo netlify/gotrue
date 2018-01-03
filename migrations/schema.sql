@@ -1,6 +1,6 @@
--- MySQL dump 10.13  Distrib 5.7.20, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 5.7.19, for osx10.13 (x86_64)
 --
--- Host: 127.0.0.1    Database: gotrue_test
+-- Host: 127.0.0.1    Database: gotrue_development
 -- ------------------------------------------------------
 -- Server version	5.7.20
 
@@ -92,8 +92,8 @@ CREATE TABLE `users` (
   `email_change` varchar(255) DEFAULT NULL,
   `email_change_sent_at` timestamp NULL DEFAULT NULL,
   `last_sign_in_at` timestamp NULL DEFAULT NULL,
-  `raw_app_meta_data` varchar(255) DEFAULT NULL,
-  `raw_user_meta_data` varchar(255) DEFAULT NULL,
+  `raw_app_meta_data` json DEFAULT NULL,
+  `raw_user_meta_data` json DEFAULT NULL,
   `is_super_admin` tinyint(1) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
@@ -112,4 +112,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-11-08 16:53:33
+-- Dump completed on 2018-01-03 17:39:06

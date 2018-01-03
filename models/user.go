@@ -102,20 +102,23 @@ func (u *User) BeforeUpdate() error {
 		return errors.New("Cannot persist system user")
 	}
 
-	if u.AppMetaData != nil {
-		data, err := json.Marshal(u.AppMetaData)
-		if err != nil {
-			return err
-		}
-		u.RawAppMetaData = string(data)
+	if u.AppMetaData == nil {
+		u.AppMetaData = make(map[string]interface{})
 	}
-	if u.UserMetaData != nil {
-		data, err := json.Marshal(u.UserMetaData)
-		if err != nil {
-			return err
-		}
-		u.RawUserMetaData = string(data)
+	data, err := json.Marshal(u.AppMetaData)
+	if err != nil {
+		return err
 	}
+	u.RawAppMetaData = string(data)
+
+	if u.UserMetaData == nil {
+		u.UserMetaData = make(map[string]interface{})
+	}
+	data, err = json.Marshal(u.UserMetaData)
+	if err != nil {
+		return err
+	}
+	u.RawUserMetaData = string(data)
 
 	return nil
 }
