@@ -6,7 +6,7 @@
   "env": {
     "DATABASE_URL": {},
     "GOTRUE_DB_DRIVER": {
-      "value": "sqlite3"
+      "value": "mysql"
     },
     "GOTRUE_DB_AUTOMIGRATE": {
       "value": true

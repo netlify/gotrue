@@ -1,4 +1,4 @@
-.PONY: all build deps image lint test
+.PHONY: all build deps image lint test
 CHECK_FILES?=$$(go list ./... | grep -v /vendor/)
 
 help: ## Show this help.

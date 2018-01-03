@@ -52,13 +52,13 @@ Controls what endpoint Netlify can access this API on.
 ### Database
 
 ```
-GOTRUE_DB_DRIVER=sqlite3
-DATABASE_URL=gotrue.db
+GOTRUE_DB_DRIVER=mysql
+DATABASE_URL="root@tcp(127.0.0.1:3306)/gotrue?parseTime=true"
 ```
 
 `DB_DRIVER` - `string` **required**
 
-Chooses what dialect of database you want. Choose from `sqlite3`, `mysql`, or `postgres`.
+Chooses what dialect of database you want. Choose from `mysql`, or `postgres`.
 
 `DATABASE_URL` (no prefix) / `DB_DATABASE_URL` - `string` **required**
 

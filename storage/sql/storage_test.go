@@ -1,8 +1,6 @@
 package sql
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/netlify/gotrue/conf"
@@ -15,20 +13,8 @@ import (
 var conn *Connection
 
 func TestSQLTestSuite(t *testing.T) {
-	f, err := ioutil.TempFile("", "gotrue-test-")
+	config, err := conf.LoadGlobal("../../api/test.env")
 	require.NoError(t, err)
-
-	defer os.Remove(f.Name())
-	err = f.Close()
-	require.NoError(t, err)
-
-	config := &conf.GlobalConfiguration{
-		DB: conf.DBConfiguration{
-			Driver:      "sqlite3",
-			URL:         f.Name(),
-			Automigrate: true,
-		},
-	}
 
 	conn, err = Dial(config)
 	require.NoError(t, err)
