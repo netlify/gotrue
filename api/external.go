@@ -272,6 +272,8 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 		return provider.NewGoogleProvider(config.External.Google)
 	case "facebook":
 		return provider.NewFacebookProvider(config.External.Facebook)
+	case "twitter":
+		return provider.NewTwitterProvider(config.External.Twitter)
 	default:
 		return nil, fmt.Errorf("Provider %s could not be found", name)
 	}

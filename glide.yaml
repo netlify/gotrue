@@ -53,3 +53,4 @@ import:
   version: v1.3.0
 - package: github.com/joho/godotenv
   version: v1.1
+- package: github.com/mrjones/oauth

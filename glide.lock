@@ -1,5 +1,5 @@
-hash: bc730d92aa029c00a10209d369ee19a9adb25821ae3151b1b48d58c38b9d3652
-updated: 2017-08-29T13:09:01.408410718-04:00
+hash: 646959bf34d19cb4190a31ad5bcbd991373a8e2d19a79a9ce8359e14d323d473
+updated: 2018-01-02T17:29:59.360309-08:00
 imports:
 - name: cloud.google.com/go
   version: 98f5696b1026056a47f114c4451dbc4703d67191
@@ -71,6 +71,8 @@ imports:
   version: 3b3f1d01b2696af5501697c35629048c227586ab
 - name: github.com/mitchellh/mapstructure
   version: ca63d7c062ee3c9f34db231e352b60012b4fd0c1
+- name: github.com/mrjones/oauth
+  version: 3f67d9c274355678b2f9844b08d643e2f9213340
 - name: github.com/nats-io/nats
   version: 61923ed1eaf8398000991fbbee2ef11ab5a5be0d
   subpackages:
@@ -166,6 +168,7 @@ imports:
   version: 9a379c6b3e95a790ffc43293c2a78dee0d7b6e20
   subpackages:
   - bitbucket
+  - facebook
   - github
   - google
   - internal
