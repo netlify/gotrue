@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
 	"github.com/sirupsen/logrus"
@@ -19,6 +19,7 @@ type ExternalProviderClaims struct {
 	NetlifyMicroserviceClaims
 	Provider    string `json:"provider"`
 	InviteToken string `json:"invite_token,omitempty"`
+	Referrer    string `json:"referrer,omitempty"`
 }
 
 // SignupParams are the parameters the Signup endpoint accepts
@@ -48,6 +49,16 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		}
 	}
 
+	referrer := ""
+	if reqref := r.Referer(); reqref != "" {
+		base, berr := url.Parse(config.SiteURL)
+		refurl, rerr := url.Parse(reqref)
+		// As long as the referrer came from the site, we will redirect back there
+		if berr == nil && rerr == nil && base.Hostname() == refurl.Hostname() {
+			referrer = reqref
+		}
+	}
+
 	log := getLogEntry(r)
 	log.WithField("provider", providerType).Info("Redirecting to external provider")
 
@@ -62,6 +73,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		},
 		Provider:    providerType,
 		InviteToken: inviteToken,
+		Referrer:    referrer,
 	})
 	tokenString, err := token.SignedString([]byte(a.config.OperatorToken))
 	if err != nil {
@@ -195,7 +207,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					return internalServerError("Error updating user in database").WithInternalError(confirmationErr)
 				}
 				// email must be verified to issue a token
-				http.Redirect(w, r, config.External.RedirectURL, http.StatusFound)
+				http.Redirect(w, r, a.getExternalRedirectURL(r), http.StatusFound)
 			}
 
 			if config.Webhook.HasEvent("signup") {
@@ -227,7 +239,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 	q.Set("expires_in", strconv.Itoa(token.ExpiresIn))
 	q.Set("refresh_token", token.RefreshToken)
 
-	http.Redirect(w, r, config.External.RedirectURL+"#"+q.Encode(), http.StatusFound)
+	http.Redirect(w, r, a.getExternalRedirectURL(r)+"#"+q.Encode(), http.StatusFound)
 	return nil
 }
 
@@ -250,6 +262,9 @@ func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Co
 	}
 	if claims.InviteToken != "" {
 		ctx = withInviteToken(ctx, claims.InviteToken)
+	}
+	if claims.Referrer != "" {
+		ctx = withExternalReferrer(ctx, claims.Referrer)
 	}
 
 	ctx = withExternalProviderType(ctx, claims.Provider)
@@ -279,7 +294,6 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 
 func (a *API) redirectErrors(handler apiHandler, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	config := a.getConfig(ctx)
 	log := getLogEntry(r)
 	errorID := getRequestID(ctx)
 	err := handler(w, r)
@@ -308,6 +322,18 @@ func (a *API) redirectErrors(handler apiHandler, w http.ResponseWriter, r *http.
 			q.Set("error", "server_error")
 			q.Set("error_description", err.Error())
 		}
-		http.Redirect(w, r, config.External.RedirectURL+"#"+q.Encode(), http.StatusFound)
+		http.Redirect(w, r, a.getExternalRedirectURL(r)+"#"+q.Encode(), http.StatusFound)
 	}
+}
+
+func (a *API) getExternalRedirectURL(r *http.Request) string {
+	ctx := r.Context()
+	config := a.getConfig(ctx)
+	if config.External.RedirectURL != "" {
+		return config.External.RedirectURL
+	}
+	if er := getExternalReferrer(ctx); er != "" {
+		return er
+	}
+	return config.SiteURL
 }

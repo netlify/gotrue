@@ -171,6 +171,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 
 	// get redirect url w/ state
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=gitlab", nil)
+	req.Header.Set("Referer", "https://example.netlify.com/admin")
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
 	ts.Require().Equal(http.StatusFound, w.Code)
@@ -192,6 +193,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 	ts.Require().Equal(http.StatusFound, w.Code)
 	u, err = url.Parse(w.Header().Get("Location"))
 	ts.Require().NoError(err, "redirect url parse failed")
+	ts.Require().Equal("/admin", u.Path)
 
 	// ensure redirect has #access_token=...
 	v, err = url.ParseQuery(u.Fragment)
