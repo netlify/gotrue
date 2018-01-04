@@ -5,32 +5,37 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/storage/test"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 type ExternalTestSuite struct {
 	suite.Suite
-	API    *API
-	Config *conf.Configuration
+	API        *API
+	Config     *conf.Configuration
+	instanceID string
+}
+
+func TestExternal(t *testing.T) {
+	api, config, instanceID, err := setupAPIForTestForInstance()
+	require.NoError(t, err)
+
+	ts := &ExternalTestSuite{
+		API:        api,
+		Config:     config,
+		instanceID: instanceID,
+	}
+
+	suite.Run(t, ts)
 }
 
 func (ts *ExternalTestSuite) SetupTest() {
-	ts.Require().NoError(os.Setenv("GOTRUE_DB_DATABASE_URL", createTestDB()))
-
-	api, config, err := NewAPIFromConfigFile("test.env", "v1")
-	ts.Require().NoError(err)
-	ts.API = api
-	ts.Config = config
-
-}
-
-func (ts *ExternalTestSuite) TearDownTest() {
-	os.Remove(ts.API.config.DB.URL)
+	test.CleanupTables()
 }
 
 // TestSignupExternalUnsupported tests API /authorize for an unsupported external provider
@@ -210,7 +215,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 	ts.Equal(1, userCount)
 
 	// ensure user has been created with metadata
-	user, err := ts.API.db.FindUserByEmailAndAudience("", "gitlab@example.com", ts.Config.JWT.Aud)
+	user, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
 	ts.Require().NoError(err)
 	ts.Equal("Gitlab Test", user.UserMetaData["full_name"])
 	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
@@ -283,12 +288,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHub_AuthorizationCode() {
 	ts.Equal(1, userCount)
 
 	// ensure user has been created with metadata
-	user, err := ts.API.db.FindUserByEmailAndAudience("", "github@example.com", ts.Config.JWT.Aud)
+	user, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
 	ts.Require().NoError(err)
 	ts.Equal("GitHub Test", user.UserMetaData["full_name"])
 	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
-}
-
-func TestExternal(t *testing.T) {
-	suite.Run(t, new(ExternalTestSuite))
 }

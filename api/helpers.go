@@ -40,13 +40,13 @@ func getUserFromClaims(ctx context.Context, conn storage.Connection) (*models.Us
 		return nil, errors.New("Invalid claim: id")
 	}
 
-	if claims.Subject == models.SystemUserID {
-		// System User
-		instanceID := getInstanceID(ctx)
+	// System User
+	instanceID := getInstanceID(ctx)
 
+	if claims.Subject == models.SystemUserID {
 		return models.NewSystemUser(instanceID, claims.Audience), nil
 	}
-	return conn.FindUserByID(claims.Subject)
+	return conn.FindUserByInstanceIDAndID(instanceID, claims.Subject)
 }
 
 func (a *API) isAdmin(ctx context.Context, u *models.User, aud string) bool {

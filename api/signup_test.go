@@ -6,13 +6,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -22,28 +22,26 @@ type SignupTestSuite struct {
 	suite.Suite
 	API    *API
 	Config *conf.Configuration
+
+	instanceID string
 }
 
-func (ts *SignupTestSuite) SetupSuite() {
-	require.NoError(ts.T(), os.Setenv("GOTRUE_DB_DATABASE_URL", createTestDB()))
-}
+func TestSignup(t *testing.T) {
+	api, config, instanceID, err := setupAPIForTestForInstance()
+	require.NoError(t, err)
 
-func (ts *SignupTestSuite) TearDownSuite() {
-	os.Remove(ts.API.config.DB.URL)
+	ts := &SignupTestSuite{
+		API:        api,
+		Config:     config,
+		instanceID: instanceID,
+	}
+
+	suite.Run(t, ts)
 }
 
 func (ts *SignupTestSuite) SetupTest() {
-	api, config, err := NewAPIFromConfigFile("test.env", "v1")
-	require.NoError(ts.T(), err)
-
-	ts.API = api
-	ts.Config = config
-
-	// Cleanup existing user
-	u, err := ts.API.db.FindUserByEmailAndAudience("", "test@example.com", config.JWT.Aud)
-	if err == nil {
-		require.NoError(ts.T(), api.db.DeleteUser(u))
-	}
+	test.CleanupTables()
+	ts.Config.Webhook = conf.WebhookConfig{}
 }
 
 // TestSignup tests API /signup route
@@ -59,7 +57,7 @@ func (ts *SignupTestSuite) TestSignup() {
 	}))
 
 	// Setup request
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
+	req := httptest.NewRequest(http.MethodPost, "/signup", &buffer)
 	req.Header.Set("Content-Type", "application/json")
 
 	// Setup response recorder
@@ -94,7 +92,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 			return []byte(ts.Config.Webhook.Secret), nil
 		})
 		assert.True(token.Valid)
-		assert.Equal("", claims.Subject) // not configured for multitenancy
+		assert.Equal(ts.instanceID, claims.Subject) // not configured for multitenancy
 		assert.Equal("gotrue", claims.Issuer)
 		assert.WithinDuration(time.Now(), time.Unix(claims.IssuedAt, 0), 5*time.Second)
 
@@ -106,8 +104,9 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		data := map[string]interface{}{}
 		require.NoError(json.Unmarshal(raw, &data))
 
-		assert.Equal(2, len(data))
+		assert.Equal(3, len(data))
 		assert.Equal("validate", data["event"])
+		assert.Equal(ts.instanceID, data["instance_id"])
 
 		u, ok := data["user"].(map[string]interface{})
 		require.True(ok)
@@ -213,7 +212,7 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 	y := httptest.NewRecorder()
 
 	ts.API.handler.ServeHTTP(y, req)
-	u, err := ts.API.db.FindUserByEmailAndAudience("", "test1@example.com", ts.Config.JWT.Aud)
+	u, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test1@example.com", ts.Config.JWT.Aud)
 	if err == nil {
 		u.Confirm()
 		require.NoError(ts.T(), ts.API.db.UpdateUser(u))
@@ -230,12 +229,12 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 }
 
 func (ts *SignupTestSuite) TestVerifySignup() {
-	user, err := models.NewUser("", "test@example.com", "testing", ts.Config.JWT.Aud, nil)
+	user, err := models.NewUser(ts.instanceID, "test@example.com", "testing", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err)
 	require.NoError(ts.T(), ts.API.db.CreateUser(user))
 
 	// Find test user
-	u, err := ts.API.db.FindUserByEmailAndAudience("", "test@example.com", ts.Config.JWT.Aud)
+	u, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// Request body
@@ -255,8 +254,4 @@ func (ts *SignupTestSuite) TestVerifySignup() {
 	ts.API.handler.ServeHTTP(w, req)
 
 	assert.Equal(ts.T(), w.Code, http.StatusOK)
-}
-
-func TestSignup(t *testing.T) {
-	suite.Run(t, new(SignupTestSuite))
 }

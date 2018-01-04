@@ -1,0 +1,15 @@
+development:
+  dialect: "mysql"
+  database: "gotrue_development"
+  host: {{ envOr "MYSQL_HOST" "127.0.0.1"  }}
+  port: {{ envOr "MYSQL_PORT" "3306"  }}
+  user: {{ envOr "MYSQL_USER"  "root"  }}
+  password: {{ envOr "MYSQL_PASSWORD"  ""  }}
+
+test:
+  dialect: "mysql"
+  database: "gotrue_test"
+  host: {{ envOr "MYSQL_HOST" "127.0.0.1"  }}
+  port: {{ envOr "MYSQL_PORT" "3306"  }}
+  user: {{ envOr "MYSQL_USER"  "root"  }}
+  password: {{ envOr "MYSQL_PASSWORD"  ""  }}

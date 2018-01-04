@@ -1,4 +1,4 @@
-.PONY: all build deps image lint test
+.PHONY: all build deps image lint migrate test vet
 CHECK_FILES?=$$(go list ./... | grep -v /vendor/)
 
 help: ## Show this help.
@@ -10,17 +10,24 @@ build: ## Build the binary.
 	go build -ldflags "-X github.com/netlify/gotrue/cmd.Version=`git rev-parse HEAD`"
 
 deps: ## Install dependencies.
+	@go get -u github.com/markbates/pop/soda
 	@go get -u github.com/golang/lint/golint
 	@go get -u github.com/Masterminds/glide && glide install
 
 image: ## Build the Docker image.
 	docker build .
 
-lint: ## Lint the code
+lint: ## Lint the code.
 	golint $(CHECK_FILES)
 
-vet: # Vet the code
-	go vet $(CHECK_FILES)
+migrate_dev: ## Run database migrations for development.
+	hack/migrate.sh development
+
+migrate_test: ## Run database migrations for test.
+	hack/migrate.sh test
 
 test: ## Run tests.
 	go test -v $(CHECK_FILES)
+
+vet: # Vet the code
+	go vet $(CHECK_FILES)

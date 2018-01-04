@@ -149,12 +149,8 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 	if err != nil {
 		return nil, nil, err
 	}
-	config, err := conf.LoadConfig(filename)
-	if err != nil {
-		return nil, nil, err
-	}
 
-	db, err := dial.Dial(globalConfig)
+	config, err := conf.LoadConfig(filename)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -162,6 +158,11 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 	ctx, err := WithInstanceConfig(context.Background(), globalConfig.SMTP, config, "")
 	if err != nil {
 		logrus.Fatalf("Error loading instance config: %+v", err)
+	}
+
+	db, err := dial.Dial(globalConfig)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return NewAPIWithVersion(ctx, globalConfig, db, version), config, nil

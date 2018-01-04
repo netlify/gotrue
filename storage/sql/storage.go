@@ -11,7 +11,6 @@ import (
 	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/postgres"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/jinzhu/gorm"
 	"github.com/netlify/gotrue/conf"
@@ -220,10 +219,14 @@ func (conn *Connection) Logout(id string) {
 // RevokeToken revokes a refresh token.
 func (conn *Connection) RevokeToken(token *models.RefreshToken) error {
 	token.Revoked = true
-	if err := conn.db.Save(token).Error; err != nil {
+	tx := conn.db.Begin()
+
+	if err := tx.Save(token).Error; err != nil {
+		tx.Rollback()
 		return errors.Wrap(err, "error revoking refresh token")
 	}
 
+	tx.Commit()
 	return nil
 }
 
@@ -324,6 +327,14 @@ func (conn *Connection) DeleteInstance(instance *models.Instance) error {
 	}
 
 	return tx.Commit().Error
+}
+
+func (conn *Connection) TruncateAll() {
+	tx := conn.db.Begin()
+	tx.Exec("delete from " + (&models.User{}).TableName())
+	tx.Exec("delete from " + (&models.RefreshToken{}).TableName())
+	tx.Exec("delete from " + (&models.Instance{}).TableName())
+	tx.Commit()
 }
 
 // Dial will connect to that storage engine
