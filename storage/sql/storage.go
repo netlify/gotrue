@@ -331,9 +331,9 @@ func (conn *Connection) DeleteInstance(instance *models.Instance) error {
 
 func (conn *Connection) TruncateAll() {
 	tx := conn.db.Begin()
-	tx.Exec("delete from users")
-	tx.Exec("delete from refresh_tokens")
-	tx.Exec("delete from instances")
+	tx.Exec("delete from " + (&models.User{}).TableName())
+	tx.Exec("delete from " + (&models.RefreshToken{}).TableName())
+	tx.Exec("delete from " + (&models.Instance{}).TableName())
 	tx.Commit()
 }
 
