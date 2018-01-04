@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage/test"
@@ -155,11 +155,6 @@ func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
 
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
-	// Hack the creation time to workaround GORM always setting the timestamps to now on create :(
-	//u.CreatedAt = time.Now().Add(5 * time.Minute)
-	//u.UpdatedAt = time.Now().Add(5 * time.Minute)
-	//require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
-
 	// Setup request
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
@@ -189,11 +184,6 @@ func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
-	// Hack the creation time to workaround GORM always setting the timestamps to now on create :(
-	//u.CreatedAt = time.Now().Add(5 * time.Minute)
-	//u.UpdatedAt = time.Now().Add(5 * time.Minute)
-	//require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
-
 	// Setup request
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
@@ -212,6 +202,56 @@ func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 	require.Len(ts.T(), data.Users, 2)
 	assert.Equal(ts.T(), "test1@example.com", data.Users[0].Email)
 	assert.Equal(ts.T(), "test@example.com", data.Users[1].Email)
+}
+
+// TestAdminUsers tests API /admin/users route
+func (ts *AdminTestSuite) TestAdminUsers_FilterEmail() {
+	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
+	require.NoError(ts.T(), err, "Error making new user")
+	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+
+	// Setup request
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/admin/users?filter=test1", nil)
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusOK, w.Code)
+
+	data := struct {
+		Users []*models.User `json:"users"`
+		Aud   string         `json:"aud"`
+	}{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
+
+	require.Len(ts.T(), data.Users, 1)
+	assert.Equal(ts.T(), "test1@example.com", data.Users[0].Email)
+}
+
+// TestAdminUsers tests API /admin/users route
+func (ts *AdminTestSuite) TestAdminUsers_FilterName() {
+	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
+	require.NoError(ts.T(), err, "Error making new user")
+	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+
+	// Setup request
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/admin/users?filter=User", nil)
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusOK, w.Code)
+
+	data := struct {
+		Users []*models.User `json:"users"`
+		Aud   string         `json:"aud"`
+	}{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
+
+	require.Len(ts.T(), data.Users, 1)
+	assert.Equal(ts.T(), "test@example.com", data.Users[0].Email)
 }
 
 // TestAdminUserCreate tests API /admin/user route (POST)

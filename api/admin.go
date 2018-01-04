@@ -60,7 +60,9 @@ func (a *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Bad Sort Parameters: %v", err)
 	}
 
-	users, err := a.db.FindUsersInAudience(instanceID, aud, pageParams, sortParams)
+	filter := r.URL.Query().Get("filter")
+
+	users, err := a.db.FindUsersInAudience(instanceID, aud, pageParams, sortParams, filter)
 	if err != nil {
 		return internalServerError("Database error finding users").WithInternalError(err)
 	}

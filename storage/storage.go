@@ -16,7 +16,7 @@ type Connection interface {
 	FindUserByInstanceIDAndID(instanceID, id string) (*models.User, error)
 	FindUserByRecoveryToken(token string) (*models.User, error)
 	FindUserWithRefreshToken(token string) (*models.User, *models.RefreshToken, error)
-	FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination, sortParams *models.SortParams) ([]*models.User, error)
+	FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination, sortParams *models.SortParams, filter string) ([]*models.User, error)
 	GrantAuthenticatedUser(user *models.User) (*models.RefreshToken, error)
 	GrantRefreshTokenSwap(user *models.User, token *models.RefreshToken) (*models.RefreshToken, error)
 	IsDuplicatedEmail(instanceID string, email, aud string) (bool, error)
