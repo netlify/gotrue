@@ -64,7 +64,7 @@ func (s *StorageTestSuite) TestFindUserByEmailAndAudience() {
 func (s *StorageTestSuite) TestFindUsersInAudience() {
 	u := s.createUser()
 
-	n, err := s.C.FindUsersInAudience(u.InstanceID, u.Aud, nil, nil)
+	n, err := s.C.FindUsersInAudience(u.InstanceID, u.Aud, nil, nil, "")
 	require.NoError(s.T(), err)
 	require.Len(s.T(), n, 1)
 
@@ -72,7 +72,7 @@ func (s *StorageTestSuite) TestFindUsersInAudience() {
 		Page:    1,
 		PerPage: 50,
 	}
-	n, err = s.C.FindUsersInAudience(u.InstanceID, u.Aud, &p, nil)
+	n, err = s.C.FindUsersInAudience(u.InstanceID, u.Aud, &p, nil, "")
 	require.NoError(s.T(), err)
 	require.Len(s.T(), n, 1)
 	assert.Equal(s.T(), uint64(1), p.Count)
@@ -82,7 +82,7 @@ func (s *StorageTestSuite) TestFindUsersInAudience() {
 			models.SortField{Name: "created_at", Dir: models.Descending},
 		},
 	}
-	n, err = s.C.FindUsersInAudience(u.InstanceID, u.Aud, nil, sp)
+	n, err = s.C.FindUsersInAudience(u.InstanceID, u.Aud, nil, sp, "")
 	require.NoError(s.T(), err)
 	require.Len(s.T(), n, 1)
 }

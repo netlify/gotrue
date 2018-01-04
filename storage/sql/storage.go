@@ -93,9 +93,15 @@ func (conn *Connection) DeleteUser(u *models.User) error {
 }
 
 // FindUsersInAudience finds users with the matching audience.
-func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination, sortParams *models.SortParams) ([]*models.User, error) {
+func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination, sortParams *models.SortParams, filter string) ([]*models.User, error) {
 	users := []*models.User{}
 	q := conn.db.Table((&models.User{}).TableName()).Where("instance_id = ? and aud = ?", instanceID, aud)
+
+	if filter != "" {
+		lf := "%" + filter + "%"
+		// we must specify the collation in order to get case insensitive search for the JSON column
+		q = q.Where("email LIKE ? OR raw_user_meta_data->>'$.full_name' COLLATE utf8mb4_unicode_ci LIKE ?", lf, lf)
+	}
 
 	if sortParams != nil && len(sortParams.Fields) > 0 {
 		for _, field := range sortParams.Fields {
