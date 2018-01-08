@@ -7,6 +7,7 @@ import (
 	"github.com/netlify/gotrue/api"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage/dial"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +27,7 @@ func serve(globalConfig *conf.GlobalConfiguration, config *conf.Configuration) {
 	}
 	defer db.Close()
 
-	ctx, err := api.WithInstanceConfig(context.Background(), globalConfig.SMTP, config, "")
+	ctx, err := api.WithInstanceConfig(context.Background(), globalConfig.SMTP, config, uuid.Nil)
 	if err != nil {
 		logrus.Fatalf("Error loading instance config: %+v", err)
 	}

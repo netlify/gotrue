@@ -10,12 +10,14 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSignupHookSendInstanceID(t *testing.T) {
-	user, err := models.NewUser("myinstance", "test@truth.com", "thisisapassword", "", nil)
+	iid := uuid.Must(uuid.NewV4())
+	user, err := models.NewUser(iid, "test@truth.com", "thisisapassword", "", nil)
 	require.NoError(t, err)
 
 	var callCount int
@@ -29,7 +31,7 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 		require.NoError(t, json.Unmarshal(raw, &data))
 
 		assert.Len(t, data, 3)
-		assert.Equal(t, "myinstance", data["instance_id"])
+		assert.Equal(t, iid.String(), data["instance_id"])
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer svr.Close()
@@ -40,7 +42,7 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, triggerHook(SignupEvent, user, "myinstance", config))
+	require.NoError(t, triggerHook(SignupEvent, user, iid, config))
 
 	assert.Equal(t, 1, callCount)
 }

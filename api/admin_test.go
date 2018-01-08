@@ -12,7 +12,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage/test"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -25,7 +25,7 @@ type AdminTestSuite struct {
 	Config *conf.Configuration
 
 	token      string
-	instanceID string
+	instanceID uuid.UUID
 }
 
 func TestAdmin(t *testing.T) {
@@ -37,12 +37,13 @@ func TestAdmin(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
+	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *AdminTestSuite) SetupTest() {
-	test.CleanupTables()
+	ts.API.db.TruncateAll()
 	ts.token = ts.makeSuperAdmin("test@example.com")
 }
 
@@ -70,7 +71,7 @@ func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
 }
 
 func (ts *AdminTestSuite) makeSystemUser() string {
-	u := models.NewSystemUser("", ts.Config.JWT.Aud)
+	u := models.NewSystemUser(uuid.Nil, ts.Config.JWT.Aud)
 
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
@@ -153,6 +154,8 @@ func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 
+	// if the created_at times are the same, then the sort order is not guaranteed
+	time.Sleep(1 * time.Second)
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
 	// Setup request
@@ -182,6 +185,8 @@ func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
 func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
+	// if the created_at times are the same, then the sort order is not guaranteed
+	time.Sleep(1 * time.Second)
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
 	// Setup request
@@ -279,7 +284,7 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 
 // TestAdminUserGet tests API /admin/user route (GET)
 func (ts *AdminTestSuite) TestAdminUserGet() {
-	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
+	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test Get User"})
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
@@ -298,6 +303,9 @@ func (ts *AdminTestSuite) TestAdminUserGet() {
 	assert.Equal(ts.T(), data["email"], "test1@example.com")
 	assert.NotNil(ts.T(), data["app_metadata"])
 	assert.NotNil(ts.T(), data["user_metadata"])
+	md := data["user_metadata"].(map[string]interface{})
+	assert.Len(ts.T(), md, 1)
+	assert.Equal(ts.T(), "Test Get User", md["full_name"])
 }
 
 // TestAdminUserUpdate tests API /admin/user route (UPDATE)

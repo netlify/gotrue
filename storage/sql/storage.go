@@ -1,18 +1,17 @@
 package sql
 
 import (
-	// this is where we do the connections
-
+	"database/sql"
 	"fmt"
 	"net/url"
+	"path/filepath"
 
 	// import drivers we might need
 	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
-	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/postgres"
 	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
+	uuid "github.com/satori/go.uuid"
 
-	"github.com/jinzhu/gorm"
+	"github.com/markbates/pop"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/models"
@@ -30,13 +29,7 @@ func (l logger) Print(v ...interface{}) {
 
 // Connection represents a sql connection.
 type Connection struct {
-	db *gorm.DB
-}
-
-// Automigrate creates any missing tables and/or columns.
-func (conn *Connection) Automigrate() error {
-	conn.db = conn.db.AutoMigrate(&models.User{}, &models.RefreshToken{}, &models.Instance{})
-	return conn.db.Error
+	db *pop.Connection
 }
 
 // Close closes the database connection.
@@ -46,42 +39,24 @@ func (conn *Connection) Close() error {
 
 // CreateUser creates a user.
 func (conn *Connection) CreateUser(user *models.User) error {
-	tx := conn.db.Begin()
-	if _, err := conn.createUserWithTransaction(tx, user); err != nil {
-		return err
-	}
-	tx.Commit()
-	return nil
+	return conn.db.Transaction(func(tx *pop.Connection) error {
+		return tx.Create(user)
+	})
 }
 
 // CountOtherUsers counts how many other users exist besides the one provided
-func (conn *Connection) CountOtherUsers(instanceID string, id string) (int, error) {
-	u := models.User{}
-	var userCount int
-	if result := conn.db.Table(u.TableName()).Where("instance_id = ? and id != ?", instanceID, id).Count(&userCount); result.Error != nil {
-		return 0, errors.Wrap(result.Error, "error finding registered users")
-	}
-	return userCount, nil
-}
-
-func (conn *Connection) createUserWithTransaction(tx *gorm.DB, user *models.User) (*models.User, error) {
-	if result := tx.Create(user); result.Error != nil {
-		tx.Rollback()
-		return nil, errors.Wrap(result.Error, "Error creating user")
-	}
-
-	return user, nil
+func (conn *Connection) CountOtherUsers(instanceID, id uuid.UUID) (int, error) {
+	userCount, err := conn.db.Q().Where("instance_id = ? and id != ?", instanceID, id).Count(&models.User{})
+	return userCount, errors.Wrap(err, "error finding registered users")
 }
 
 func (conn *Connection) findUser(query string, args ...interface{}) (*models.User, error) {
 	obj := &models.User{}
-	values := append([]interface{}{query}, args...)
-
-	if result := conn.db.First(obj, values...); result.Error != nil {
-		if result.RecordNotFound() {
+	if err := conn.db.Q().Where(query, args...).First(obj); err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
 			return nil, models.UserNotFoundError{}
 		}
-		return nil, errors.Wrap(result.Error, "error finding user")
+		return nil, errors.Wrap(err, "error finding user")
 	}
 
 	return obj, nil
@@ -89,13 +64,13 @@ func (conn *Connection) findUser(query string, args ...interface{}) (*models.Use
 
 // DeleteUser deletes a user.
 func (conn *Connection) DeleteUser(u *models.User) error {
-	return conn.db.Delete(u).Error
+	return conn.db.Destroy(u)
 }
 
 // FindUsersInAudience finds users with the matching audience.
-func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageParams *models.Pagination, sortParams *models.SortParams, filter string) ([]*models.User, error) {
+func (conn *Connection) FindUsersInAudience(instanceID uuid.UUID, aud string, pageParams *models.Pagination, sortParams *models.SortParams, filter string) ([]*models.User, error) {
 	users := []*models.User{}
-	q := conn.db.Table((&models.User{}).TableName()).Where("instance_id = ? and aud = ?", instanceID, aud)
+	q := conn.db.Q().Where("instance_id = ? and aud = ?", instanceID, aud)
 
 	if filter != "" {
 		lf := "%" + filter + "%"
@@ -109,20 +84,15 @@ func (conn *Connection) FindUsersInAudience(instanceID string, aud string, pageP
 		}
 	}
 
-	var rsp *gorm.DB
+	var err error
 	if pageParams != nil {
-		var total uint64
-		if cq := q.Count(&total); cq.Error != nil {
-			return nil, cq.Error
-		}
-		pageParams.Count = total
-
-		rsp = q.Offset(pageParams.Offset()).Limit(pageParams.PerPage).Find(&users)
+		err = q.Paginate(int(pageParams.Page), int(pageParams.PerPage)).All(&users)
+		pageParams.Count = uint64(q.Paginator.TotalEntriesSize)
 	} else {
-		rsp = q.Find(&users)
+		err = q.All(&users)
 	}
 
-	return users, rsp.Error
+	return users, err
 }
 
 // FindUserByConfirmationToken finds users with the matching confirmation token.
@@ -131,17 +101,17 @@ func (conn *Connection) FindUserByConfirmationToken(token string) (*models.User,
 }
 
 // FindUserByEmailAndAudience finds a user with the matching email and audience.
-func (conn *Connection) FindUserByEmailAndAudience(instanceID, email, aud string) (*models.User, error) {
+func (conn *Connection) FindUserByEmailAndAudience(instanceID uuid.UUID, email, aud string) (*models.User, error) {
 	return conn.findUser("instance_id = ? and email = ? and aud = ?", instanceID, email, aud)
 }
 
 // FindUserByID finds a user matching the provided ID.
-func (conn *Connection) FindUserByID(id string) (*models.User, error) {
+func (conn *Connection) FindUserByID(id uuid.UUID) (*models.User, error) {
 	return conn.findUser("id = ?", id)
 }
 
 // FindUserByInstanceIDAndID finds a user matching the provided ID.
-func (conn *Connection) FindUserByInstanceIDAndID(instanceID, id string) (*models.User, error) {
+func (conn *Connection) FindUserByInstanceIDAndID(instanceID, id uuid.UUID) (*models.User, error) {
 	return conn.findUser("instance_id = ? and id = ?", instanceID, id)
 }
 
@@ -153,11 +123,11 @@ func (conn *Connection) FindUserByRecoveryToken(token string) (*models.User, err
 // FindUserWithRefreshToken finds a user from the provided refresh token.
 func (conn *Connection) FindUserWithRefreshToken(token string) (*models.User, *models.RefreshToken, error) {
 	refreshToken := &models.RefreshToken{}
-	if result := conn.db.First(refreshToken, "token = ?", token); result.Error != nil {
-		if result.RecordNotFound() {
+	if err := conn.db.Where("token = ?", token).First(refreshToken); err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
 			return nil, nil, models.RefreshTokenNotFoundError{}
 		}
-		return nil, nil, errors.Wrap(result.Error, "error finding refresh token")
+		return nil, nil, errors.Wrap(err, "error finding refresh token")
 	}
 
 	user, err := conn.findUser("id = ?", refreshToken.UserID)
@@ -170,42 +140,34 @@ func (conn *Connection) FindUserWithRefreshToken(token string) (*models.User, *m
 
 // GrantAuthenticatedUser creates a refresh token for the provided user.
 func (conn *Connection) GrantAuthenticatedUser(user *models.User) (*models.RefreshToken, error) {
-	tx := conn.db.Begin()
-
-	tx.Save(user)
-
-	token, err := createRefreshToken(tx, user)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	tx.Commit()
-	return token, nil
+	var token *models.RefreshToken
+	err := conn.db.Transaction(func(tx *pop.Connection) error {
+		terr := tx.Save(user)
+		if terr != nil {
+			return terr
+		}
+		token, terr = createRefreshToken(tx, user)
+		return terr
+	})
+	return token, err
 }
 
 // GrantRefreshTokenSwap swaps a refresh token for a new one, revoking the provided token.
 func (conn *Connection) GrantRefreshTokenSwap(user *models.User, token *models.RefreshToken) (*models.RefreshToken, error) {
-	tx := conn.db.Begin()
-
-	token.Revoked = true
-	if err := tx.Save(token).Error; err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	newToken, err := createRefreshToken(tx, user)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	tx.Commit()
-	return newToken, nil
+	var newToken *models.RefreshToken
+	err := conn.db.Transaction(func(tx *pop.Connection) error {
+		terr := revokeToken(tx, token, true)
+		if terr != nil {
+			return terr
+		}
+		newToken, terr = createRefreshToken(tx, user)
+		return terr
+	})
+	return newToken, err
 }
 
 // IsDuplicatedEmail returns whether a user exists with a matching email and audience.
-func (conn *Connection) IsDuplicatedEmail(instanceID string, email, aud string) (bool, error) {
+func (conn *Connection) IsDuplicatedEmail(instanceID uuid.UUID, email, aud string) (bool, error) {
 	_, err := conn.FindUserByEmailAndAudience(instanceID, email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
@@ -218,129 +180,116 @@ func (conn *Connection) IsDuplicatedEmail(instanceID string, email, aud string) 
 }
 
 // Logout deletes all refresh tokens for a user.
-func (conn *Connection) Logout(id string) {
-	conn.db.Where("user_id = ?", id).Delete(&models.RefreshToken{})
+func (conn *Connection) Logout(id uuid.UUID) {
+	conn.db.RawQuery("DELETE FROM "+(&pop.Model{Value: models.RefreshToken{}}).TableName()+" WHERE user_id = ?", id).Exec()
+}
+
+func revokeToken(tx *pop.Connection, token *models.RefreshToken, revoked bool) error {
+	token.Revoked = revoked
+	return tx.Update(token, "instance_id", "token", "user_id")
 }
 
 // RevokeToken revokes a refresh token.
 func (conn *Connection) RevokeToken(token *models.RefreshToken) error {
-	token.Revoked = true
-	tx := conn.db.Begin()
-
-	if err := tx.Save(token).Error; err != nil {
-		tx.Rollback()
-		return errors.Wrap(err, "error revoking refresh token")
-	}
-
-	tx.Commit()
-	return nil
+	return conn.db.Transaction(func(tx *pop.Connection) error {
+		return revokeToken(tx, token, true)
+	})
 }
 
 // RollbackRefreshTokenSwap rolls back a refresh token swap by revoking the new
 // token, and un-revoking the old token.
 func (conn *Connection) RollbackRefreshTokenSwap(newToken, oldToken *models.RefreshToken) error {
-	tx := conn.db.Begin()
-
-	newToken.Revoked = true
-	if err := tx.Save(newToken).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	oldToken.Revoked = false
-	if err := tx.Save(oldToken).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	tx.Commit()
-	return nil
+	return conn.db.Transaction(func(tx *pop.Connection) error {
+		if err := revokeToken(tx, newToken, true); err != nil {
+			return err
+		}
+		return revokeToken(tx, oldToken, false)
+	})
 }
 
 // UpdateUser updates a user.
 func (conn *Connection) UpdateUser(user *models.User) error {
-	tx := conn.db.Begin()
-	if err := conn.updateUserWithTransaction(tx, user); err != nil {
-		return err
-	}
-	tx.Commit()
-	return nil
-}
-
-func (conn *Connection) updateUserWithTransaction(tx *gorm.DB, user *models.User) error {
-	if result := tx.Save(user); result.Error != nil {
-		tx.Rollback()
-		return errors.Wrap(result.Error, "Error updating user record")
-	}
-	return nil
+	return errors.Wrap(conn.db.Transaction(func(tx *pop.Connection) error {
+		return tx.Update(user)
+	}), "Error updating user record")
 }
 
 // GetInstance finds an instance by ID
-func (conn *Connection) GetInstance(instanceID string) (*models.Instance, error) {
+func (conn *Connection) GetInstance(instanceID uuid.UUID) (*models.Instance, error) {
 	instance := models.Instance{}
-	if rsp := conn.db.Where("id = ?", instanceID).First(&instance); rsp.Error != nil {
-		if rsp.RecordNotFound() {
+	if err := conn.db.Find(&instance, instanceID); err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
 			return nil, models.InstanceNotFoundError{}
 		}
-		return nil, errors.Wrap(rsp.Error, "error finding instance")
+		return nil, errors.Wrap(err, "error finding instance")
 	}
 	return &instance, nil
 }
 
-func (conn *Connection) GetInstanceByUUID(uuid string) (*models.Instance, error) {
+func (conn *Connection) GetInstanceByUUID(uuid uuid.UUID) (*models.Instance, error) {
 	instance := models.Instance{}
-	if rsp := conn.db.Where("uuid = ?", uuid).First(&instance); rsp.Error != nil {
-		if rsp.RecordNotFound() {
+	if err := conn.db.Where("uuid = ?", uuid).First(&instance); err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
 			return nil, models.InstanceNotFoundError{}
 		}
-		return nil, errors.Wrap(rsp.Error, "error finding instance")
+		return nil, errors.Wrap(err, "error finding instance")
 	}
 	return &instance, nil
 }
 
 func (conn *Connection) CreateInstance(instance *models.Instance) error {
-	if result := conn.db.Create(instance); result.Error != nil {
-		return errors.Wrap(result.Error, "Error creating instance")
-	}
-	return nil
+	return errors.Wrap(conn.db.Create(instance), "Error creating instance")
 }
 
 func (conn *Connection) UpdateInstance(instance *models.Instance) error {
-	if result := conn.db.Save(instance); result.Error != nil {
-		return errors.Wrap(result.Error, "Error updating instance record")
-	}
-	return nil
+	return errors.Wrap(conn.db.Update(instance), "Error updating instance record")
 }
 
 func (conn *Connection) DeleteInstance(instance *models.Instance) error {
-	tx := conn.db.Begin()
-
-	delModels := map[string]interface{}{
-		"user":          models.User{},
-		"refresh token": models.RefreshToken{},
-	}
-
-	for name, dm := range delModels {
-		if result := tx.Delete(dm, "instance_id = ?", instance.ID); result.Error != nil {
-			tx.Rollback()
-			return errors.Wrap(result.Error, fmt.Sprintf("Error deleting %s records", name))
+	return conn.db.Transaction(func(tx *pop.Connection) error {
+		delModels := map[string]*pop.Model{
+			"user":          &pop.Model{Value: models.User{}},
+			"refresh token": &pop.Model{Value: models.RefreshToken{}},
 		}
-	}
 
-	if result := tx.Delete(instance); result.Error != nil {
-		tx.Rollback()
-		return errors.Wrap(result.Error, "Error deleting instance record")
-	}
+		for name, dm := range delModels {
+			if err := tx.RawQuery("DELETE FROM "+dm.TableName()+" WHERE instance_id = ?", instance.ID).Exec(); err != nil {
+				return errors.Wrapf(err, "Error deleting %s records", name)
+			}
+		}
 
-	return tx.Commit().Error
+		return errors.Wrap(tx.Destroy(instance), "Error deleting instance record")
+	})
 }
 
-func (conn *Connection) TruncateAll() {
-	tx := conn.db.Begin()
-	tx.Exec("delete from " + (&models.User{}).TableName())
-	tx.Exec("delete from " + (&models.RefreshToken{}).TableName())
-	tx.Exec("delete from " + (&models.Instance{}).TableName())
-	tx.Commit()
+func (conn *Connection) TruncateAll() error {
+	return conn.db.Transaction(func(tx *pop.Connection) error {
+		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: models.User{}}).TableName()).Exec(); err != nil {
+			return err
+		}
+		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: models.RefreshToken{}}).TableName()).Exec(); err != nil {
+			return err
+		}
+		return tx.RawQuery("TRUNCATE " + (&pop.Model{Value: models.Instance{}}).TableName()).Exec()
+	})
+}
+
+func (conn *Connection) MigrateUp() error {
+	p, err := filepath.Abs("../migrations")
+	if err != nil {
+		return err
+	}
+	fmt.Println(p)
+	fm, err := pop.NewFileMigrator(p, conn.db)
+	if err != nil {
+		return err
+	}
+	fm.SchemaPath = ""
+	return fm.Up()
+}
+
+func (conn *Connection) DropDB() error {
+	return pop.DropDB(conn.db)
 }
 
 // Dial will connect to that storage engine
@@ -353,22 +302,25 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 		config.DB.Driver = u.Scheme
 	}
 
-	if config.DB.Dialect == "" {
-		config.DB.Dialect = config.DB.Driver
-	}
-	db, err := gorm.Open(config.DB.Dialect, config.DB.Driver, config.DB.URL)
+	db, err := pop.NewConnection(&pop.ConnectionDetails{
+		Dialect: config.DB.Driver,
+		URL:     config.DB.URL,
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "opening database connection")
 	}
-
-	if err := db.DB().Ping(); err != nil {
+	if err := db.Open(); err != nil {
 		return nil, errors.Wrap(err, "checking database connection")
 	}
 
-	db.SetLogger(logger{logrus.WithField("db-connection", config.DB.Driver)})
+	if config.DB.Namespace != "" {
+		pop.MapTableName("User", config.DB.Namespace+"_users")
+		pop.MapTableName("RefreshToken", config.DB.Namespace+"_refresh_tokens")
+		pop.MapTableName("Instance", config.DB.Namespace+"_instances")
+	}
 
 	if logrus.StandardLogger().Level == logrus.DebugLevel {
-		db.LogMode(true)
+		pop.Debug = true
 	}
 
 	conn := &Connection{
@@ -378,15 +330,14 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 	return conn, nil
 }
 
-func createRefreshToken(tx *gorm.DB, user *models.User) (*models.RefreshToken, error) {
+func createRefreshToken(tx *pop.Connection, user *models.User) (*models.RefreshToken, error) {
 	token := &models.RefreshToken{
 		InstanceID: user.InstanceID,
-		User:       *user,
 		UserID:     user.ID,
 		Token:      crypto.SecureToken(),
 	}
 
-	if err := tx.Create(token).Error; err != nil {
+	if err := tx.Create(token); err != nil {
 		return nil, errors.Wrap(err, "error creating refresh token")
 	}
 

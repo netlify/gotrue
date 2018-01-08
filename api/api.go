@@ -13,6 +13,7 @@ import (
 	"github.com/netlify/gotrue/storage/dial"
 	"github.com/netlify/netlify-commons/graceful"
 	"github.com/rs/cors"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sebest/xff"
 	"github.com/sirupsen/logrus"
 )
@@ -155,7 +156,7 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 		return nil, nil, err
 	}
 
-	ctx, err := WithInstanceConfig(context.Background(), globalConfig.SMTP, config, "")
+	ctx, err := WithInstanceConfig(context.Background(), globalConfig.SMTP, config, uuid.Nil)
 	if err != nil {
 		logrus.Fatalf("Error loading instance config: %+v", err)
 	}
@@ -176,7 +177,7 @@ func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
-func WithInstanceConfig(ctx context.Context, smtp conf.SMTPConfiguration, config *conf.Configuration, instanceID string) (context.Context, error) {
+func WithInstanceConfig(ctx context.Context, smtp conf.SMTPConfiguration, config *conf.Configuration, instanceID uuid.UUID) (context.Context, error) {
 	ctx = withConfig(ctx, config)
 
 	mailer := mailer.NewMailer(smtp, config)

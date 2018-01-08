@@ -12,7 +12,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage/test"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -23,7 +23,7 @@ type SignupTestSuite struct {
 	API    *API
 	Config *conf.Configuration
 
-	instanceID string
+	instanceID uuid.UUID
 }
 
 func TestSignup(t *testing.T) {
@@ -35,12 +35,13 @@ func TestSignup(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
+	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *SignupTestSuite) SetupTest() {
-	test.CleanupTables()
+	ts.API.db.TruncateAll()
 	ts.Config.Webhook = conf.WebhookConfig{}
 }
 
@@ -92,7 +93,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 			return []byte(ts.Config.Webhook.Secret), nil
 		})
 		assert.True(token.Valid)
-		assert.Equal(ts.instanceID, claims.Subject) // not configured for multitenancy
+		assert.Equal(ts.instanceID.String(), claims.Subject) // not configured for multitenancy
 		assert.Equal("gotrue", claims.Issuer)
 		assert.WithinDuration(time.Now(), time.Unix(claims.IssuedAt, 0), 5*time.Second)
 
@@ -106,7 +107,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 
 		assert.Equal(3, len(data))
 		assert.Equal("validate", data["event"])
-		assert.Equal(ts.instanceID, data["instance_id"])
+		assert.Equal(ts.instanceID.String(), data["instance_id"])
 
 		u, ok := data["user"].(map[string]interface{})
 		require.True(ok)

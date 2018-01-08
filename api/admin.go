@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/netlify/gotrue/models"
+	uuid "github.com/satori/go.uuid"
 )
 
 type adminUserParams struct {
@@ -20,7 +21,11 @@ type adminUserParams struct {
 }
 
 func (a *API) loadUser(w http.ResponseWriter, r *http.Request) (context.Context, error) {
-	userID := chi.URLParam(r, "user_id")
+	userID, err := uuid.FromString(chi.URLParam(r, "user_id"))
+	if err != nil {
+		return nil, badRequestError("user_id must be an UUID")
+	}
+
 	logEntrySetField(r, "user_id", userID)
 	instanceID := getInstanceID(r.Context())
 

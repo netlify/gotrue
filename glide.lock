@@ -1,5 +1,5 @@
-hash: cdc3a5f427a631f52c96cc81940727f3124d2e34f9bade39e316dd06d75a1a5c
-updated: 2018-01-03T16:22:37.007105-05:00
+hash: 8443ccd50300b776e8dbd5083b332987d45a27279d857e849de49ab081faebbd
+updated: 2018-01-04T18:53:17.112287-05:00
 imports:
 - name: cloud.google.com/go
   version: 98f5696b1026056a47f114c4451dbc4703d67191
@@ -7,8 +7,12 @@ imports:
   - compute/metadata
 - name: github.com/badoux/checkmail
   version: d0a759655d62bcdc95c50a0676f3e9702ed59453
+- name: github.com/daviddengcn/go-colortext
+  version: 17e75f6184bc9e727756cd0d82e0af58b1fc7191
 - name: github.com/dgrijalva/jwt-go
   version: d2709f9f1f31ebcda9651b03077758c1f3a0018c
+- name: github.com/fatih/color
+  version: 5df930a27be2502f99b292b7cc09ebad4d0891f4
 - name: github.com/fsnotify/fsnotify
   version: f12c6236fe7b5cf6bcf30e5935d08cb079d78334
 - name: github.com/go-chi/chi
@@ -17,6 +21,10 @@ imports:
   - middleware
 - name: github.com/go-sql-driver/mysql
   version: a0583e0143b1624142adab07e0e97fe106d99561
+- name: github.com/gobuffalo/envy
+  version: a1789093e51b497900a240e15b39d8a97bfbc5d0
+- name: github.com/gobuffalo/packr
+  version: 7458c919b2ddc10bfb5588b6645b7aefd1c60418
 - name: github.com/golang/protobuf
   version: ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
   subpackages:
@@ -27,7 +35,6 @@ imports:
   - logging
   - proxy/certs
   - proxy/dialers/mysql
-  - proxy/dialers/postgres
   - proxy/proxy
   - proxy/util
 - name: github.com/hashicorp/hcl
@@ -45,10 +52,10 @@ imports:
   version: 3e95a51e0639b4cf372f2ccf74c86749d747fbdc
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
-- name: github.com/jinzhu/gorm
-  version: 0a51f6cdc55d1650d9ed3b4c13026cfa9133b01e
-- name: github.com/jinzhu/inflection
-  version: 1c35d901db3da928c72a72d8458480cc9ade058f
+- name: github.com/jmoiron/sqlx
+  version: de8647470aafe4854c976707c431dbe1eb2822c6
+  subpackages:
+  - reflectx
 - name: github.com/joho/godotenv
   version: 726cc8b906e3d31c70a9671c90a13716a8d3f50d
 - name: github.com/kelseyhightower/envconfig
@@ -63,6 +70,63 @@ imports:
   - oid
 - name: github.com/magiconair/properties
   version: 0723e352fa358f9322c938cc2dadda874e9151a9
+- name: github.com/markbates/going
+  version: 0576708c56cea02331f864fe6e157ac7841923e4
+  subpackages:
+  - defaults
+  - randx
+  - wait
+- name: github.com/markbates/inflect
+  version: a12c3aec81a6a938bf584a4bac567afed9256586
+- name: github.com/markbates/pop
+  version: b4656b41fc8dbd16e86737e066370f3272746a1d
+  subpackages:
+  - columns
+  - fizz
+  - fizz/translators
+- name: github.com/markbates/validate
+  version: cd8cc34c703420d6b084fbbfd5085e8e71c5b830
+- name: github.com/mattn/anko
+  version: 3b446c7d031bdd754fc0183f599af173cd996715
+  subpackages:
+  - ast
+  - builtins
+  - builtins/encoding/json
+  - builtins/errors
+  - builtins/flag
+  - builtins/fmt
+  - builtins/github.com/daviddengcn/go-colortext
+  - builtins/io
+  - builtins/io/ioutil
+  - builtins/math
+  - builtins/math/big
+  - builtins/math/rand
+  - builtins/net
+  - builtins/net/http
+  - builtins/net/url
+  - builtins/os
+  - builtins/os/exec
+  - builtins/os/signal
+  - builtins/path
+  - builtins/path/filepath
+  - builtins/regexp
+  - builtins/runtime
+  - builtins/sort
+  - builtins/strconv
+  - builtins/strings
+  - builtins/time
+  - parser
+  - vm
+- name: github.com/mattn/go-colorable
+  version: 5411d3eea5978e6cdc258b30de592b60df6aba96
+  repo: https://github.com/mattn/go-colorable
+- name: github.com/mattn/go-isatty
+  version: 57fdcb988a5c543893cc61bce354a6e24ab70022
+  repo: https://github.com/mattn/go-isatty
+- name: github.com/mattn/go-sqlite3
+  version: 3b3f1d01b2696af5501697c35629048c227586ab
+- name: github.com/mitchellh/go-homedir
+  version: b8bc1bf767474819792c23f32d8286a45736f1c6
 - name: github.com/mitchellh/mapstructure
   version: db1efb556f84b25a0a13a04aad883943538ad2e0
 - name: github.com/nats-io/nats
@@ -97,6 +161,8 @@ imports:
   version: 8dd4211afb5d08dbb39a533b9bb9e4b486351df6
 - name: github.com/rybit/nats_logrus_hook
   version: 8d9e8da6aeca6fe5ab668efa91d1ea0722af8d1a
+- name: github.com/satori/go.uuid
+  version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/sebest/xff
   version: 6c115e0ffa35d6a2e3f7a9e797c9cf07f0da4b9f
 - name: github.com/signalfx/com_signalfx_metrics_protobuf
@@ -162,8 +228,12 @@ imports:
   - internal
   - jws
   - jwt
+- name: golang.org/x/sync
+  version: fd80eb99c8f653c847d294a001bdf2a3a6f768f5
+  subpackages:
+  - errgroup
 - name: golang.org/x/sys
-  version: e48874b42435b4347fc52bdee0424a52abc974d7
+  version: e24f485414aeafb646f6fca458b0bf869c0880a1
   subpackages:
   - unix
 - name: golang.org/x/text

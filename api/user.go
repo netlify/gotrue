@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
+	uuid "github.com/satori/go.uuid"
 )
 
 // UserUpdateParams parameters for updating a user
@@ -24,7 +25,8 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read claims")
 	}
 
-	if claims.Subject == "" {
+	userID, err := uuid.FromString(claims.Subject)
+	if err != nil {
 		return badRequestError("Could not read User ID claim")
 	}
 
@@ -33,7 +35,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Token audience doesn't match request audience")
 	}
 
-	user, err := a.db.FindUserByID(claims.Subject)
+	user, err := a.db.FindUserByID(userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -57,11 +59,12 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	claims := getClaims(ctx)
-	if claims.Subject == "" {
+	userID, err := uuid.FromString(claims.Subject)
+	if err != nil {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	user, err := a.db.FindUserByID(claims.Subject)
+	user, err := a.db.FindUserByID(userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())

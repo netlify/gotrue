@@ -1,6 +1,8 @@
 package conf
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"os"
 	"time"
@@ -21,11 +23,9 @@ type OAuthProviderConfiguration struct {
 
 // DBConfiguration holds all the database related configuration.
 type DBConfiguration struct {
-	Dialect     string `json:"dialect"`
-	Driver      string `json:"driver" required:"true"`
-	URL         string `json:"url" envconfig:"DATABASE_URL" required:"true"`
-	Namespace   string `json:"namespace"`
-	Automigrate bool   `json:"automigrate"`
+	Driver    string `json:"driver" required:"true"`
+	URL       string `json:"url" envconfig:"DATABASE_URL" required:"true"`
+	Namespace string `json:"namespace"`
 }
 
 // JWTConfiguration holds all the JWT related configuration.
@@ -198,6 +198,31 @@ func (config *Configuration) ApplyDefaults() {
 	if config.Cookie.Duration == 0 {
 		config.Cookie.Duration = 86400
 	}
+}
+
+func (config *Configuration) Value() (driver.Value, error) {
+	data, err := json.Marshal(config)
+	if err != nil {
+		return driver.Value(""), err
+	}
+	return driver.Value(string(data)), nil
+}
+
+func (config *Configuration) Scan(src interface{}) error {
+	var source []byte
+	switch v := src.(type) {
+	case string:
+		source = []byte(v)
+	case []byte:
+		source = v
+	default:
+		return errors.New("Invalid data type for Configuration")
+	}
+
+	if len(source) == 0 {
+		source = []byte("{}")
+	}
+	return json.Unmarshal(source, &config)
 }
 
 func (o *OAuthProviderConfiguration) Validate() error {

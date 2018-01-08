@@ -1,5 +1,4 @@
 .env
-gorm.db
 vendor/
 gotrue
 

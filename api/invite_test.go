@@ -13,7 +13,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage/test"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -25,7 +25,7 @@ type InviteTestSuite struct {
 	Config *conf.Configuration
 
 	token      string
-	instanceID string
+	instanceID uuid.UUID
 }
 
 func TestInvite(t *testing.T) {
@@ -37,12 +37,13 @@ func TestInvite(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
+	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *InviteTestSuite) SetupTest() {
-	test.CleanupTables()
+	ts.API.db.TruncateAll()
 
 	// Setup response recorder with super admin privileges
 	ts.token = ts.makeSuperAdmin("admin@example.com")

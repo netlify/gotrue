@@ -27,7 +27,7 @@ migrate_test: ## Run database migrations for test.
 	hack/migrate.sh test
 
 test: ## Run tests.
-	go test -v $(CHECK_FILES)
+	go test -p 1 -v $(CHECK_FILES)
 
 vet: # Vet the code
 	go vet $(CHECK_FILES)

@@ -8,11 +8,15 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/pborman/uuid"
+	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
 )
 
 func (a *API) loadInstance(w http.ResponseWriter, r *http.Request) (context.Context, error) {
-	instanceID := chi.URLParam(r, "instance_id")
+	instanceID, err := uuid.FromString(chi.URLParam(r, "instance_id"))
+	if err != nil {
+		return nil, badRequestError("Invalid instance ID")
+	}
 	logEntrySetField(r, "instance_id", instanceID)
 
 	i, err := a.db.GetInstance(instanceID)
@@ -36,7 +40,7 @@ func (a *API) GetAppManifest(w http.ResponseWriter, r *http.Request) error {
 }
 
 type InstanceRequestParams struct {
-	UUID       string              `json:"uuid"`
+	UUID       uuid.UUID           `json:"uuid"`
 	BaseConfig *conf.Configuration `json:"config"`
 }
 
@@ -61,8 +65,13 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("An instance with that UUID already exists")
 	}
 
+	id, err := uuid.NewV4()
+	if err != nil {
+		return errors.Wrap(err, "Error generating id")
+	}
+
 	i := models.Instance{
-		ID:         uuid.NewRandom().String(),
+		ID:         id,
 		UUID:       params.UUID,
 		BaseConfig: params.BaseConfig,
 	}

@@ -58,19 +58,15 @@ DATABASE_URL=root@localhost/gotrue
 
 `DB_DRIVER` - `string` **required**
 
-Chooses what dialect of database you want. Choose from `mysql` or `postgres`.
+Chooses what dialect of database you want. Must be `mysql`.
 
 `DATABASE_URL` (no prefix) / `DB_DATABASE_URL` - `string` **required**
 
-Connection string for the database. See the [gorm examples](https://github.com/jinzhu/gorm/blob/gh-pages/documents/database.md) for more details.
+Connection string for the database.
 
 `DB_NAMESPACE` - `string`
 
 Adds a prefix to all table names.
-
-`DB_AUTOMIGRATE` - `bool`
-
-If enabled, creates missing tables and columns upon startup.
 
 ### Logging
 

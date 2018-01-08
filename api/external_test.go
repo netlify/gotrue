@@ -9,7 +9,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
-	"github.com/netlify/gotrue/storage/test"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -18,7 +18,7 @@ type ExternalTestSuite struct {
 	suite.Suite
 	API        *API
 	Config     *conf.Configuration
-	instanceID string
+	instanceID uuid.UUID
 }
 
 func TestExternal(t *testing.T) {
@@ -30,12 +30,13 @@ func TestExternal(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
+	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *ExternalTestSuite) SetupTest() {
-	test.CleanupTables()
+	ts.API.db.TruncateAll()
 }
 
 // TestSignupExternalUnsupported tests API /authorize for an unsupported external provider
