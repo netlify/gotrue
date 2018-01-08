@@ -35,7 +35,6 @@ func TestInstance(t *testing.T) {
 		API: api,
 	}
 	defer api.db.Close()
-	//defer api.db.DropDB()
 
 	suite.Run(t, ts)
 }

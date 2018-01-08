@@ -26,7 +26,6 @@ type DBConfiguration struct {
 	Driver    string `json:"driver" required:"true"`
 	URL       string `json:"url" envconfig:"DATABASE_URL" required:"true"`
 	Namespace string `json:"namespace"`
-	// Automigrate bool   `json:"automigrate"`
 }
 
 // JWTConfiguration holds all the JWT related configuration.

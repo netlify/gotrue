@@ -61,25 +61,14 @@ func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Config
 		return nil, nil, err
 	}
 
-	// TODO disable serial tests and re-enable automigrate and uncomment
-	// this code once `pop` migrations are fixed
-	//
-	// dbname := fmt.Sprintf("gotrue_test_%s", randStringBytes(10))
-	// globalConfig.DB.URL, err = test.CreateTestDB(dbname, globalConfig)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-
 	conn, err := test.SetupDBConnection(globalConfig)
 	if err != nil {
-		//test.DeleteTestDB(globalConfig)
 		return nil, nil, err
 	}
 
 	config, err := conf.LoadConfig(apiTestConfig)
 	if err != nil {
 		conn.Close()
-		//test.DeleteTestDB(globalConfig)
 		return nil, nil, err
 	}
 
@@ -88,7 +77,6 @@ func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Config
 		instanceID, err = cb(globalConfig, config, conn)
 		if err != nil {
 			conn.Close()
-			//test.DeleteTestDB(globalConfig)
 			return nil, nil, err
 		}
 	}
@@ -96,7 +84,6 @@ func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Config
 	ctx, err := WithInstanceConfig(context.Background(), globalConfig.SMTP, config, instanceID)
 	if err != nil {
 		conn.Close()
-		//test.DeleteTestDB(globalConfig)
 		return nil, nil, err
 	}
 
