@@ -11,7 +11,7 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage/test"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -22,7 +22,7 @@ type UserTestSuite struct {
 	API    *API
 	Config *conf.Configuration
 
-	instanceID string
+	instanceID uuid.UUID
 }
 
 func TestUser(t *testing.T) {
@@ -34,12 +34,14 @@ func TestUser(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
+	defer api.db.Close()
+	//defer api.db.DropDB()
 
 	suite.Run(t, ts)
 }
 
 func (ts *UserTestSuite) SetupTest() {
-	test.CleanupTables()
+	ts.API.db.TruncateAll()
 
 	// Create user
 	u, err := models.NewUser(ts.instanceID, "test@example.com", "password", ts.Config.JWT.Aud, nil)

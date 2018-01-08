@@ -12,6 +12,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/netlify/gotrue/conf"
@@ -34,7 +35,7 @@ var defaultTimeout time.Duration = time.Second * 5
 type Webhook struct {
 	*conf.WebhookConfig
 
-	instanceID string
+	instanceID uuid.UUID
 	jwtSecret  string
 	claims     jwt.Claims
 	payload    []byte
@@ -142,7 +143,7 @@ func closeBody(rsp *http.Response) {
 	}
 }
 
-func triggerHook(event HookEvent, user *models.User, instanceID string, config *conf.Configuration) error {
+func triggerHook(event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
 	if config.Webhook.URL == "" {
 		return nil
 	}
@@ -163,7 +164,7 @@ func triggerHook(event HookEvent, user *models.User, instanceID string, config *
 
 	payload := struct {
 		Event      HookEvent    `json:"event"`
-		InstanceID string       `json:"instance_id,omitempty"`
+		InstanceID uuid.UUID    `json:"instance_id,omitempty"`
 		User       *models.User `json:"user"`
 	}{
 		Event:      event,
@@ -180,7 +181,7 @@ func triggerHook(event HookEvent, user *models.User, instanceID string, config *
 		instanceID:    instanceID,
 		claims: &jwt.StandardClaims{
 			IssuedAt: time.Now().Unix(),
-			Subject:  instanceID,
+			Subject:  instanceID.String(),
 			Issuer:   gotrueIssuer,
 		},
 		payload: data,

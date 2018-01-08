@@ -2,8 +2,6 @@ package: github.com/netlify/gotrue
 import:
 - package: github.com/dgrijalva/jwt-go
   version: v3.0.0
-- package: github.com/jinzhu/gorm
-  version: 0a51f6cdc55d1650d9ed3b4c13026cfa9133b01e
 - package: github.com/pborman/uuid
   version: v1.0
 - package: github.com/rs/cors
@@ -32,7 +30,6 @@ import:
   version: v0.8.0
 - package: github.com/go-sql-driver/mysql
   version: v1.3
-- package: github.com/lib/pq
 - package: github.com/spf13/viper
 - package: github.com/go-chi/chi
   version: v3.1.4
@@ -46,8 +43,10 @@ import:
 - package: github.com/GoogleCloudPlatform/cloudsql-proxy
   version: "1.10"
   subpackages:
-  - proxy/dialers/postgres
+  - proxy/dialers/mysql
 - package: github.com/kelseyhightower/envconfig
   version: v1.3.0
 - package: github.com/joho/godotenv
   version: v1.1
+- package: github.com/markbates/pop
+  version: 3.42.0

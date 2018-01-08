@@ -7,17 +7,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/pborman/uuid"
+	"github.com/satori/go.uuid"
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
-const testUUID = "11111111-1111-1111-1111-111111111111"
+var testUUID = uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111"))
+
 const operatorToken = "operatorToken"
 
 type InstanceTestSuite struct {
@@ -34,12 +34,14 @@ func TestInstance(t *testing.T) {
 	ts := &InstanceTestSuite{
 		API: api,
 	}
+	defer api.db.Close()
+	//defer api.db.DropDB()
 
 	suite.Run(t, ts)
 }
 
 func (ts *InstanceTestSuite) SetupTest() {
-	test.CleanupTables()
+	ts.API.db.TruncateAll()
 }
 
 func (ts *InstanceTestSuite) TestCreate() {
@@ -75,7 +77,7 @@ func (ts *InstanceTestSuite) TestCreate() {
 }
 
 func (ts *InstanceTestSuite) TestGet() {
-	instanceID := uuid.NewRandom().String()
+	instanceID := uuid.Must(uuid.NewV4())
 	err := ts.API.db.CreateInstance(&models.Instance{
 		ID:   instanceID,
 		UUID: testUUID,
@@ -87,7 +89,7 @@ func (ts *InstanceTestSuite) TestGet() {
 	})
 	require.NoError(ts.T(), err)
 
-	req := httptest.NewRequest(http.MethodGet, "/instances/"+instanceID, nil)
+	req := httptest.NewRequest(http.MethodGet, "/instances/"+instanceID.String(), nil)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+operatorToken)
 
@@ -99,7 +101,7 @@ func (ts *InstanceTestSuite) TestGet() {
 }
 
 func (ts *InstanceTestSuite) TestUpdate() {
-	instanceID := uuid.NewRandom().String()
+	instanceID := uuid.Must(uuid.NewV4())
 	err := ts.API.db.CreateInstance(&models.Instance{
 		ID:   instanceID,
 		UUID: testUUID,
@@ -121,7 +123,7 @@ func (ts *InstanceTestSuite) TestUpdate() {
 		},
 	}))
 
-	req := httptest.NewRequest(http.MethodPut, "/instances/"+instanceID, &buffer)
+	req := httptest.NewRequest(http.MethodPut, "/instances/"+instanceID.String(), &buffer)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+operatorToken)
 

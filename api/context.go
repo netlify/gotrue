@@ -7,6 +7,7 @@ import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/models"
+	uuid "github.com/satori/go.uuid"
 )
 
 type contextKey string
@@ -96,17 +97,17 @@ func getMailer(ctx context.Context) mailer.Mailer {
 }
 
 // withInstanceID adds the instance id to the context.
-func withInstanceID(ctx context.Context, id string) context.Context {
+func withInstanceID(ctx context.Context, id uuid.UUID) context.Context {
 	return context.WithValue(ctx, instanceIDKey, id)
 }
 
 // getInstanceID reads the instance id from the context.
-func getInstanceID(ctx context.Context) string {
+func getInstanceID(ctx context.Context) uuid.UUID {
 	obj := ctx.Value(instanceIDKey)
 	if obj == nil {
-		return ""
+		return uuid.Nil
 	}
-	return obj.(string)
+	return obj.(uuid.UUID)
 }
 
 // withInstance adds the instance id to the context.

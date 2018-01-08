@@ -1,60 +1,63 @@
 package models
 
 import (
-	"encoding/json"
-	"errors"
 	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"github.com/markbates/pop"
 	"github.com/netlify/gotrue/crypto"
-	"github.com/pborman/uuid"
+	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const SystemUserID = "0"
 
+var SystemUserUUID = uuid.Nil
+
 // User respresents a registered user with email/password authentication
 type User struct {
-	InstanceID string `json:"-"`
-	ID         string `json:"id"`
+	InstanceID uuid.UUID `json:"-" db:"instance_id"`
+	ID         uuid.UUID `json:"id" db:"id"`
 
-	Aud               string     `json:"aud"`
-	Role              string     `json:"role"`
-	Email             string     `json:"email"`
-	EncryptedPassword string     `json:"-"`
-	ConfirmedAt       *time.Time `json:"confirmed_at,omitempty"`
-	InvitedAt         *time.Time `json:"invited_at,omitempty"`
+	Aud               string     `json:"aud" db:"aud"`
+	Role              string     `json:"role" db:"role"`
+	Email             string     `json:"email" db:"email"`
+	EncryptedPassword string     `json:"-" db:"encrypted_password"`
+	ConfirmedAt       *time.Time `json:"confirmed_at,omitempty" db:"confirmed_at"`
+	InvitedAt         *time.Time `json:"invited_at,omitempty" db:"invited_at"`
 
-	ConfirmationToken  string     `json:"-"`
-	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty"`
+	ConfirmationToken  string     `json:"-" db:"confirmation_token"`
+	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty" db:"confirmation_sent_at"`
 
-	RecoveryToken  string     `json:"-"`
-	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty"`
+	RecoveryToken  string     `json:"-" db:"recovery_token"`
+	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty" db:"recovery_sent_at"`
 
-	EmailChangeToken  string     `json:"-"`
-	EmailChange       string     `json:"new_email,omitempty"`
-	EmailChangeSentAt *time.Time `json:"email_change_sent_at,omitempty"`
+	EmailChangeToken  string     `json:"-" db:"email_change_token"`
+	EmailChange       string     `json:"new_email,omitempty" db:"email_change"`
+	EmailChangeSentAt *time.Time `json:"email_change_sent_at,omitempty" db:"email_change_sent_at"`
 
-	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty"`
+	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty" db:"last_sign_in_at"`
 
-	AppMetaData    map[string]interface{} `json:"app_metadata" sql:"-"`
-	RawAppMetaData string                 `json:"-" gorm:"type:json"`
+	AppMetaData  JSONMap `json:"app_metadata" db:"raw_app_meta_data"`
+	UserMetaData JSONMap `json:"user_metadata" db:"raw_user_meta_data"`
 
-	UserMetaData    map[string]interface{} `json:"user_metadata" sql:"-"`
-	RawUserMetaData string                 `json:"-" gorm:"type:json"`
+	IsSuperAdmin bool `json:"-" db:"is_super_admin"`
 
-	IsSuperAdmin bool `json:"-"`
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // NewUser initializes a new user from an email, password and user data.
-func NewUser(instanceID string, email, password, aud string, userData map[string]interface{}) (*User, error) {
+func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[string]interface{}) (*User, error) {
+	id, err := uuid.NewV4()
+	if err != nil {
+		return nil, errors.Wrap(err, "Error generating unique id")
+	}
+
 	user := &User{
 		InstanceID:   instanceID,
-		ID:           uuid.NewRandom().String(),
+		ID:           id,
 		Aud:          aud,
 		Email:        email,
 		UserMetaData: userData,
@@ -68,63 +71,29 @@ func NewUser(instanceID string, email, password, aud string, userData map[string
 	return user, nil
 }
 
-func NewSystemUser(instanceID, aud string) *User {
+func NewSystemUser(instanceID uuid.UUID, aud string) *User {
 	return &User{
 		InstanceID:   instanceID,
-		ID:           SystemUserID,
+		ID:           SystemUserUUID,
 		Aud:          aud,
 		IsSuperAdmin: true,
 	}
 }
 
-func (u *User) BeforeCreate(tx *gorm.DB) error {
-	return u.BeforeUpdate()
+func (u *User) BeforeCreate(tx *pop.Connection) error {
+	return u.BeforeUpdate(tx)
 }
 
-func (u *User) AfterFind() (err error) {
-	if u.RawAppMetaData != "" {
-		err = json.Unmarshal([]byte(u.RawAppMetaData), &u.AppMetaData)
-	} else {
-		u.AppMetaData = make(map[string]interface{})
-	}
-
-	if err == nil && u.RawUserMetaData != "" {
-		err = json.Unmarshal([]byte(u.RawUserMetaData), &u.UserMetaData)
-	} else {
-		u.UserMetaData = make(map[string]interface{})
-	}
-
-	return err
-}
-
-func (u *User) BeforeUpdate() error {
-	if u.ID == SystemUserID {
+func (u *User) BeforeUpdate(tx *pop.Connection) error {
+	if u.ID == SystemUserUUID {
 		return errors.New("Cannot persist system user")
 	}
-
-	if u.AppMetaData == nil {
-		u.AppMetaData = make(map[string]interface{})
-	}
-	data, err := json.Marshal(u.AppMetaData)
-	if err != nil {
-		return err
-	}
-	u.RawAppMetaData = string(data)
-
-	if u.UserMetaData == nil {
-		u.UserMetaData = make(map[string]interface{})
-	}
-	data, err = json.Marshal(u.UserMetaData)
-	if err != nil {
-		return err
-	}
-	u.RawUserMetaData = string(data)
 
 	return nil
 }
 
-func (u *User) BeforeSave() error {
-	if u.ID == SystemUserID {
+func (u *User) BeforeSave(tx *pop.Connection) error {
+	if u.ID == SystemUserUUID {
 		return errors.New("Cannot persist system user")
 	}
 
@@ -254,9 +223,4 @@ func (u *User) ConfirmEmailChange() {
 // Recover resets the recovery token
 func (u *User) Recover() {
 	u.RecoveryToken = ""
-}
-
-// TableName returns the namespaced user table name
-func (*User) TableName() string {
-	return tableName("users")
 }

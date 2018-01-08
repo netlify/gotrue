@@ -2,24 +2,20 @@ package models
 
 import (
 	"time"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 // RefreshToken is the database model for refresh tokens.
 type RefreshToken struct {
-	InstanceID string `json:"-"`
-	ID         int64
+	InstanceID uuid.UUID `json:"-" db:"instance_id"`
+	ID         int64     `db:"id"`
 
-	Token string
+	Token string `db:"token"`
 
-	User   User
-	UserID string
+	UserID uuid.UUID `db:"user_id"`
 
-	Revoked   bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-// TableName returns the database table name for RefreshToken
-func (*RefreshToken) TableName() string {
-	return tableName("refresh_tokens")
+	Revoked   bool      `db:"revoked"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }

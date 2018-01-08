@@ -5,7 +5,7 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/pborman/uuid"
+	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -15,7 +15,7 @@ type StorageTestSuite struct {
 	suite.Suite
 	C          *Connection
 	TokenID    func(*models.RefreshToken) interface{}
-	InstanceID string
+	InstanceID uuid.UUID
 }
 
 func TestSQLTestSuite(t *testing.T) {
@@ -29,6 +29,7 @@ func TestSQLTestSuite(t *testing.T) {
 		C:       conn,
 		TokenID: tokenID,
 	}
+	defer conn.Close()
 	suite.Run(t, s)
 }
 
@@ -37,7 +38,7 @@ func tokenID(r *models.RefreshToken) interface{} {
 }
 
 func (s *StorageTestSuite) SetupTest() {
-	s.InstanceID = uuid.NewRandom().String()
+	s.InstanceID = uuid.Must(uuid.NewV4())
 
 	s.C.TruncateAll()
 }
@@ -180,8 +181,8 @@ func (s *StorageTestSuite) TestLogout() {
 	require.NoError(s.T(), err)
 
 	s.C.Logout(u.ID)
-	_, _, err = s.C.FindUserWithRefreshToken(r.Token)
-	require.Error(s.T(), err, "expected error when there are no refresh tokens to authenticate")
+	u, r, err = s.C.FindUserWithRefreshToken(r.Token)
+	require.Error(s.T(), err, "expected error when there are no refresh tokens to authenticate. user: %v token: %v", u, r)
 
 	require.True(s.T(), models.IsNotFoundError(err), "expected NotFoundError")
 }

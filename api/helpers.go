@@ -8,14 +8,18 @@ import (
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
 )
 
 func addRequestID(w http.ResponseWriter, r *http.Request) (context.Context, error) {
-	id := uuid.NewRandom().String()
+	id, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+
 	ctx := r.Context()
-	ctx = withRequestID(ctx, id)
+	ctx = withRequestID(ctx, id.String())
 	return ctx, nil
 }
 
@@ -43,10 +47,14 @@ func getUserFromClaims(ctx context.Context, conn storage.Connection) (*models.Us
 	// System User
 	instanceID := getInstanceID(ctx)
 
-	if claims.Subject == models.SystemUserID {
+	if claims.Subject == models.SystemUserUUID.String() || claims.Subject == models.SystemUserID {
 		return models.NewSystemUser(instanceID, claims.Audience), nil
 	}
-	return conn.FindUserByInstanceIDAndID(instanceID, claims.Subject)
+	userID, err := uuid.FromString(claims.Subject)
+	if err != nil {
+		return nil, errors.New("Invalid user ID")
+	}
+	return conn.FindUserByInstanceIDAndID(instanceID, userID)
 }
 
 func (a *API) isAdmin(ctx context.Context, u *models.User, aud string) bool {

@@ -7,8 +7,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/models"
+	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -68,9 +69,12 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 		return nil, badRequestError("Operator microservice signature is invalid: %v", err)
 	}
 
-	instanceID := claims.InstanceID
-	if instanceID == "" {
+	if claims.InstanceID == "" {
 		return nil, badRequestError("Instance ID is missing")
+	}
+	instanceID, err := uuid.FromString(claims.InstanceID)
+	if err != nil {
+		return nil, badRequestError("Instance ID is not a valid UUID")
 	}
 
 	logEntrySetField(r, "instance_id", instanceID)

@@ -4,6 +4,7 @@ import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage/dial"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -67,6 +68,8 @@ var adminEditRoleCmd = cobra.Command{
 }
 
 func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
+	iid := uuid.Must(uuid.FromString(instanceID))
+
 	db, err := dial.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
@@ -74,13 +77,13 @@ func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 	defer db.Close()
 
 	aud := getAudience(config)
-	if exists, err := db.IsDuplicatedEmail(instanceID, args[0], aud); exists {
+	if exists, err := db.IsDuplicatedEmail(iid, args[0], aud); exists {
 		logrus.Fatalf("Error creating new user: user already exists")
 	} else if err != nil {
 		logrus.Fatalf("Error checking user email: %+v", err)
 	}
 
-	user, err := models.NewUser(instanceID, args[0], args[1], aud, nil)
+	user, err := models.NewUser(iid, args[0], args[1], aud, nil)
 	if err != nil {
 		logrus.Fatalf("Error creating new user: %+v", err)
 	}
@@ -107,17 +110,20 @@ func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 }
 
 func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
+	iid := uuid.Must(uuid.FromString(instanceID))
+
 	db, err := dial.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 	defer db.Close()
 
-	user, err := db.FindUserByEmailAndAudience(instanceID, args[0], getAudience(config))
+	user, err := db.FindUserByEmailAndAudience(iid, args[0], getAudience(config))
 	if err != nil {
-		user, err = db.FindUserByInstanceIDAndID(instanceID, args[0])
+		userID := uuid.Must(uuid.FromString(args[0]))
+		user, err = db.FindUserByInstanceIDAndID(iid, userID)
 		if err != nil {
-			logrus.Fatalf("Error finding user (%s): %+v", args[0], err)
+			logrus.Fatalf("Error finding user (%s): %+v", userID, err)
 		}
 	}
 
@@ -129,17 +135,20 @@ func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 }
 
 func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
+	iid := uuid.Must(uuid.FromString(instanceID))
+
 	db, err := dial.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 	defer db.Close()
 
-	user, err := db.FindUserByEmailAndAudience(instanceID, args[0], getAudience(config))
+	user, err := db.FindUserByEmailAndAudience(iid, args[0], getAudience(config))
 	if err != nil {
-		user, err = db.FindUserByInstanceIDAndID(instanceID, args[0])
+		userID := uuid.Must(uuid.FromString(args[0]))
+		user, err = db.FindUserByInstanceIDAndID(iid, userID)
 		if err != nil {
-			logrus.Fatalf("Error finding user (%s): %+v", args[0], err)
+			logrus.Fatalf("Error finding user (%s): %+v", userID, err)
 		}
 	}
 

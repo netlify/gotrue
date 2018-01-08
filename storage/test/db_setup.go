@@ -1,41 +1,46 @@
 package test
 
 import (
-	"fmt"
-
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/dial"
-	"github.com/netlify/gotrue/storage/sql"
 )
 
-const (
-	apiTestEnv = "../hack/test.env"
-)
-
-var conn storage.Connection
-
-func SetupDBConnection() (*conf.GlobalConfiguration, storage.Connection, error) {
-	globalConfig, err := conf.LoadGlobal(apiTestEnv)
+func SetupDBConnection(globalConfig *conf.GlobalConfiguration) (storage.Connection, error) {
+	var conn storage.Connection
+	conn, err := dial.Dial(globalConfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	conn, err = dial.Dial(globalConfig)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return globalConfig, conn, err
+	// if globalConfig.DB.Automigrate {
+	// 	if err = conn.MigrateUp(); err != nil {
+	// 		conn.Close()
+	// 		return nil, err
+	// 	}
+	// }
+	return conn, err
 }
 
-func CleanupTables() error {
-	sconn, ok := conn.(*sql.Connection)
-	if !ok {
-		return fmt.Errorf("sql connection required for testing")
-	}
+// func CreateTestDB(dbname string, config *conf.GlobalConfiguration) (string, error) {
+// 	dburl := fmt.Sprintf("root@tcp(127.0.0.1:3306)/%s?parseTime=true&multiStatements=true", dbname)
+// 	db, err := pop.NewConnection(&pop.ConnectionDetails{
+// 		Dialect: config.DB.Driver,
+// 		URL:     dburl,
+// 	})
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return dburl, pop.CreateDB(db)
+// }
 
-	sconn.TruncateAll()
-
-	return nil
-}
+// func DeleteTestDB(config *conf.GlobalConfiguration) error {
+// 	db, err := pop.NewConnection(&pop.ConnectionDetails{
+// 		Dialect: config.DB.Driver,
+// 		URL:     config.DB.URL,
+// 	})
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return pop.DropDB(db)
+// }

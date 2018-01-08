@@ -27,7 +27,7 @@ func (a *API) requireAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 	// Find the administrative user
 	adminUser, err := getUserFromClaims(ctx, a.db)
 	if err != nil {
-		return nil, unauthorizedError("Invalid admin user")
+		return nil, unauthorizedError("Invalid admin user").WithInternalError(err)
 	}
 
 	aud := a.requestAud(ctx, r)

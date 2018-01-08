@@ -68,7 +68,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 				ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
 			},
 			SiteURL:    config.SiteURL,
-			InstanceID: getInstanceID(ctx),
+			InstanceID: getInstanceID(ctx).String(),
 			NetlifyID:  getNetlifyID(ctx),
 		},
 		Provider:    providerType,
