@@ -30,9 +30,12 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	if params.Email == "" {
 		return unprocessableEntityError("Invite requires a valid email")
 	}
+	mailer := getMailer(ctx)
+	if err = mailer.ValidateEmail(params.Email); err != nil {
+		return unprocessableEntityError("Unable to validate email address: " + err.Error())
+	}
 
 	aud := a.requestAud(ctx, r)
-
 	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
 	if err == nil {
 		return unprocessableEntityError("Email address already registered by another user")
@@ -53,11 +56,6 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	}
 	now := time.Now()
 	user.InvitedAt = &now
-
-	mailer := getMailer(ctx)
-	if err = mailer.ValidateEmail(params.Email); err != nil {
-		return unprocessableEntityError("Unable to validate email address: " + err.Error())
-	}
 
 	if err := mailer.InviteMail(user); err != nil {
 		return internalServerError("Error sending confirmation mail").WithInternalError(err)

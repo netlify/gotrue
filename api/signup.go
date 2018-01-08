@@ -40,15 +40,15 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	mailer := getMailer(ctx)
-	aud := a.requestAud(ctx, r)
+	if err = mailer.ValidateEmail(params.Email); err != nil {
+		return unprocessableEntityError("Unable to validate email address: " + err.Error())
+	}
 
+	aud := a.requestAud(ctx, r)
 	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
 	if err != nil {
 		if !models.IsNotFoundError(err) {
 			return internalServerError("Database error finding user").WithInternalError(err)
-		}
-		if err = mailer.ValidateEmail(params.Email); err != nil {
-			return unprocessableEntityError("Unable to validate email address: " + err.Error())
 		}
 
 		params.Provider = "email"
