@@ -109,7 +109,6 @@ func (ts *AdminTestSuite) TestAdminUsers() {
 	assert.Equal(ts.T(), "</admin/users?page=1>; rel=\"last\"", w.HeaderMap.Get("Link"))
 	assert.Equal(ts.T(), "1", w.HeaderMap.Get("X-Total-Count"))
 
-	fmt.Println(w.Body)
 	data := struct {
 		Users []*models.User `json:"users"`
 		Aud   string         `json:"aud"`
@@ -306,6 +305,7 @@ func (ts *AdminTestSuite) TestAdminUserGet() {
 	assert.NotNil(ts.T(), data["app_metadata"])
 	assert.NotNil(ts.T(), data["user_metadata"])
 	md := data["user_metadata"].(map[string]interface{})
+	assert.Len(ts.T(), md, 1)
 	assert.Equal(ts.T(), "Test Get User", md["full_name"])
 }
 
