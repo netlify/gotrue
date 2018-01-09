@@ -54,10 +54,6 @@ func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
 	u.IsSuperAdmin = true
 	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
 
-	// Hack the creation time to workaround GORM always setting the timestamps to now on create :(
-	u.CreatedAt = time.Now().Add(-5 * time.Minute)
-	require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
-
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
 
