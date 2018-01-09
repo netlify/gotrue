@@ -137,7 +137,7 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	if params.Email == "" {
 		return unprocessableEntityError("Creating a user requires a valid email")
 	}
-	mailer := getMailer(ctx)
+	mailer := a.Mailer(ctx)
 	if err := mailer.ValidateEmail(params.Email); err != nil {
 		return unprocessableEntityError("Invalid email address: %s", params.Email).WithInternalError(err)
 	}

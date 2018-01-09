@@ -30,7 +30,7 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	if params.Email == "" {
 		return unprocessableEntityError("Invite requires a valid email")
 	}
-	mailer := getMailer(ctx)
+	mailer := a.Mailer(ctx)
 	if err = mailer.ValidateEmail(params.Email); err != nil {
 		return unprocessableEntityError("Unable to validate email address: " + err.Error())
 	}

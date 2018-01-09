@@ -74,7 +74,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 
 	sendChangeEmailVerification := false
 	if params.Email != "" {
-		mailer := getMailer(ctx)
+		mailer := a.Mailer(ctx)
 		if err = mailer.ValidateEmail(params.Email); err != nil {
 			return unprocessableEntityError("Unable to verify new email address: " + err.Error())
 		}
@@ -126,7 +126,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if sendChangeEmailVerification {
-		mailer := getMailer(ctx)
+		mailer := a.Mailer(ctx)
 		if err = mailer.EmailChangeMail(user); err != nil {
 			log := getLogEntry(r)
 			log.WithError(err).Error("Error sending change email")

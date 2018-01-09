@@ -81,7 +81,7 @@ func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Config
 		}
 	}
 
-	ctx, err := WithInstanceConfig(context.Background(), globalConfig.SMTP, config, instanceID)
+	ctx, err := WithInstanceConfig(context.Background(), config, instanceID)
 	if err != nil {
 		conn.Close()
 		return nil, nil, err

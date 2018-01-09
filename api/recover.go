@@ -42,7 +42,7 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 		if err := a.db.UpdateUser(user); err != nil {
 			return internalServerError("Database error updating user").WithInternalError(err)
 		}
-		mailer := getMailer(ctx)
+		mailer := a.Mailer(ctx)
 		if err := mailer.RecoveryMail(user); err != nil {
 			return internalServerError("Error sending recovery mail").WithInternalError(err)
 		}

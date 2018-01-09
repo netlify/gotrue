@@ -196,7 +196,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 
 		if !user.IsConfirmed() {
 			if !userData.Verified && !config.Mailer.Autoconfirm {
-				mailer := getMailer(ctx)
+				mailer := a.Mailer(ctx)
 				if confirmationErr := mailer.ConfirmationMail(user); confirmationErr != nil {
 					return internalServerError("Error sending confirmation mail").WithInternalError(confirmationErr)
 				}

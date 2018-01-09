@@ -59,46 +59,21 @@ type MailSubjects struct {
 }
 
 // NewMailer returns a new gotrue mailer
-func NewMailer(smtp conf.SMTPConfiguration, instanceConfig *conf.Configuration) Mailer {
-	if smtp.Host == "" && instanceConfig.SMTP.Host == "" {
+func NewMailer(instanceConfig *conf.Configuration) Mailer {
+	if instanceConfig.SMTP.Host == "" {
 		return &noopMailer{}
-	}
-
-	smtpHost := instanceConfig.SMTP.Host
-	if smtpHost == "" {
-		smtpHost = smtp.Host
-	}
-	smtpPort := instanceConfig.SMTP.Port
-	if smtpPort == 0 {
-		smtpPort = smtp.Port
-	}
-	smtpUser := instanceConfig.SMTP.User
-	if smtpUser == "" {
-		smtpUser = smtp.User
-	}
-	smtpPass := instanceConfig.SMTP.Pass
-	if smtpPass == "" {
-		smtpPass = smtp.Pass
-	}
-	smtpAdminEmail := instanceConfig.SMTP.AdminEmail
-	if smtpAdminEmail == "" {
-		smtpAdminEmail = smtp.AdminEmail
-	}
-	smtpMaxFrequency := instanceConfig.SMTP.MaxFrequency
-	if smtpMaxFrequency == 0 {
-		smtpMaxFrequency = smtp.MaxFrequency
 	}
 
 	return &TemplateMailer{
 		SiteURL:      instanceConfig.SiteURL,
-		MaxFrequency: smtpMaxFrequency,
+		MaxFrequency: instanceConfig.SMTP.MaxFrequency,
 		Config:       instanceConfig,
-		TemplateMailer: &mailme.Mailer{
-			Host:    smtpHost,
-			Port:    smtpPort,
-			User:    smtpUser,
-			Pass:    smtpPass,
-			From:    smtpAdminEmail,
+		Mailer: &mailme.Mailer{
+			Host:    instanceConfig.SMTP.Host,
+			Port:    instanceConfig.SMTP.Port,
+			User:    instanceConfig.SMTP.User,
+			Pass:    instanceConfig.SMTP.Pass,
+			From:    instanceConfig.SMTP.AdminEmail,
 			BaseURL: instanceConfig.SiteURL,
 		},
 	}

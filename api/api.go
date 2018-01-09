@@ -156,7 +156,7 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 		return nil, nil, err
 	}
 
-	ctx, err := WithInstanceConfig(context.Background(), globalConfig.SMTP, config, uuid.Nil)
+	ctx, err := WithInstanceConfig(context.Background(), config, uuid.Nil)
 	if err != nil {
 		logrus.Fatalf("Error loading instance config: %+v", err)
 	}
@@ -177,14 +177,15 @@ func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
-func WithInstanceConfig(ctx context.Context, smtp conf.SMTPConfiguration, config *conf.Configuration, instanceID uuid.UUID) (context.Context, error) {
+func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanceID uuid.UUID) (context.Context, error) {
 	ctx = withConfig(ctx, config)
-
-	mailer := mailer.NewMailer(smtp, config)
-	ctx = withMailer(ctx, mailer)
 	ctx = withInstanceID(ctx, instanceID)
-
 	return ctx, nil
+}
+
+func (a *API) Mailer(ctx context.Context) mailer.Mailer {
+	config := a.getConfig(ctx)
+	return mailer.NewMailer(config)
 }
 
 func (a *API) getConfig(ctx context.Context) *conf.Configuration {
@@ -194,11 +195,18 @@ func (a *API) getConfig(ctx context.Context) *conf.Configuration {
 	}
 
 	config := obj.(*conf.Configuration)
+
 	extConfig := (*a.config).External
 	if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
 		return nil
 	}
-
 	config.External = extConfig
+
+	smtpConfig := (*a.config).SMTP
+	if err := mergo.MergeWithOverwrite(&smtpConfig, config.SMTP); err != nil {
+		return nil
+	}
+	config.SMTP = smtpConfig
+
 	return config
 }

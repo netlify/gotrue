@@ -39,7 +39,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		return unprocessableEntityError("Signup requires a valid email and password")
 	}
 
-	mailer := getMailer(ctx)
+	mailer := a.Mailer(ctx)
 	if err = mailer.ValidateEmail(params.Email); err != nil {
 		return unprocessableEntityError("Unable to validate email address: " + err.Error())
 	}
