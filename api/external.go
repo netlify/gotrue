@@ -197,11 +197,13 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		if !user.IsConfirmed() {
 			if !userData.Verified && !config.Mailer.Autoconfirm {
 				mailer := a.Mailer(ctx)
-				if confirmationErr := mailer.ConfirmationMail(user); confirmationErr != nil {
-					return internalServerError("Error sending confirmation mail").WithInternalError(confirmationErr)
+				if user.ConfirmationSentAt == nil || user.ConfirmationSentAt.Add(config.SMTP.MaxFrequency).Before(time.Now()) {
+					if confirmationErr := mailer.ConfirmationMail(user); confirmationErr != nil {
+						return internalServerError("Error sending confirmation mail").WithInternalError(confirmationErr)
+					}
+					now := time.Now()
+					user.ConfirmationSentAt = &now
 				}
-				now := time.Now()
-				user.ConfirmationSentAt = &now
 
 				if confirmationErr := a.db.UpdateUser(user); confirmationErr != nil {
 					return internalServerError("Error updating user in database").WithInternalError(confirmationErr)

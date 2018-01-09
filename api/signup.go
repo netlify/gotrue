@@ -72,11 +72,13 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		}
 		user.Confirm()
 	} else {
-		if err := mailer.ConfirmationMail(user); err != nil {
-			return internalServerError("Error sending confirmation mail").WithInternalError(err)
+		if user.ConfirmationSentAt == nil || user.ConfirmationSentAt.Add(config.SMTP.MaxFrequency).Before(time.Now()) {
+			if err := mailer.ConfirmationMail(user); err != nil {
+				return internalServerError("Error sending confirmation mail").WithInternalError(err)
+			}
+			now := time.Now()
+			user.ConfirmationSentAt = &now
 		}
-		now := time.Now()
-		user.ConfirmationSentAt = &now
 	}
 
 	if err = a.db.UpdateUser(user); err != nil {
