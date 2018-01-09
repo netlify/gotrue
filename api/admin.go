@@ -103,7 +103,7 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.Password != "" {
-		user.EncryptPassword(params.Password)
+		user.SetPassword(params.Password)
 	}
 
 	if params.Email != "" {

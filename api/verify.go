@@ -80,8 +80,8 @@ func (a *API) signupVerify(ctx context.Context, params *VerifyParams) (*models.U
 			if params.Password == "" {
 				return nil, unprocessableEntityError("Invited users must specify a password")
 			}
-			if err = user.EncryptPassword(params.Password); err != nil {
-				return nil, internalServerError("Error encrypting password").WithInternalError(err)
+			if err = user.SetPassword(params.Password); err != nil {
+				return nil, internalServerError("Error storing password").WithInternalError(err)
 			}
 		}
 	}

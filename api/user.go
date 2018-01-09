@@ -104,8 +104,8 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.Password != "" {
-		if err = user.EncryptPassword(params.Password); err != nil {
-			return internalServerError("Error during password encryption").WithInternalError(err)
+		if err = user.SetPassword(params.Password); err != nil {
+			return internalServerError("Error during password storage").WithInternalError(err)
 		}
 	}
 

@@ -63,7 +63,7 @@ func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[str
 		UserMetaData: userData,
 	}
 
-	if err := user.EncryptPassword(password); err != nil {
+	if err := user.SetPassword(password); err != nil {
 		return nil, err
 	}
 
@@ -166,8 +166,8 @@ func (u *User) UpdateAppMetaData(updates map[string]interface{}) {
 	}
 }
 
-// EncryptPassword sets the encrypted password from a plaintext string
-func (u *User) EncryptPassword(password string) error {
+// SetPassword sets the encrypted password from a plaintext string
+func (u *User) SetPassword(password string) error {
 	pw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
