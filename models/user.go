@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/markbates/pop"
-	"github.com/netlify/gotrue/crypto"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -66,8 +65,6 @@ func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[str
 	if err := user.SetPassword(password); err != nil {
 		return nil, err
 	}
-
-	user.GenerateConfirmationToken()
 	return user, nil
 }
 
@@ -180,30 +177,6 @@ func (u *User) SetPassword(password string) error {
 func (u *User) Authenticate(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.EncryptedPassword), []byte(password))
 	return err == nil
-}
-
-// GenerateConfirmationToken generates a secure confirmation token for confirming
-// signup
-func (u *User) GenerateConfirmationToken() {
-	token := crypto.SecureToken()
-	u.ConfirmationToken = token
-}
-
-// GenerateRecoveryToken generates a secure password recovery token
-func (u *User) GenerateRecoveryToken() {
-	token := crypto.SecureToken()
-	now := time.Now()
-	u.RecoveryToken = token
-	u.RecoverySentAt = &now
-}
-
-// GenerateEmailChange prepares for verifying a new email
-func (u *User) GenerateEmailChange(email string) {
-	token := crypto.SecureToken()
-	now := time.Now()
-	u.EmailChangeToken = token
-	u.EmailChangeSentAt = &now
-	u.EmailChange = email
 }
 
 // Confirm resets the confimation token and the confirm timestamp

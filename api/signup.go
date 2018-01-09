@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/netlify/gotrue/models"
 )
@@ -68,21 +67,15 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 			if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
 				return err
 			}
-			a.db.UpdateUser(user)
 		}
 		user.Confirm()
-	} else {
-		if user.ConfirmationSentAt == nil || user.ConfirmationSentAt.Add(config.SMTP.MaxFrequency).Before(time.Now()) {
-			if err := mailer.ConfirmationMail(user); err != nil {
-				return internalServerError("Error sending confirmation mail").WithInternalError(err)
-			}
-			now := time.Now()
-			user.ConfirmationSentAt = &now
+		if err = a.db.UpdateUser(user); err != nil {
+			return internalServerError("Database error updating user").WithInternalError(err)
 		}
-	}
-
-	if err = a.db.UpdateUser(user); err != nil {
-		return internalServerError("Database error updating user").WithInternalError(err)
+	} else {
+		if err := a.sendConfirmation(user, mailer, config.SMTP.MaxFrequency); err != nil {
+			return internalServerError("Error sending confirmation mail").WithInternalError(err)
+		}
 	}
 
 	return sendJSON(w, http.StatusOK, user)

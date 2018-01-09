@@ -66,7 +66,7 @@ func (ts *RecoverTestSuite) TestRecover_FirstRecovery() {
 	// Setup response recorder
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
 
 	u, err = ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
@@ -94,7 +94,7 @@ func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
 	// Setup response recorder
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
 
 	u, err = ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
@@ -125,7 +125,7 @@ func (ts *RecoverTestSuite) TestRecover_NewEmailSent() {
 	// Setup response recorder
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
 
 	u, err = ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)

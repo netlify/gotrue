@@ -231,6 +231,7 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 
 func (ts *SignupTestSuite) TestVerifySignup() {
 	user, err := models.NewUser(ts.instanceID, "test@example.com", "testing", ts.Config.JWT.Aud, nil)
+	user.ConfirmationToken = "asdf3"
 	require.NoError(ts.T(), err)
 	require.NoError(ts.T(), ts.API.db.CreateUser(user))
 
@@ -254,5 +255,5 @@ func (ts *SignupTestSuite) TestVerifySignup() {
 
 	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	assert.Equal(ts.T(), http.StatusOK, w.Code, w.Body.String())
 }

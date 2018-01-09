@@ -148,6 +148,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogle() {
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
+	ts.Config.Mailer.Autoconfirm = true
+
 	tokenCount, userCount := 0, 0
 	code := "authcode"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -241,7 +243,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHub_AuthorizationCode() {
 			fmt.Fprint(w, `{"name":"GitHub Test","avatar_url":"http://example.com/avatar"}`)
 		case "/api/v3/user/emails":
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, `[{"email":"github@example.com", "primary": true, "validated": true}]`)
+			fmt.Fprint(w, `[{"email":"github@example.com", "primary": true, "verified": true}]`)
 		default:
 			w.WriteHeader(500)
 			ts.Fail("unknown github oauth call %s", r.URL.Path)

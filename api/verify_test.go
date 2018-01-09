@@ -66,7 +66,7 @@ func (ts *VerifyTestSuite) TestVerify_PasswordRecovery() {
 	// Setup response recorder
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
 
 	u, err = ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
@@ -86,7 +86,7 @@ func (ts *VerifyTestSuite) TestVerify_PasswordRecovery() {
 
 	w = httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
 
 	u, err = ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)

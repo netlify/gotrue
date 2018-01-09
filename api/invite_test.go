@@ -92,7 +92,7 @@ func (ts *InviteTestSuite) TestInvite() {
 	w := httptest.NewRecorder()
 
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
 }
 
 func (ts *InviteTestSuite) TestInvite_WithoutAccess() {
@@ -113,7 +113,7 @@ func (ts *InviteTestSuite) TestInvite_WithoutAccess() {
 	w := httptest.NewRecorder()
 
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusUnauthorized)
+	assert.Equal(ts.T(), http.StatusUnauthorized, w.Code)
 }
 
 func (ts *InviteTestSuite) TestVerifyInvite() {
@@ -121,6 +121,7 @@ func (ts *InviteTestSuite) TestVerifyInvite() {
 	now := time.Now()
 	user.InvitedAt = &now
 	user.EncryptedPassword = ""
+	user.ConfirmationToken = "asdf"
 	require.NoError(ts.T(), err)
 	require.NoError(ts.T(), ts.API.db.CreateUser(user))
 
@@ -145,7 +146,7 @@ func (ts *InviteTestSuite) TestVerifyInvite() {
 
 	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, http.StatusOK)
+	assert.Equal(ts.T(), http.StatusOK, w.Code, w.Body.String())
 }
 
 func (ts *InviteTestSuite) TestVerifyInvite_NoPassword() {
@@ -153,6 +154,7 @@ func (ts *InviteTestSuite) TestVerifyInvite_NoPassword() {
 	now := time.Now()
 	user.InvitedAt = &now
 	user.EncryptedPassword = ""
+	user.ConfirmationToken = "asdf2"
 	require.NoError(ts.T(), err)
 	require.NoError(ts.T(), ts.API.db.CreateUser(user))
 
@@ -176,7 +178,7 @@ func (ts *InviteTestSuite) TestVerifyInvite_NoPassword() {
 
 	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), w.Code, http.StatusUnprocessableEntity)
+	assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code)
 }
 
 func (ts *InviteTestSuite) TestInviteExternalGitlab() {

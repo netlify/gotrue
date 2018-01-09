@@ -72,36 +72,8 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	sendChangeEmailVerification := false
-	if params.Email != "" {
-		mailer := a.Mailer(ctx)
-		if err = mailer.ValidateEmail(params.Email); err != nil {
-			return unprocessableEntityError("Unable to verify new email address: " + err.Error())
-		}
-
-		instanceID := getInstanceID(ctx)
-		if exists, err := a.db.IsDuplicatedEmail(instanceID, params.Email, user.Aud); err != nil {
-			return internalServerError("Database error checking email").WithInternalError(err)
-		} else if exists {
-			return unprocessableEntityError("Email address already registered by another user")
-		}
-
-		user.GenerateEmailChange(params.Email)
-		sendChangeEmailVerification = true
-	}
-
 	log := getLogEntry(r)
 	log.Debugf("Checking params for token %v", params)
-
-	if params.EmailChangeToken != "" {
-		log.Debugf("Got change token %v", params.EmailChangeToken)
-
-		if params.EmailChangeToken != user.EmailChangeToken {
-			return unauthorizedError("Email Change Token didn't match token on file")
-		}
-
-		user.ConfirmEmailChange()
-	}
 
 	if params.Password != "" {
 		if err = user.SetPassword(params.Password); err != nil {
@@ -121,16 +93,34 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		user.UpdateAppMetaData(params.AppData)
 	}
 
-	if err := a.db.UpdateUser(user); err != nil {
-		return internalServerError("Database error updating user").WithInternalError(err)
+	if params.EmailChangeToken != "" {
+		log.Debugf("Got change token %v", params.EmailChangeToken)
+
+		if params.EmailChangeToken != user.EmailChangeToken {
+			return unauthorizedError("Email Change Token didn't match token on file")
+		}
+
+		user.ConfirmEmailChange()
+	} else if params.Email != "" && params.Email != user.Email {
+		mailer := a.Mailer(ctx)
+		if err = mailer.ValidateEmail(params.Email); err != nil {
+			return unprocessableEntityError("Unable to verify new email address: " + err.Error())
+		}
+
+		instanceID := getInstanceID(ctx)
+		if exists, err := a.db.IsDuplicatedEmail(instanceID, params.Email, user.Aud); err != nil {
+			return internalServerError("Database error checking email").WithInternalError(err)
+		} else if exists {
+			return unprocessableEntityError("Email address already registered by another user")
+		}
+
+		if err = a.sendEmailChange(user, mailer, params.Email); err != nil {
+			return internalServerError("Error sending change email").WithInternalError(err)
+		}
 	}
 
-	if sendChangeEmailVerification {
-		mailer := a.Mailer(ctx)
-		if err = mailer.EmailChangeMail(user); err != nil {
-			log := getLogEntry(r)
-			log.WithError(err).Error("Error sending change email")
-		}
+	if err := a.db.UpdateUser(user); err != nil {
+		return internalServerError("Database error updating user").WithInternalError(err)
 	}
 
 	return sendJSON(w, http.StatusOK, user)

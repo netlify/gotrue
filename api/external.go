@@ -197,26 +197,18 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		if !user.IsConfirmed() {
 			if !userData.Verified && !config.Mailer.Autoconfirm {
 				mailer := a.Mailer(ctx)
-				if user.ConfirmationSentAt == nil || user.ConfirmationSentAt.Add(config.SMTP.MaxFrequency).Before(time.Now()) {
-					if confirmationErr := mailer.ConfirmationMail(user); confirmationErr != nil {
-						return internalServerError("Error sending confirmation mail").WithInternalError(confirmationErr)
-					}
-					now := time.Now()
-					user.ConfirmationSentAt = &now
-				}
-
-				if confirmationErr := a.db.UpdateUser(user); confirmationErr != nil {
-					return internalServerError("Error updating user in database").WithInternalError(confirmationErr)
+				if err := a.sendConfirmation(user, mailer, config.SMTP.MaxFrequency); err != nil {
+					return internalServerError("Error sending confirmation mail").WithInternalError(err)
 				}
 				// email must be verified to issue a token
 				http.Redirect(w, r, a.getExternalRedirectURL(r), http.StatusFound)
+				return nil
 			}
 
 			if config.Webhook.HasEvent("signup") {
 				if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
 					return err
 				}
-				a.db.UpdateUser(user)
 			}
 
 			// fall through to auto-confirm and issue token
@@ -226,11 +218,11 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				if err := triggerHook(LoginEvent, user, instanceID, config); err != nil {
 					return err
 				}
-				a.db.UpdateUser(user)
 			}
 		}
 	}
 
+	// TODO make it clear this updates/saves the user
 	token, err := a.issueRefreshToken(ctx, user)
 	if err != nil {
 		return oauthError("server_error", err.Error())

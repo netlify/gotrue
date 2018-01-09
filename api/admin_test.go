@@ -87,7 +87,7 @@ func (ts *AdminTestSuite) TestAdminUsersUnauthorized() {
 	w := httptest.NewRecorder()
 
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusUnauthorized)
+	assert.Equal(ts.T(), http.StatusUnauthorized, w.Code)
 }
 
 // TestAdminUsers tests API /admin/users route

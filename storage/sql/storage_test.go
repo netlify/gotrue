@@ -106,7 +106,7 @@ func (s *StorageTestSuite) TestFindUserByInstanceIDAndID() {
 
 func (s *StorageTestSuite) TestFindUserByRecoveryToken() {
 	u := s.createUser()
-	u.GenerateRecoveryToken()
+	u.RecoveryToken = "asdf"
 
 	err := s.C.UpdateUser(u)
 	require.NoError(s.T(), err)

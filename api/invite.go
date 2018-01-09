@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/netlify/gotrue/models"
 )
@@ -17,7 +16,6 @@ type InviteParams struct {
 // Invite is the endpoint for inviting a new user
 func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	config := a.getConfig(ctx)
 	instanceID := getInstanceID(ctx)
 	params := &InviteParams{}
 
@@ -54,17 +52,9 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	now := time.Now()
-	user.InvitedAt = &now
 
-	if err := mailer.InviteMail(user); err != nil {
-		return internalServerError("Error sending confirmation mail").WithInternalError(err)
+	if err := a.sendInvite(user, mailer); err != nil {
+		return internalServerError("Error inviting user").WithInternalError(err)
 	}
-
-	user.SetRole(config.JWT.DefaultGroupName)
-	if err = a.db.UpdateUser(user); err != nil {
-		return internalServerError("Database error updating user").WithInternalError(err)
-	}
-
 	return sendJSON(w, http.StatusOK, user)
 }
