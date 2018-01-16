@@ -13,9 +13,10 @@ import (
 
 type GoTrueClaims struct {
 	jwt.StandardClaims
-	Email        string                 `json:"email"`
-	AppMetaData  map[string]interface{} `json:"app_metadata"`
-	UserMetaData map[string]interface{} `json:"user_metadata"`
+	Email         string                 `json:"email"`
+	AppMetaData   map[string]interface{} `json:"app_metadata"`
+	UserMetaData  map[string]interface{} `json:"user_metadata"`
+	FunctionHooks map[string]string      `json:"function_hooks"`
 }
 
 // AccessTokenResponse represents an OAuth2 success response
@@ -77,7 +78,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 			return terr
 		}
 		if config.Webhook.HasEvent("login") {
-			if terr = triggerHook(tx, LoginEvent, user, instanceID, config); terr != nil {
+			if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
 				return terr
 			}
 		}

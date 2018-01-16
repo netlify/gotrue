@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net"
@@ -144,13 +145,32 @@ func closeBody(rsp *http.Response) {
 	}
 }
 
-func triggerHook(conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
-	if config.Webhook.URL == "" {
-		return nil
+func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
+	var hookURL *url.URL
+	if config.Webhook.URL != "" {
+		var err error
+		hookURL, err = url.Parse(config.Webhook.URL)
+		if err != nil {
+			return errors.Wrapf(err, "Failed to parse Webhook URL")
+		}
 	}
-	hookURL, err := url.Parse(config.Webhook.URL)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to parse Webhook URL")
+
+	if hookURL == nil {
+		fun := requestFunctionHooks(ctx)
+		if fun == nil {
+			return nil
+		}
+
+		if eventHookURL, ok := fun[string(event)]; ok {
+			var err error
+			hookURL, err = url.Parse(eventHookURL)
+			if err != nil {
+				return errors.Wrapf(err, "Failed to parse Event Function Hook URL")
+			}
+		} else {
+			// abort hook call if there are no functions for this event
+			return nil
+		}
 	}
 
 	if !hookURL.IsAbs() {

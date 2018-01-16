@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage/test"
@@ -49,7 +51,62 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, triggerHook(conn, SignupEvent, user, iid, config))
+	require.NoError(t, triggerHook(context.Background(), conn, SignupEvent, user, iid, config))
+
+	assert.Equal(t, 1, callCount)
+}
+
+func TestSignupHookFromClaims(t *testing.T) {
+	globalConfig, err := conf.LoadGlobal(apiTestConfig)
+	require.NoError(t, err)
+
+	conn, err := test.SetupDBConnection(globalConfig)
+	require.NoError(t, err)
+
+	iid := uuid.Must(uuid.NewV4())
+	user, err := models.NewUser(iid, "test@truth.com", "thisisapassword", "", nil)
+	require.NoError(t, err)
+
+	var callCount int
+	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		defer squash(r.Body.Close)
+		raw, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		data := map[string]interface{}{}
+		require.NoError(t, json.Unmarshal(raw, &data))
+
+		assert.Len(t, data, 3)
+		assert.Equal(t, iid.String(), data["instance_id"])
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer svr.Close()
+
+	config := &conf.Configuration{
+		Webhook: conf.WebhookConfig{
+			Events: []string{"signup"},
+		},
+		JWT: conf.JWTConfiguration{
+			Secret: "foobar",
+		},
+	}
+
+	ctx := context.Background()
+
+	claims := &GoTrueClaims{
+		StandardClaims: jwt.StandardClaims{
+			Issuer: "netlify",
+		},
+		FunctionHooks: map[string]string{
+			"signup": svr.URL,
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	ctx = withToken(ctx, token)
+
+	require.NoError(t, triggerHook(ctx, conn, SignupEvent, user, iid, config))
 
 	assert.Equal(t, 1, callCount)
 }

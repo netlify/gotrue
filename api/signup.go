@@ -71,7 +71,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 				return terr
 			}
 			if config.Webhook.HasEvent("signup") {
-				if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
+				if terr = triggerHook(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
 					return terr
 				}
 			}
@@ -119,7 +119,7 @@ func (a *API) signupNewUser(conn *storage.Connection, ctx context.Context, param
 			return internalServerError("Database error updating user").WithInternalError(terr)
 		}
 		if config.Webhook.HasEvent("validate") {
-			if terr := triggerHook(tx, ValidateEvent, user, instanceID, config); terr != nil {
+			if terr := triggerHook(ctx, tx, ValidateEvent, user, instanceID, config); terr != nil {
 				return terr
 			}
 		}
