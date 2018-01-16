@@ -3,6 +3,8 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net"
@@ -33,6 +35,11 @@ const (
 )
 
 var defaultTimeout time.Duration = time.Second * 5
+
+type webhookClaims struct {
+	jwt.StandardClaims
+	SHA256 string `json:"sha256"`
+}
 
 type Webhook struct {
 	*conf.WebhookConfig
@@ -196,17 +203,29 @@ func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent,
 	if err != nil {
 		return internalServerError("Failed to serialize the data for signup webhook").WithInternalError(err)
 	}
-	w := Webhook{
-		WebhookConfig: &config.Webhook,
-		jwtSecret:     config.Webhook.Secret,
-		instanceID:    instanceID,
-		claims: &jwt.StandardClaims{
+
+	sha, err := checksum(data)
+	if err != nil {
+		return internalServerError("Failed to checksum the data for signup webhook").WithInternalError(err)
+	}
+
+	claims := webhookClaims{
+		StandardClaims: jwt.StandardClaims{
 			IssuedAt: time.Now().Unix(),
 			Subject:  instanceID.String(),
 			Issuer:   gotrueIssuer,
 		},
-		payload: data,
+		SHA256: sha,
 	}
+
+	w := Webhook{
+		WebhookConfig: &config.Webhook,
+		jwtSecret:     config.Webhook.Secret,
+		instanceID:    instanceID,
+		claims:        claims,
+		payload:       data,
+	}
+
 	w.URL = hookURL.String()
 
 	body, err := w.trigger()
@@ -248,6 +267,16 @@ func watchForConnection(req *http.Request) (*connectionWatcher, *http.Request) {
 
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), t))
 	return w, req
+}
+
+func checksum(data []byte) (string, error) {
+	sha := sha256.New()
+	_, err := sha.Write(data)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(sha.Sum(nil)), nil
 }
 
 type connectionWatcher struct {
