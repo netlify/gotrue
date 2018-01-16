@@ -86,7 +86,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		assert.Equal("application/json", r.Header.Get("Content-Type"))
 
 		// verify the signature
-		signature := r.Header.Get("x-gotrue-signature")
+		signature := r.Header.Get("x-webhook-signature")
 		p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 		claims := new(jwt.StandardClaims)
 		token, err := p.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {

@@ -26,7 +26,7 @@ import (
 type HookEvent string
 
 const (
-	headerHookSignature = "x-gotrue-signature"
+	headerHookSignature = "x-webhook-signature"
 	defaultHookRetries  = 3
 	gotrueIssuer        = "gotrue"
 	ValidateEvent       = "validate"
