@@ -17,10 +17,11 @@ const (
 )
 
 type NetlifyMicroserviceClaims struct {
-	SiteURL    string `json:"site_url"`
-	InstanceID string `json:"id"`
-	NetlifyID  string `json:"netlify_id"`
 	jwt.StandardClaims
+	SiteURL       string            `json:"site_url"`
+	InstanceID    string            `json:"id"`
+	NetlifyID     string            `json:"netlify_id"`
+	FunctionHooks map[string]string `json:"function_hooks"`
 }
 
 func addGetBody(w http.ResponseWriter, req *http.Request) (context.Context, error) {
@@ -98,6 +99,8 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 	logEntrySetField(r, "site_url", config.SiteURL)
 
 	ctx = withNetlifyID(ctx, claims.NetlifyID)
+	ctx = withFunctionHooks(ctx, claims.FunctionHooks)
+
 	ctx, err = WithInstanceConfig(ctx, config, instanceID)
 	if err != nil {
 		return nil, internalServerError("Error loading instance config").WithInternalError(err)

@@ -163,7 +163,7 @@ func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent,
 	}
 
 	if hookURL == nil {
-		fun := requestFunctionHooks(ctx)
+		fun := getFunctionHooks(ctx)
 		if fun == nil {
 			return nil
 		}

@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage/test"
@@ -87,24 +86,12 @@ func TestSignupHookFromClaims(t *testing.T) {
 		Webhook: conf.WebhookConfig{
 			Events: []string{"signup"},
 		},
-		JWT: conf.JWTConfiguration{
-			Secret: "foobar",
-		},
 	}
 
 	ctx := context.Background()
-
-	claims := &GoTrueClaims{
-		StandardClaims: jwt.StandardClaims{
-			Issuer: "netlify",
-		},
-		FunctionHooks: map[string]string{
-			"signup": svr.URL,
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ctx = withToken(ctx, token)
+	ctx = withFunctionHooks(ctx, map[string]string{
+		"signup": svr.URL,
+	})
 
 	require.NoError(t, triggerHook(ctx, conn, SignupEvent, user, iid, config))
 

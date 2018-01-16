@@ -81,11 +81,3 @@ func (a *API) requestAud(ctx context.Context, r *http.Request) string {
 	// Finally, return the default of none of the above methods are successful
 	return config.JWT.Aud
 }
-
-func requestFunctionHooks(ctx context.Context) map[string]string {
-	claims := getClaims(ctx)
-	if claims != nil {
-		return claims.FunctionHooks
-	}
-	return nil
-}

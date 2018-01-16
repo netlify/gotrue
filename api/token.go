@@ -13,10 +13,9 @@ import (
 
 type GoTrueClaims struct {
 	jwt.StandardClaims
-	Email         string                 `json:"email"`
-	AppMetaData   map[string]interface{} `json:"app_metadata"`
-	UserMetaData  map[string]interface{} `json:"user_metadata"`
-	FunctionHooks map[string]string      `json:"function_hooks"`
+	Email        string                 `json:"email"`
+	AppMetaData  map[string]interface{} `json:"app_metadata"`
+	UserMetaData map[string]interface{} `json:"user_metadata"`
 }
 
 // AccessTokenResponse represents an OAuth2 success response
