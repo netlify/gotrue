@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -29,7 +30,7 @@ func (a *API) loadUser(w http.ResponseWriter, r *http.Request) (context.Context,
 	logEntrySetField(r, "user_id", userID)
 	instanceID := getInstanceID(r.Context())
 
-	u, err := a.db.FindUserByInstanceIDAndID(instanceID, userID)
+	u, err := models.FindUserByInstanceIDAndID(a.db, instanceID, userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError("User not found")
@@ -67,7 +68,7 @@ func (a *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 
 	filter := r.URL.Query().Get("filter")
 
-	users, err := a.db.FindUsersInAudience(instanceID, aud, pageParams, sortParams, filter)
+	users, err := models.FindUsersInAudience(a.db, instanceID, aud, pageParams, sortParams, filter)
 	if err != nil {
 		return internalServerError("Database error finding users").WithInternalError(err)
 	}
@@ -94,31 +95,46 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	if params.Role != "" {
-		user.SetRole(params.Role)
-	}
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		if params.Role != "" {
+			if terr := user.SetRole(tx, params.Role); terr != nil {
+				return terr
+			}
+		}
 
-	if params.Confirm {
-		user.Confirm()
-	}
+		if params.Confirm {
+			if terr := user.Confirm(tx); terr != nil {
+				return terr
+			}
+		}
 
-	if params.Password != "" {
-		user.SetPassword(params.Password)
-	}
+		if params.Password != "" {
+			if terr := user.UpdatePassword(tx, params.Password); terr != nil {
+				return terr
+			}
+		}
 
-	if params.Email != "" {
-		user.Email = params.Email
-	}
+		if params.Email != "" {
+			if terr := user.SetEmail(tx, params.Email); terr != nil {
+				return terr
+			}
+		}
 
-	if params.AppMetaData != nil {
-		user.UpdateAppMetaData(params.AppMetaData)
-	}
+		if params.AppMetaData != nil {
+			if terr := user.UpdateAppMetaData(tx, params.AppMetaData); terr != nil {
+				return terr
+			}
+		}
 
-	if params.UserMetaData != nil {
-		user.UpdateUserMetaData(params.UserMetaData)
-	}
+		if params.UserMetaData != nil {
+			if terr := user.UpdateUserMetaData(tx, params.UserMetaData); terr != nil {
+				return terr
+			}
+		}
+		return nil
+	})
 
-	if err := a.db.UpdateUser(user); err != nil {
+	if err != nil {
 		return internalServerError("Error updating user").WithInternalError(err)
 	}
 
@@ -134,12 +150,8 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	if params.Email == "" {
-		return unprocessableEntityError("Creating a user requires a valid email")
-	}
-	mailer := a.Mailer(ctx)
-	if err := mailer.ValidateEmail(params.Email); err != nil {
-		return unprocessableEntityError("Invalid email address: %s", params.Email).WithInternalError(err)
+	if err := a.validateEmail(ctx, params.Email); err != nil {
+		return err
 	}
 
 	aud := a.requestAud(ctx, r)
@@ -147,7 +159,7 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 		aud = params.Aud
 	}
 
-	if exists, err := a.db.IsDuplicatedEmail(instanceID, params.Email, aud); err != nil {
+	if exists, err := models.IsDuplicatedEmail(a.db, instanceID, params.Email, aud); err != nil {
 		return internalServerError("Database error checking email").WithInternalError(err)
 	} else if exists {
 		return unprocessableEntityError("Email address already registered by another user")
@@ -163,17 +175,29 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	user.AppMetaData["provider"] = "email"
 
 	config := a.getConfig(ctx)
-	if params.Role != "" {
-		user.SetRole(params.Role)
-	} else {
-		user.SetRole(config.JWT.DefaultGroupName)
-	}
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		if terr := tx.Create(user); terr != nil {
+			return terr
+		}
 
-	if params.Confirm {
-		user.Confirm()
-	}
+		role := config.JWT.DefaultGroupName
+		if params.Role != "" {
+			role = params.Role
+		}
+		if terr := user.SetRole(tx, role); terr != nil {
+			return terr
+		}
 
-	if err = a.db.CreateUser(user); err != nil {
+		if params.Confirm {
+			if terr := user.Confirm(tx); terr != nil {
+				return terr
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		return internalServerError("Database error creating new user").WithInternalError(err)
 	}
 
@@ -184,7 +208,7 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 func (a *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
 	user := getUser(r.Context())
 
-	if err := a.db.DeleteUser(user); err != nil {
+	if err := a.db.Destroy(user); err != nil {
 		return internalServerError("Database error deleting user").WithInternalError(err)
 	}
 

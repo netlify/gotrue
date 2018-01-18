@@ -34,7 +34,7 @@ func sendJSON(w http.ResponseWriter, status int, obj interface{}) error {
 	return err
 }
 
-func getUserFromClaims(ctx context.Context, conn storage.Connection) (*models.User, error) {
+func getUserFromClaims(ctx context.Context, conn *storage.Connection) (*models.User, error) {
 	claims := getClaims(ctx)
 	if claims == nil {
 		return nil, errors.New("Invalid token")
@@ -54,7 +54,7 @@ func getUserFromClaims(ctx context.Context, conn storage.Connection) (*models.Us
 	if err != nil {
 		return nil, errors.New("Invalid user ID")
 	}
-	return conn.FindUserByInstanceIDAndID(instanceID, userID)
+	return models.FindUserByInstanceIDAndID(conn, instanceID, userID)
 }
 
 func (a *API) isAdmin(ctx context.Context, u *models.User, aud string) bool {

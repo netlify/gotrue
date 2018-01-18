@@ -41,7 +41,7 @@ func TestSignup(t *testing.T) {
 }
 
 func (ts *SignupTestSuite) SetupTest() {
-	ts.API.db.TruncateAll()
+	models.TruncateAll(ts.API.db)
 	ts.Config.Webhook = conf.WebhookConfig{}
 }
 
@@ -126,15 +126,6 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		require.True(ok)
 		assert.Len(usermeta, 1)
 		assert.EqualValues(1, usermeta["a"])
-
-		created, err := time.Parse(time.RFC3339Nano, u["created_at"].(string))
-		assert.NoError(err)
-		assert.True(created.IsZero())
-
-		updated, err := time.Parse(time.RFC3339Nano, u["created_at"].(string))
-		assert.NoError(err)
-		assert.True(updated.IsZero())
-		w.WriteHeader(http.StatusOK)
 	}))
 	defer svr.Close()
 	ts.Config.Webhook = conf.WebhookConfig{
@@ -213,10 +204,9 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 	y := httptest.NewRecorder()
 
 	ts.API.handler.ServeHTTP(y, req)
-	u, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test1@example.com", ts.Config.JWT.Aud)
+	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test1@example.com", ts.Config.JWT.Aud)
 	if err == nil {
-		u.Confirm()
-		require.NoError(ts.T(), ts.API.db.UpdateUser(u))
+		require.NoError(ts.T(), u.Confirm(ts.API.db))
 	}
 
 	encode()
@@ -225,18 +215,18 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 	data := make(map[string]interface{})
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
-	assert.Equal(ts.T(), w.Code, http.StatusBadRequest)
-	assert.Equal(ts.T(), data["code"], float64(http.StatusBadRequest))
+	assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
+	assert.Equal(ts.T(), float64(http.StatusBadRequest), data["code"])
 }
 
 func (ts *SignupTestSuite) TestVerifySignup() {
 	user, err := models.NewUser(ts.instanceID, "test@example.com", "testing", ts.Config.JWT.Aud, nil)
 	user.ConfirmationToken = "asdf3"
 	require.NoError(ts.T(), err)
-	require.NoError(ts.T(), ts.API.db.CreateUser(user))
+	require.NoError(ts.T(), ts.API.db.Create(user))
 
 	// Find test user
-	u, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// Request body

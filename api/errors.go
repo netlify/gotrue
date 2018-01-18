@@ -148,6 +148,10 @@ func recoverer(w http.ResponseWriter, r *http.Request) (context.Context, error) 
 	return nil, nil
 }
 
+type ErrorCause interface {
+	Cause() error
+}
+
 func handleError(err error, w http.ResponseWriter, r *http.Request) {
 	log := getLogEntry(r)
 	errorID := getRequestID(r.Context())
@@ -168,6 +172,8 @@ func handleError(err error, w http.ResponseWriter, r *http.Request) {
 		if jsonErr := sendJSON(w, http.StatusBadRequest, e); jsonErr != nil {
 			handleError(jsonErr, w, r)
 		}
+	case ErrorCause:
+		handleError(e.Cause(), w, r)
 	default:
 		log.WithError(e).Errorf("Unhandled server error: %s", e.Error())
 		// hide real error details from response to prevent info leaks

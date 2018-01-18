@@ -1,15 +1,17 @@
 package api
 
 import (
+	"context"
 	"time"
 
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
 )
 
-func (a *API) sendConfirmation(u *models.User, mailer mailer.Mailer, maxFrequency time.Duration) error {
+func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration) error {
 	if u.ConfirmationSentAt != nil && !u.ConfirmationSentAt.Add(maxFrequency).Before(time.Now()) {
 		return nil
 	}
@@ -22,10 +24,10 @@ func (a *API) sendConfirmation(u *models.User, mailer mailer.Mailer, maxFrequenc
 		return errors.Wrap(err, "Error sending confirmation email")
 	}
 	u.ConfirmationSentAt = &now
-	return errors.Wrap(a.db.UpdateUser(u), "Database error updating user for confirmation")
+	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "confirmation_sent_at"), "Database error updating user for confirmation")
 }
 
-func (a *API) sendInvite(u *models.User, mailer mailer.Mailer) error {
+func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer) error {
 	oldToken := u.ConfirmationToken
 	u.ConfirmationToken = crypto.SecureToken()
 	now := time.Now()
@@ -34,10 +36,10 @@ func (a *API) sendInvite(u *models.User, mailer mailer.Mailer) error {
 		return errors.Wrap(err, "Error sending invite email")
 	}
 	u.InvitedAt = &now
-	return errors.Wrap(a.db.UpdateUser(u), "Database error updating user for invite")
+	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "invited_at"), "Database error updating user for invite")
 }
 
-func (a *API) sendPasswordRecovery(u *models.User, mailer mailer.Mailer, maxFrequency time.Duration) error {
+func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration) error {
 	if u.RecoverySentAt != nil && !u.RecoverySentAt.Add(maxFrequency).Before(time.Now()) {
 		return nil
 	}
@@ -50,7 +52,7 @@ func (a *API) sendPasswordRecovery(u *models.User, mailer mailer.Mailer, maxFreq
 		return errors.Wrap(err, "Error sending recovery email")
 	}
 	u.RecoverySentAt = &now
-	return errors.Wrap(a.db.UpdateUser(u), "Database error updating user for recovery")
+	return errors.Wrap(tx.UpdateOnly(u, "recovery_token", "recovery_sent_at"), "Database error updating user for recovery")
 }
 
 func (a *API) sendEmailChange(u *models.User, mailer mailer.Mailer, email string) error {
@@ -66,5 +68,16 @@ func (a *API) sendEmailChange(u *models.User, mailer mailer.Mailer, email string
 	}
 
 	u.EmailChangeSentAt = &now
+	return nil
+}
+
+func (a *API) validateEmail(ctx context.Context, email string) error {
+	if email == "" {
+		return unprocessableEntityError("An email address is required")
+	}
+	mailer := a.Mailer(ctx)
+	if err := mailer.ValidateEmail(email); err != nil {
+		return unprocessableEntityError("Unable to validate email address: " + err.Error())
+	}
 	return nil
 }

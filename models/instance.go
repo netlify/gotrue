@@ -1,10 +1,13 @@
 package models
 
 import (
-	"errors"
+	"database/sql"
 	"time"
 
+	"github.com/markbates/pop"
 	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/storage"
+	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -32,4 +35,44 @@ func (i *Instance) Config() (*conf.Configuration, error) {
 	baseConf.ApplyDefaults()
 
 	return baseConf, nil
+}
+
+// GetInstance finds an instance by ID
+func GetInstance(tx *storage.Connection, instanceID uuid.UUID) (*Instance, error) {
+	instance := Instance{}
+	if err := tx.Find(&instance, instanceID); err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, InstanceNotFoundError{}
+		}
+		return nil, errors.Wrap(err, "error finding instance")
+	}
+	return &instance, nil
+}
+
+func GetInstanceByUUID(tx *storage.Connection, uuid uuid.UUID) (*Instance, error) {
+	instance := Instance{}
+	if err := tx.Where("uuid = ?", uuid).First(&instance); err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, InstanceNotFoundError{}
+		}
+		return nil, errors.Wrap(err, "error finding instance")
+	}
+	return &instance, nil
+}
+
+func DeleteInstance(conn *storage.Connection, instance *Instance) error {
+	return conn.Transaction(func(tx *storage.Connection) error {
+		delModels := map[string]*pop.Model{
+			"user":          &pop.Model{Value: User{}},
+			"refresh token": &pop.Model{Value: RefreshToken{}},
+		}
+
+		for name, dm := range delModels {
+			if err := tx.RawQuery("DELETE FROM "+dm.TableName()+" WHERE instance_id = ?", instance.ID).Exec(); err != nil {
+				return errors.Wrapf(err, "Error deleting %s records", name)
+			}
+		}
+
+		return errors.Wrap(tx.Destroy(instance), "Error deleting instance record")
+	})
 }

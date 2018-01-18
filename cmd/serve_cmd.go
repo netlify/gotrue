@@ -6,7 +6,7 @@ import (
 
 	"github.com/netlify/gotrue/api"
 	"github.com/netlify/gotrue/conf"
-	"github.com/netlify/gotrue/storage/dial"
+	"github.com/netlify/gotrue/storage"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -21,7 +21,7 @@ var serveCmd = cobra.Command{
 }
 
 func serve(globalConfig *conf.GlobalConfiguration, config *conf.Configuration) {
-	db, err := dial.Dial(globalConfig)
+	db, err := storage.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}

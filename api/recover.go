@@ -29,7 +29,7 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	aud := a.requestAud(ctx, r)
-	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
+	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -38,7 +38,7 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	mailer := a.Mailer(ctx)
-	if err := a.sendPasswordRecovery(user, mailer, config.SMTP.MaxFrequency); err != nil {
+	if err := a.sendPasswordRecovery(a.db, user, mailer, config.SMTP.MaxFrequency); err != nil {
 		return internalServerError("Error recovering user").WithInternalError(err)
 	}
 	return sendJSON(w, http.StatusOK, &map[string]string{})

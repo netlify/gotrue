@@ -43,7 +43,7 @@ func TestInvite(t *testing.T) {
 }
 
 func (ts *InviteTestSuite) SetupTest() {
-	ts.API.db.TruncateAll()
+	models.TruncateAll(ts.API.db)
 
 	// Setup response recorder with super admin privileges
 	ts.token = ts.makeSuperAdmin("admin@example.com")
@@ -51,15 +51,15 @@ func (ts *InviteTestSuite) SetupTest() {
 
 func (ts *InviteTestSuite) makeSuperAdmin(email string) string {
 	// Cleanup existing user, if they already exist
-	if u, _ := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, email, ts.Config.JWT.Aud); u != nil {
-		require.NoError(ts.T(), ts.API.db.DeleteUser(u), "Error deleting user")
+	if u, _ := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, email, ts.Config.JWT.Aud); u != nil {
+		require.NoError(ts.T(), ts.API.db.Destroy(u), "Error deleting user")
 	}
 
 	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test User"})
 	require.NoError(ts.T(), err, "Error making new user")
 
 	u.IsSuperAdmin = true
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
@@ -123,10 +123,10 @@ func (ts *InviteTestSuite) TestVerifyInvite() {
 	user.EncryptedPassword = ""
 	user.ConfirmationToken = "asdf"
 	require.NoError(ts.T(), err)
-	require.NoError(ts.T(), ts.API.db.CreateUser(user))
+	require.NoError(ts.T(), ts.API.db.Create(user))
 
 	// Find test user
-	u, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// Request body
@@ -156,10 +156,10 @@ func (ts *InviteTestSuite) TestVerifyInvite_NoPassword() {
 	user.EncryptedPassword = ""
 	user.ConfirmationToken = "asdf2"
 	require.NoError(ts.T(), err)
-	require.NoError(ts.T(), ts.API.db.CreateUser(user))
+	require.NoError(ts.T(), ts.API.db.Create(user))
 
 	// Find test user
-	u, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// Request body
@@ -202,7 +202,7 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab() {
 			w.Header().Add("Content-Type", "application/json")
 			fmt.Fprint(w, `[{"email":"gitlab@example.com"}]`)
 		default:
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			ts.Fail("unknown gitlab oauth call %s", r.URL.Path)
 		}
 	}))
@@ -223,7 +223,7 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab() {
 	ts.Require().Equal(http.StatusOK, w.Code)
 
 	// Find test user
-	user, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
+	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// get redirect url w/ state
@@ -265,7 +265,7 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab() {
 	ts.Equal(1, userCount)
 
 	// ensure user has been created with metadata
-	user, err = ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
+	user, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
 	ts.Require().NoError(err)
 	ts.Equal("Gitlab Test", user.UserMetaData["full_name"])
 	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
@@ -314,7 +314,7 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab_MismatchedEmails() {
 	ts.Require().Equal(http.StatusOK, w.Code)
 
 	// Find test user
-	user, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
+	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// get redirect url w/ state
@@ -343,7 +343,7 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab_MismatchedEmails() {
 
 	// ensure redirect has #access_token=...
 	v, err = url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
+	ts.Require().NoError(err, u.Fragment)
 	ts.Require().NotEmpty(v.Get("error_description"))
 	ts.Require().Equal("invalid_request", v.Get("error"))
 }

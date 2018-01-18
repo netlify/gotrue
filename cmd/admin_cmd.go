@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage/dial"
+	"github.com/netlify/gotrue/storage"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -70,14 +70,14 @@ var adminEditRoleCmd = cobra.Command{
 func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
 	iid := uuid.Must(uuid.FromString(instanceID))
 
-	db, err := dial.Dial(globalConfig)
+	db, err := storage.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 	defer db.Close()
 
 	aud := getAudience(config)
-	if exists, err := db.IsDuplicatedEmail(iid, args[0], aud); exists {
+	if exists, err := models.IsDuplicatedEmail(db, iid, args[0], aud); exists {
 		logrus.Fatalf("Error creating new user: user already exists")
 	} else if err != nil {
 		logrus.Fatalf("Error checking user email: %+v", err)
@@ -87,23 +87,33 @@ func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 	if err != nil {
 		logrus.Fatalf("Error creating new user: %+v", err)
 	}
-
-	if len(args) > 2 {
-		user.SetRole(args[2])
-	} else if isAdmin {
-		user.SetRole(config.JWT.AdminGroupName)
-	}
-
 	user.IsSuperAdmin = isSuperAdmin
 
-	if err := db.CreateUser(user); err != nil {
-		logrus.Fatalf("Unable to create user (%s): %+v", args[0], err)
-		return
-	}
+	err = db.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		if terr = tx.Create(user); terr != nil {
+			return terr
+		}
 
-	if config.Mailer.Autoconfirm || autoconfirm {
-		user.Confirm()
-		db.UpdateUser(user)
+		if len(args) > 2 {
+			if terr = user.SetRole(tx, args[2]); terr != nil {
+				return terr
+			}
+		} else if isAdmin {
+			if terr = user.SetRole(tx, config.JWT.AdminGroupName); terr != nil {
+				return terr
+			}
+		}
+
+		if config.Mailer.Autoconfirm || autoconfirm {
+			if terr = user.Confirm(tx); terr != nil {
+				return terr
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		logrus.Fatalf("Unable to create user (%s): %+v", args[0], err)
 	}
 
 	logrus.Infof("Created user: %s", args[0])
@@ -112,22 +122,22 @@ func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
 	iid := uuid.Must(uuid.FromString(instanceID))
 
-	db, err := dial.Dial(globalConfig)
+	db, err := storage.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 	defer db.Close()
 
-	user, err := db.FindUserByEmailAndAudience(iid, args[0], getAudience(config))
+	user, err := models.FindUserByEmailAndAudience(db, iid, args[0], getAudience(config))
 	if err != nil {
 		userID := uuid.Must(uuid.FromString(args[0]))
-		user, err = db.FindUserByInstanceIDAndID(iid, userID)
+		user, err = models.FindUserByInstanceIDAndID(db, iid, userID)
 		if err != nil {
 			logrus.Fatalf("Error finding user (%s): %+v", userID, err)
 		}
 	}
 
-	if err = db.DeleteUser(user); err != nil {
+	if err = db.Destroy(user); err != nil {
 		logrus.Fatalf("Error removing user (%s): %+v", args[0], err)
 	}
 
@@ -137,24 +147,22 @@ func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
 	iid := uuid.Must(uuid.FromString(instanceID))
 
-	db, err := dial.Dial(globalConfig)
+	db, err := storage.Dial(globalConfig)
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
 	defer db.Close()
 
-	user, err := db.FindUserByEmailAndAudience(iid, args[0], getAudience(config))
+	user, err := models.FindUserByEmailAndAudience(db, iid, args[0], getAudience(config))
 	if err != nil {
 		userID := uuid.Must(uuid.FromString(args[0]))
-		user, err = db.FindUserByInstanceIDAndID(iid, userID)
+		user, err = models.FindUserByInstanceIDAndID(db, iid, userID)
 		if err != nil {
 			logrus.Fatalf("Error finding user (%s): %+v", userID, err)
 		}
 	}
 
-	if isSuperAdmin {
-		user.IsSuperAdmin = true
-	}
+	user.IsSuperAdmin = isSuperAdmin
 
 	if len(args) > 0 {
 		user.Role = args[0]
@@ -162,7 +170,7 @@ func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configur
 		user.Role = config.JWT.AdminGroupName
 	}
 
-	if err = db.UpdateUser(user); err != nil {
+	if err = db.UpdateOnly(user, "role", "is_super_admin"); err != nil {
 		logrus.Fatalf("Error updating role for user (%s): %+v", args[0], err)
 	}
 

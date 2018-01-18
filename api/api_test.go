@@ -29,7 +29,7 @@ func setupAPIForTest() (*API, *conf.Configuration, error) {
 }
 
 func setupAPIForMultiinstanceTest() (*API, *conf.Configuration, error) {
-	cb := func(gc *conf.GlobalConfiguration, c *conf.Configuration, conn storage.Connection) (uuid.UUID, error) {
+	cb := func(gc *conf.GlobalConfiguration, c *conf.Configuration, conn *storage.Connection) (uuid.UUID, error) {
 		gc.MultiInstanceMode = true
 		return uuid.Nil, nil
 	}
@@ -39,8 +39,8 @@ func setupAPIForMultiinstanceTest() (*API, *conf.Configuration, error) {
 
 func setupAPIForTestForInstance() (*API, *conf.Configuration, uuid.UUID, error) {
 	instanceID := uuid.Must(uuid.NewV4())
-	cb := func(gc *conf.GlobalConfiguration, c *conf.Configuration, conn storage.Connection) (uuid.UUID, error) {
-		err := conn.CreateInstance(&models.Instance{
+	cb := func(gc *conf.GlobalConfiguration, c *conf.Configuration, conn *storage.Connection) (uuid.UUID, error) {
+		err := conn.Create(&models.Instance{
 			ID:         instanceID,
 			UUID:       testUUID,
 			BaseConfig: c,
@@ -55,7 +55,7 @@ func setupAPIForTestForInstance() (*API, *conf.Configuration, uuid.UUID, error) 
 	return api, conf, instanceID, nil
 }
 
-func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Configuration, storage.Connection) (uuid.UUID, error)) (*API, *conf.Configuration, error) {
+func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Configuration, *storage.Connection) (uuid.UUID, error)) (*API, *conf.Configuration, error) {
 	globalConfig, err := conf.LoadGlobal(apiTestConfig)
 	if err != nil {
 		return nil, nil, err

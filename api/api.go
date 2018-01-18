@@ -10,7 +10,6 @@ import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
-	"github.com/netlify/gotrue/storage/dial"
 	"github.com/netlify/netlify-commons/graceful"
 	"github.com/rs/cors"
 	uuid "github.com/satori/go.uuid"
@@ -28,7 +27,7 @@ var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 // API is the main REST API
 type API struct {
 	handler http.Handler
-	db      storage.Connection
+	db      *storage.Connection
 	config  *conf.GlobalConfiguration
 	version string
 }
@@ -47,12 +46,12 @@ func (a *API) ListenAndServe(hostAndPort string) {
 }
 
 // NewAPI instantiates a new REST API
-func NewAPI(globalConfig *conf.GlobalConfiguration, db storage.Connection) *API {
+func NewAPI(globalConfig *conf.GlobalConfiguration, db *storage.Connection) *API {
 	return NewAPIWithVersion(context.Background(), globalConfig, db, defaultVersion)
 }
 
 // NewAPIWithVersion creates a new REST API using the specified version
-func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, db storage.Connection, version string) *API {
+func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, db *storage.Connection, version string) *API {
 	api := &API{config: globalConfig, db: db, version: version}
 
 	xffmw, _ := xff.Default()
@@ -161,7 +160,7 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 		logrus.Fatalf("Error loading instance config: %+v", err)
 	}
 
-	db, err := dial.Dial(globalConfig)
+	db, err := storage.Dial(globalConfig)
 	if err != nil {
 		return nil, nil, err
 	}

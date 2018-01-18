@@ -17,6 +17,7 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 )
 
 type HookEvent string
@@ -143,7 +144,7 @@ func closeBody(rsp *http.Response) {
 	}
 }
 
-func triggerHook(event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
+func triggerHook(conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
 	if config.Webhook.URL == "" {
 		return nil
 	}
@@ -200,12 +201,21 @@ func triggerHook(event HookEvent, user *models.User, instanceID uuid.UUID, confi
 		if err = decoder.Decode(webhookRsp); err != nil {
 			return internalServerError("Webhook returned malformed JSON: %v", err).WithInternalError(err)
 		}
-		if webhookRsp.UserMetaData != nil {
-			user.UserMetaData = webhookRsp.UserMetaData
-		}
-		if webhookRsp.AppMetaData != nil {
-			user.AppMetaData = webhookRsp.AppMetaData
-		}
+		return conn.Transaction(func(tx *storage.Connection) error {
+			if webhookRsp.UserMetaData != nil {
+				user.UserMetaData = nil
+				if terr := user.UpdateUserMetaData(tx, webhookRsp.UserMetaData); terr != nil {
+					return terr
+				}
+			}
+			if webhookRsp.AppMetaData != nil {
+				user.AppMetaData = nil
+				if terr := user.UpdateAppMetaData(tx, webhookRsp.AppMetaData); terr != nil {
+					return terr
+				}
+			}
+			return nil
+		})
 	}
 	return err
 }

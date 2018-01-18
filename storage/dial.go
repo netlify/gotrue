@@ -1,0 +1,85 @@
+package storage
+
+import (
+	"net/url"
+	"reflect"
+
+	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/markbates/pop"
+	"github.com/markbates/pop/columns"
+	"github.com/netlify/gotrue/conf"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+)
+
+// Connection is the interface a storage provider must implement.
+type Connection struct {
+	*pop.Connection
+}
+
+// Dial will connect to that storage engine
+func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
+	if config.DB.Driver == "" && config.DB.URL != "" {
+		u, err := url.Parse(config.DB.URL)
+		if err != nil {
+			return nil, errors.Wrap(err, "parsing db connection url")
+		}
+		config.DB.Driver = u.Scheme
+	}
+
+	db, err := pop.NewConnection(&pop.ConnectionDetails{
+		Dialect: config.DB.Driver,
+		URL:     config.DB.URL,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "opening database connection")
+	}
+	if err := db.Open(); err != nil {
+		return nil, errors.Wrap(err, "checking database connection")
+	}
+
+	if config.DB.Namespace != "" {
+		pop.MapTableName("User", config.DB.Namespace+"_users")
+		pop.MapTableName("RefreshToken", config.DB.Namespace+"_refresh_tokens")
+		pop.MapTableName("Instance", config.DB.Namespace+"_instances")
+	}
+
+	if logrus.StandardLogger().Level == logrus.DebugLevel {
+		pop.Debug = true
+	}
+
+	return &Connection{db}, nil
+}
+
+func (c *Connection) Transaction(fn func(*Connection) error) error {
+	if c.TX == nil {
+		return c.Connection.Transaction(func(tx *pop.Connection) error {
+			return fn(&Connection{tx})
+		})
+	}
+	return fn(c)
+}
+
+func getExcludedColumns(model interface{}, includeColumns ...string) ([]string, error) {
+	sm := &pop.Model{Value: model}
+	st := reflect.TypeOf(model)
+	if st.Kind() == reflect.Ptr {
+		st = st.Elem()
+	}
+
+	// get all columns and remove included to get excluded set
+	cols := columns.ColumnsForStructWithAlias(model, sm.TableName(), sm.As)
+	for _, f := range includeColumns {
+		if _, ok := cols.Cols[f]; !ok {
+			return nil, errors.Errorf("Invalid column name %s", f)
+		}
+		cols.Remove(f)
+	}
+
+	xcols := make([]string, len(cols.Cols))
+	for n := range cols.Cols {
+		xcols = append(xcols, n)
+	}
+	return xcols, nil
+}

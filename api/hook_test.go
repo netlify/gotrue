@@ -10,12 +10,19 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage/test"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSignupHookSendInstanceID(t *testing.T) {
+	globalConfig, err := conf.LoadGlobal(apiTestConfig)
+	require.NoError(t, err)
+
+	conn, err := test.SetupDBConnection(globalConfig)
+	require.NoError(t, err)
+
 	iid := uuid.Must(uuid.NewV4())
 	user, err := models.NewUser(iid, "test@truth.com", "thisisapassword", "", nil)
 	require.NoError(t, err)
@@ -42,7 +49,7 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, triggerHook(SignupEvent, user, iid, config))
+	require.NoError(t, triggerHook(conn, SignupEvent, user, iid, config))
 
 	assert.Equal(t, 1, callCount)
 }

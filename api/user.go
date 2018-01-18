@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -35,7 +36,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Token audience doesn't match request audience")
 	}
 
-	user, err := a.db.FindUserByID(userID)
+	user, err := models.FindUserByID(a.db, userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -64,7 +65,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	user, err := a.db.FindUserByID(userID)
+	user, err := models.FindUserByID(a.db, userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -75,52 +76,66 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	log := getLogEntry(r)
 	log.Debugf("Checking params for token %v", params)
 
-	if params.Password != "" {
-		if err = user.SetPassword(params.Password); err != nil {
-			return internalServerError("Error during password storage").WithInternalError(err)
-		}
-	}
-
-	if params.Data != nil {
-		user.UpdateUserMetaData(params.Data)
-	}
-
-	if params.AppData != nil {
-		if a.isAdmin(ctx, user, config.JWT.Aud) {
-			return unauthorizedError("Updating app_metadata requires admin privileges")
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		if params.Password != "" {
+			if terr = user.UpdatePassword(tx, params.Password); terr != nil {
+				return internalServerError("Error during password storage").WithInternalError(terr)
+			}
 		}
 
-		user.UpdateAppMetaData(params.AppData)
-	}
-
-	if params.EmailChangeToken != "" {
-		log.Debugf("Got change token %v", params.EmailChangeToken)
-
-		if params.EmailChangeToken != user.EmailChangeToken {
-			return unauthorizedError("Email Change Token didn't match token on file")
+		if params.Data != nil {
+			if terr = user.UpdateUserMetaData(tx, params.Data); terr != nil {
+				return internalServerError("Error updating user").WithInternalError(terr)
+			}
 		}
 
-		user.ConfirmEmailChange()
-	} else if params.Email != "" && params.Email != user.Email {
-		mailer := a.Mailer(ctx)
-		if err = mailer.ValidateEmail(params.Email); err != nil {
-			return unprocessableEntityError("Unable to verify new email address: " + err.Error())
+		if params.AppData != nil {
+			if a.isAdmin(ctx, user, config.JWT.Aud) {
+				return unauthorizedError("Updating app_metadata requires admin privileges")
+			}
+
+			if terr = user.UpdateAppMetaData(tx, params.AppData); terr != nil {
+				return internalServerError("Error updating user").WithInternalError(terr)
+			}
 		}
 
-		instanceID := getInstanceID(ctx)
-		if exists, err := a.db.IsDuplicatedEmail(instanceID, params.Email, user.Aud); err != nil {
-			return internalServerError("Database error checking email").WithInternalError(err)
-		} else if exists {
-			return unprocessableEntityError("Email address already registered by another user")
+		if params.EmailChangeToken != "" {
+			log.Debugf("Got change token %v", params.EmailChangeToken)
+
+			if params.EmailChangeToken != user.EmailChangeToken {
+				return unauthorizedError("Email Change Token didn't match token on file")
+			}
+
+			if terr = user.ConfirmEmailChange(tx); terr != nil {
+				return internalServerError("Error updating user").WithInternalError(terr)
+			}
+		} else if params.Email != "" && params.Email != user.Email {
+			if terr = a.validateEmail(ctx, params.Email); terr != nil {
+				return terr
+			}
+
+			instanceID := getInstanceID(ctx)
+			var exists bool
+			if exists, terr = models.IsDuplicatedEmail(tx, instanceID, params.Email, user.Aud); terr != nil {
+				return internalServerError("Database error checking email").WithInternalError(terr)
+			} else if exists {
+				return unprocessableEntityError("Email address already registered by another user")
+			}
+
+			mailer := a.Mailer(ctx)
+			if terr = a.sendEmailChange(user, mailer, params.Email); terr != nil {
+				return internalServerError("Error sending change email").WithInternalError(terr)
+			}
 		}
 
-		if err = a.sendEmailChange(user, mailer, params.Email); err != nil {
-			return internalServerError("Error sending change email").WithInternalError(err)
+		if terr = tx.Update(user); terr != nil {
+			return internalServerError("Database error updating user").WithInternalError(terr)
 		}
-	}
-
-	if err := a.db.UpdateUser(user); err != nil {
-		return internalServerError("Database error updating user").WithInternalError(err)
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return sendJSON(w, http.StatusOK, user)

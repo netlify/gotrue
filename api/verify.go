@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 )
 
 const (
@@ -37,37 +38,50 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var (
-		user *models.User
-		err  error
+		user  *models.User
+		err   error
+		token *AccessTokenResponse
 	)
 
-	switch params.Type {
-	case signupVerification:
-		user, err = a.signupVerify(ctx, params)
-	case recoveryVerification:
-		user, err = a.recoverVerify(ctx, params)
-	default:
-		return unprocessableEntityError("Verify requires a verification type")
-	}
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		switch params.Type {
+		case signupVerification:
+			user, terr = a.signupVerify(ctx, tx, params)
+		case recoveryVerification:
+			user, terr = a.recoverVerify(ctx, tx, params)
+		default:
+			return unprocessableEntityError("Verify requires a verification type")
+		}
 
+		if terr != nil {
+			return terr
+		}
+
+		token, terr = a.issueRefreshToken(ctx, tx, user)
+		if terr != nil {
+			return terr
+		}
+
+		if cookie != "" && config.Cookie.Duration > 0 {
+			if terr = a.setCookieToken(config, token.Token, cookie == useSessionCookie, w); terr != nil {
+				return internalServerError("Failed to set JWT cookie", terr)
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 
-	if cookie != "" && config.Cookie.Duration > 0 {
-		if err = a.setCookieToken(config, user, cookie == useSessionCookie, w); err != nil {
-			return internalServerError("Failed to set JWT cookie", err)
-		}
-	}
-
-	return a.sendRefreshToken(ctx, user, w)
+	return sendJSON(w, http.StatusOK, token)
 }
 
-func (a *API) signupVerify(ctx context.Context, params *VerifyParams) (*models.User, error) {
+func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 
-	user, err := a.db.FindUserByConfirmationToken(params.Token)
+	user, err := models.FindUserByConfirmationToken(conn, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError(err.Error())
@@ -75,32 +89,43 @@ func (a *API) signupVerify(ctx context.Context, params *VerifyParams) (*models.U
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	if user.EncryptedPassword == "" {
-		if user.InvitedAt != nil {
-			if params.Password == "" {
-				return nil, unprocessableEntityError("Invited users must specify a password")
-			}
-			if err = user.SetPassword(params.Password); err != nil {
-				return nil, internalServerError("Error storing password").WithInternalError(err)
+	err = conn.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		if user.EncryptedPassword == "" {
+			if user.InvitedAt != nil {
+				if params.Password == "" {
+					return unprocessableEntityError("Invited users must specify a password")
+				}
+				if terr = user.UpdatePassword(tx, params.Password); terr != nil {
+					return internalServerError("Error storing password").WithInternalError(terr)
+				}
 			}
 		}
-	}
 
-	if config.Webhook.HasEvent("signup") {
-		if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
-			return nil, err
+		if config.Webhook.HasEvent("signup") {
+			if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
+				return terr
+			}
 		}
-		a.db.UpdateUser(user)
-	}
 
-	user.Confirm()
+		if terr = user.Confirm(tx); terr != nil {
+			return internalServerError("Error confirming user").WithInternalError(terr)
+		}
+		if terr = tx.Update(user); terr != nil {
+			return internalServerError("Error updating user").WithInternalError(terr)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	return user, nil
 }
 
-func (a *API) recoverVerify(ctx context.Context, params *VerifyParams) (*models.User, error) {
+func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
-	user, err := a.db.FindUserByRecoveryToken(params.Token)
+	user, err := models.FindUserByRecoveryToken(conn, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError(err.Error())
@@ -108,15 +133,26 @@ func (a *API) recoverVerify(ctx context.Context, params *VerifyParams) (*models.
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	user.Recover()
-	if !user.IsConfirmed() {
-		if config.Webhook.HasEvent("signup") {
-			if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
-				return nil, err
-			}
-			a.db.UpdateUser(user)
+	err = conn.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		if terr = user.Recover(tx); terr != nil {
+			return terr
 		}
-		user.Confirm()
+		if !user.IsConfirmed() {
+			if config.Webhook.HasEvent("signup") {
+				if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
+					return terr
+				}
+			}
+			if terr = user.Confirm(tx); terr != nil {
+				return terr
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, internalServerError("Database error updating user").WithInternalError(err)
 	}
 	return user, nil
 }

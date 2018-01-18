@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/netlify/gotrue/models"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -21,7 +22,7 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Invalid User ID")
 	}
 
-	a.db.Logout(userID)
+	models.Logout(a.db, userID)
 	w.WriteHeader(http.StatusNoContent)
 
 	return nil

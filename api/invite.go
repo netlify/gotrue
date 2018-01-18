@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 )
 
 // InviteParams are the parameters the Signup endpoint accepts
@@ -25,36 +26,40 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read Invite params: %v", err)
 	}
 
-	if params.Email == "" {
-		return unprocessableEntityError("Invite requires a valid email")
-	}
-	mailer := a.Mailer(ctx)
-	if err = mailer.ValidateEmail(params.Email); err != nil {
-		return unprocessableEntityError("Unable to validate email address: " + err.Error())
+	if err := a.validateEmail(ctx, params.Email); err != nil {
+		return err
 	}
 
 	aud := a.requestAud(ctx, r)
-	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
-	if err == nil {
-		return unprocessableEntityError("Email address already registered by another user")
-	}
-	if !models.IsNotFoundError(err) {
+	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
+	if err != nil && !models.IsNotFoundError(err) {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
-
-	signupParams := SignupParams{
-		Email:    params.Email,
-		Data:     params.Data,
-		Provider: "email",
+	if user != nil {
+		return unprocessableEntityError("Email address already registered by another user")
 	}
 
-	user, err = a.signupNewUser(ctx, &signupParams, aud)
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		signupParams := SignupParams{
+			Email:    params.Email,
+			Data:     params.Data,
+			Aud:      aud,
+			Provider: "email",
+		}
+		user, err = a.signupNewUser(tx, ctx, &signupParams)
+		if err != nil {
+			return err
+		}
+
+		mailer := a.Mailer(ctx)
+		if err := sendInvite(tx, user, mailer); err != nil {
+			return internalServerError("Error inviting user").WithInternalError(err)
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 
-	if err := a.sendInvite(user, mailer); err != nil {
-		return internalServerError("Error inviting user").WithInternalError(err)
-	}
 	return sendJSON(w, http.StatusOK, user)
 }

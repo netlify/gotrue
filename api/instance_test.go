@@ -40,7 +40,7 @@ func TestInstance(t *testing.T) {
 }
 
 func (ts *InstanceTestSuite) SetupTest() {
-	ts.API.db.TruncateAll()
+	models.TruncateAll(ts.API.db)
 }
 
 func (ts *InstanceTestSuite) TestCreate() {
@@ -70,14 +70,14 @@ func (ts *InstanceTestSuite) TestCreate() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&resp))
 	assert.NotNil(ts.T(), resp.BaseConfig)
 
-	i, err := ts.API.db.GetInstanceByUUID(testUUID)
+	i, err := models.GetInstanceByUUID(ts.API.db, testUUID)
 	require.NoError(ts.T(), err)
 	assert.NotNil(ts.T(), i.BaseConfig)
 }
 
 func (ts *InstanceTestSuite) TestGet() {
 	instanceID := uuid.Must(uuid.NewV4())
-	err := ts.API.db.CreateInstance(&models.Instance{
+	err := ts.API.db.Create(&models.Instance{
 		ID:   instanceID,
 		UUID: testUUID,
 		BaseConfig: &conf.Configuration{
@@ -101,7 +101,7 @@ func (ts *InstanceTestSuite) TestGet() {
 
 func (ts *InstanceTestSuite) TestUpdate() {
 	instanceID := uuid.Must(uuid.NewV4())
-	err := ts.API.db.CreateInstance(&models.Instance{
+	err := ts.API.db.Create(&models.Instance{
 		ID:   instanceID,
 		UUID: testUUID,
 		BaseConfig: &conf.Configuration{
@@ -130,7 +130,7 @@ func (ts *InstanceTestSuite) TestUpdate() {
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), w.Code, http.StatusOK)
 
-	i, err := ts.API.db.GetInstanceByUUID(testUUID)
+	i, err := models.GetInstanceByUUID(ts.API.db, testUUID)
 	require.NoError(ts.T(), err)
 	require.Equal(ts.T(), i.BaseConfig.JWT.Secret, "testsecret")
 	require.Equal(ts.T(), i.BaseConfig.SiteURL, "https://test.mysite.com")

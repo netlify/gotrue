@@ -12,6 +12,8 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,7 +42,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 
 	inviteToken := r.URL.Query().Get("invite_token")
 	if inviteToken != "" {
-		_, userErr := a.db.FindUserByConfirmationToken(inviteToken)
+		_, userErr := models.FindUserByConfirmationToken(a.db, inviteToken)
 		if userErr != nil {
 			if models.IsNotFoundError(userErr) {
 				return notFoundError(userErr.Error())
@@ -122,111 +124,89 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		return internalServerError("Unable to exchange external code: %s", oauthCode).WithInternalError(err)
 	}
 
-	aud := a.requestAud(ctx, r)
 	userData, err := provider.GetUserData(ctx, tok)
 	if err != nil {
 		return internalServerError("Error getting user email from external provider").WithInternalError(err)
 	}
 
 	var user *models.User
-	inviteToken := getInviteToken(ctx)
-	if inviteToken != "" {
-		user, err = a.db.FindUserByConfirmationToken(inviteToken)
-		if err != nil {
-			if models.IsNotFoundError(err) {
-				return notFoundError(err.Error())
+	var token *AccessTokenResponse
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		inviteToken := getInviteToken(ctx)
+		if inviteToken != "" {
+			if user, terr = a.processInvite(ctx, tx, userData, instanceID, inviteToken, providerType); terr != nil {
+				return terr
 			}
-			return internalServerError("Database error finding user").WithInternalError(err)
-		}
-
-		if user.Email != userData.Email {
-			return badRequestError("Invited email does not match email from external provider").WithInternalMessage("invited=%s external=%s", user.Email, userData.Email)
-		}
-
-		if user.AppMetaData == nil {
-			user.AppMetaData = make(map[string]interface{})
-		}
-		user.AppMetaData["provider"] = providerType
-		if user.UserMetaData == nil {
-			user.UserMetaData = make(map[string]interface{})
-		}
-		for k, v := range userData.Metadata {
-			if v != "" {
-				user.UserMetaData[k] = v
-			}
-		}
-
-		if config.Webhook.HasEvent("signup") {
-			if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
-				return err
-			}
-			a.db.UpdateUser(user)
-		}
-
-		// confirm because they were able to respond to invite email
-		user.Confirm()
-	} else {
-		params := &SignupParams{
-			Provider: providerType,
-			Email:    userData.Email,
-		}
-		if params.Data == nil {
-			params.Data = make(map[string]interface{})
-		}
-		for k, v := range userData.Metadata {
-			if v != "" {
-				params.Data[k] = v
-			}
-		}
-
-		user, err = a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
-		if err != nil && !models.IsNotFoundError(err) {
-			return internalServerError("Error checking for duplicate users").WithInternalError(err)
-		}
-		if user == nil {
-			if config.DisableSignup {
-				return forbiddenError("Signups not allowed for this instance")
-			}
-
-			user, err = a.signupNewUser(ctx, params, aud)
-			if err != nil {
-				return err
-			}
-		}
-
-		if !user.IsConfirmed() {
-			if !userData.Verified && !config.Mailer.Autoconfirm {
-				mailer := a.Mailer(ctx)
-				if err := a.sendConfirmation(user, mailer, config.SMTP.MaxFrequency); err != nil {
-					return internalServerError("Error sending confirmation mail").WithInternalError(err)
-				}
-				// email must be verified to issue a token
-				http.Redirect(w, r, a.getExternalRedirectURL(r), http.StatusFound)
-				return nil
-			}
-
-			if config.Webhook.HasEvent("signup") {
-				if err := triggerHook(SignupEvent, user, instanceID, config); err != nil {
-					return err
-				}
-			}
-
-			// fall through to auto-confirm and issue token
-			user.Confirm()
 		} else {
-			if config.Webhook.HasEvent("login") {
-				if err := triggerHook(LoginEvent, user, instanceID, config); err != nil {
-					return err
+			aud := a.requestAud(ctx, r)
+			user, terr = models.FindUserByEmailAndAudience(tx, instanceID, userData.Email, aud)
+			if terr != nil && !models.IsNotFoundError(terr) {
+				return internalServerError("Error checking for duplicate users").WithInternalError(terr)
+			}
+			if user == nil {
+				if config.DisableSignup {
+					return forbiddenError("Signups not allowed for this instance")
+				}
+
+				params := &SignupParams{
+					Provider: providerType,
+					Email:    userData.Email,
+					Aud:      aud,
+					Data:     make(map[string]interface{}),
+				}
+				for k, v := range userData.Metadata {
+					if v != "" {
+						params.Data[k] = v
+					}
+				}
+
+				user, terr = a.signupNewUser(tx, ctx, params)
+				if terr != nil {
+					return terr
+				}
+			}
+
+			if !user.IsConfirmed() {
+				if !userData.Verified && !config.Mailer.Autoconfirm {
+					mailer := a.Mailer(ctx)
+					if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency); terr != nil {
+						return internalServerError("Error sending confirmation mail").WithInternalError(terr)
+					}
+					// email must be verified to issue a token
+					http.Redirect(w, r, a.getExternalRedirectURL(r), http.StatusFound)
+					return nil
+				}
+
+				if config.Webhook.HasEvent("signup") {
+					if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
+						return terr
+					}
+				}
+
+				// fall through to auto-confirm and issue token
+				if terr = user.Confirm(tx); terr != nil {
+					return internalServerError("Error updating user").WithInternalError(terr)
+				}
+			} else {
+				if config.Webhook.HasEvent("login") {
+					if terr = triggerHook(tx, LoginEvent, user, instanceID, config); terr != nil {
+						return terr
+					}
 				}
 			}
 		}
+
+		token, terr = a.issueRefreshToken(ctx, tx, user)
+		if terr != nil {
+			return oauthError("server_error", terr.Error())
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
-	// TODO make it clear this updates/saves the user
-	token, err := a.issueRefreshToken(ctx, user)
-	if err != nil {
-		return oauthError("server_error", err.Error())
-	}
 	q := url.Values{}
 	q.Set("access_token", token.Token)
 	q.Set("token_type", token.TokenType)
@@ -235,6 +215,49 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 
 	http.Redirect(w, r, a.getExternalRedirectURL(r)+"#"+q.Encode(), http.StatusFound)
 	return nil
+}
+
+func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userData *provider.UserProvidedData, instanceID uuid.UUID, inviteToken, providerType string) (*models.User, error) {
+	config := a.getConfig(ctx)
+	user, err := models.FindUserByConfirmationToken(tx, inviteToken)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			return nil, notFoundError(err.Error())
+		}
+		return nil, internalServerError("Database error finding user").WithInternalError(err)
+	}
+
+	if user.Email != userData.Email {
+		return nil, badRequestError("Invited email does not match email from external provider").WithInternalMessage("invited=%s external=%s", user.Email, userData.Email)
+	}
+
+	if err := user.UpdateAppMetaData(tx, map[string]interface{}{
+		"provider": providerType,
+	}); err != nil {
+		return nil, internalServerError("Database error updating user").WithInternalError(err)
+	}
+
+	updates := make(map[string]interface{})
+	for k, v := range userData.Metadata {
+		if v != "" {
+			updates[k] = v
+		}
+	}
+	if err := user.UpdateUserMetaData(tx, updates); err != nil {
+		return nil, internalServerError("Database error updating user").WithInternalError(err)
+	}
+
+	if config.Webhook.HasEvent("signup") {
+		if err := triggerHook(tx, SignupEvent, user, instanceID, config); err != nil {
+			return nil, err
+		}
+	}
+
+	// confirm because they were able to respond to invite email
+	if err := user.Confirm(tx); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 // loadOAuthState parses the `state` query parameter as a JWS payload,
@@ -292,32 +315,39 @@ func (a *API) redirectErrors(handler apiHandler, w http.ResponseWriter, r *http.
 	errorID := getRequestID(ctx)
 	err := handler(w, r)
 	if err != nil {
-		q := url.Values{}
-		switch e := err.(type) {
-		case *HTTPError:
-			if str, ok := oauthErrorMap[e.Code]; ok {
-				q.Set("error", str)
-			} else {
-				q.Set("error", "server_error")
-			}
-			if e.Code >= http.StatusInternalServerError {
-				e.ErrorID = errorID
-				// this will get us the stack trace too
-				log.WithError(e.Cause()).Error(e.Error())
-			} else {
-				log.WithError(e.Cause()).Info(e.Error())
-			}
-			q.Set("error_description", e.Message)
-		case *OAuthError:
-			q.Set("error", e.Err)
-			q.Set("error_description", e.Description)
-			log.WithError(e.Cause()).Info(e.Error())
-		default:
-			q.Set("error", "server_error")
-			q.Set("error_description", err.Error())
-		}
+		q := getErrorQueryString(err, errorID, log)
 		http.Redirect(w, r, a.getExternalRedirectURL(r)+"#"+q.Encode(), http.StatusFound)
 	}
+}
+
+func getErrorQueryString(err error, errorID string, log logrus.FieldLogger) *url.Values {
+	q := url.Values{}
+	switch e := err.(type) {
+	case *HTTPError:
+		if str, ok := oauthErrorMap[e.Code]; ok {
+			q.Set("error", str)
+		} else {
+			q.Set("error", "server_error")
+		}
+		if e.Code >= http.StatusInternalServerError {
+			e.ErrorID = errorID
+			// this will get us the stack trace too
+			log.WithError(e.Cause()).Error(e.Error())
+		} else {
+			log.WithError(e.Cause()).Info(e.Error())
+		}
+		q.Set("error_description", e.Message)
+	case *OAuthError:
+		q.Set("error", e.Err)
+		q.Set("error_description", e.Description)
+		log.WithError(e.Cause()).Info(e.Error())
+	case ErrorCause:
+		return getErrorQueryString(e.Cause(), errorID, log)
+	default:
+		q.Set("error", "server_error")
+		q.Set("error_description", err.Error())
+	}
+	return &q
 }
 
 func (a *API) getExternalRedirectURL(r *http.Request) string {
