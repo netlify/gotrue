@@ -27,6 +27,7 @@ const (
 	externalProviderTypeKey = contextKey("external_provider_type")
 	userKey                 = contextKey("user")
 	externalReferrerKey     = contextKey("external_referrer")
+	adminUserKey            = contextKey("admin_user")
 )
 
 // withToken adds the JWT token to the context.
@@ -191,4 +192,18 @@ func getExternalReferrer(ctx context.Context) string {
 	}
 
 	return obj.(string)
+}
+
+// withAdminUser adds the admin user to the context.
+func withAdminUser(ctx context.Context, u *models.User) context.Context {
+	return context.WithValue(ctx, adminUserKey, u)
+}
+
+// getAdminUser reads the admin user from the context.
+func getAdminUser(ctx context.Context) *models.User {
+	obj := ctx.Value(adminUserKey)
+	if obj == nil {
+		return nil
+	}
+	return obj.(*models.User)
 }

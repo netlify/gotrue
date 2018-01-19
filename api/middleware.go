@@ -119,7 +119,7 @@ func (a *API) extractOperatorRequest(w http.ResponseWriter, req *http.Request) (
 	if token == "" || token != a.config.OperatorToken {
 		return nil, token, unauthorizedError("Request does not include an Operator token")
 	}
-	return req.Context(), token, nil
+	return withAdminUser(req.Context(), &models.User{ID: uuid.Nil, Email: "operator@netlify.com"}), token, nil
 }
 
 func (a *API) requireAdminCredentials(w http.ResponseWriter, req *http.Request) (context.Context, error) {

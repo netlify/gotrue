@@ -67,26 +67,11 @@ func (ts *RefreshTokenTestSuite) TestLogout() {
 	r, err := GrantAuthenticatedUser(ts.db, u)
 	require.NoError(ts.T(), err)
 
-	Logout(ts.db, u.ID)
+	require.NoError(ts.T(), Logout(ts.db, uuid.Nil, u.ID))
 	u, r, err = FindUserWithRefreshToken(ts.db, r.Token)
 	require.Errorf(ts.T(), err, "expected error when there are no refresh tokens to authenticate. user: %v token: %v", u, r)
 
 	require.True(ts.T(), IsNotFoundError(err), "expected NotFoundError")
-}
-
-func (ts *RefreshTokenTestSuite) TestRevokeToken() {
-	u := ts.createUser()
-	r, err := GrantAuthenticatedUser(ts.db, u)
-	require.NoError(ts.T(), err)
-
-	err = RevokeToken(ts.db, r)
-	require.NoError(ts.T(), err)
-
-	_, nr, err := FindUserWithRefreshToken(ts.db, r.Token)
-	require.NoError(ts.T(), err)
-
-	require.Equal(ts.T(), r.ID, nr.ID)
-	require.True(ts.T(), nr.Revoked, "expected token to be revoked")
 }
 
 func (ts *RefreshTokenTestSuite) createUser() *User {

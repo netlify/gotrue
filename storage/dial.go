@@ -43,6 +43,7 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 		pop.MapTableName("User", config.DB.Namespace+"_users")
 		pop.MapTableName("RefreshToken", config.DB.Namespace+"_refresh_tokens")
 		pop.MapTableName("Instance", config.DB.Namespace+"_instances")
+		pop.MapTableName("AuditLogEntry", config.DB.Namespace+"_audit_log_entries")
 	}
 
 	if logrus.StandardLogger().Level == logrus.DebugLevel {

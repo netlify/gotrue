@@ -100,6 +100,10 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		r.Route("/admin", func(r *router) {
 			r.Use(api.requireAdminCredentials)
 
+			r.Route("/audit", func(r *router) {
+				r.Get("/", api.adminAuditLog)
+			})
+
 			r.Route("/users", func(r *router) {
 				r.Get("/", api.adminUsers)
 				r.Post("/", api.adminUserCreate)

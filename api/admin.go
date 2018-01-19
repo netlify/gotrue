@@ -89,7 +89,10 @@ func (a *API) adminUserGet(w http.ResponseWriter, r *http.Request) error {
 
 // adminUserUpdate updates a single user object
 func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
-	user := getUser(r.Context())
+	ctx := r.Context()
+	user := getUser(ctx)
+	adminUser := getAdminUser(ctx)
+	instanceID := getInstanceID(ctx)
 	params, err := a.getAdminParams(r)
 	if err != nil {
 		return err
@@ -131,6 +134,13 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 				return terr
 			}
 		}
+
+		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserModifiedAction, map[string]interface{}{
+			"user_id":    user.ID,
+			"user_email": user.Email,
+		}); terr != nil {
+			return terr
+		}
 		return nil
 	})
 
@@ -145,6 +155,7 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	instanceID := getInstanceID(ctx)
+	adminUser := getAdminUser(ctx)
 	params, err := a.getAdminParams(r)
 	if err != nil {
 		return err
@@ -176,6 +187,13 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 
 	config := a.getConfig(ctx)
 	err = a.db.Transaction(func(tx *storage.Connection) error {
+		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserSignedUpAction, map[string]interface{}{
+			"user_id":    user.ID,
+			"user_email": user.Email,
+		}); terr != nil {
+			return terr
+		}
+
 		if terr := tx.Create(user); terr != nil {
 			return terr
 		}
@@ -206,10 +224,26 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 
 // adminUserDelete delete a user
 func (a *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
-	user := getUser(r.Context())
+	ctx := r.Context()
+	user := getUser(ctx)
+	instanceID := getInstanceID(ctx)
+	adminUser := getAdminUser(ctx)
 
-	if err := a.db.Destroy(user); err != nil {
-		return internalServerError("Database error deleting user").WithInternalError(err)
+	err := a.db.Transaction(func(tx *storage.Connection) error {
+		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserDeletedAction, map[string]interface{}{
+			"user_id":    user.ID,
+			"user_email": user.Email,
+		}); terr != nil {
+			return internalServerError("Error recording audit log entry").WithInternalError(terr)
+		}
+
+		if terr := tx.Destroy(user); terr != nil {
+			return internalServerError("Database error deleting user").WithInternalError(terr)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return sendJSON(w, http.StatusOK, map[string]interface{}{})

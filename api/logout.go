@@ -4,26 +4,31 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
-	uuid "github.com/satori/go.uuid"
+	"github.com/netlify/gotrue/storage"
 )
 
 // Logout is the endpoint for logging out a user and thereby revoking any refresh tokens
 func (a *API) Logout(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	claims := getClaims(ctx)
+	instanceID := getInstanceID(ctx)
 
 	a.clearCookieToken(ctx, w)
 
-	if claims == nil {
-		return badRequestError("Could not read User ID claim")
-	}
-	userID, err := uuid.FromString(claims.Subject)
+	u, err := getUserFromClaims(ctx, a.db)
 	if err != nil {
-		return badRequestError("Invalid User ID")
+		return unauthorizedError("Invalid user").WithInternalError(err)
 	}
 
-	models.Logout(a.db, userID)
-	w.WriteHeader(http.StatusNoContent)
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		if terr := models.NewAuditLogEntry(tx, instanceID, u, models.LogoutAction, nil); terr != nil {
+			return terr
+		}
+		return models.Logout(tx, instanceID, u.ID)
+	})
+	if err != nil {
+		return internalServerError("Error logging out user").WithInternalError(err)
+	}
 
+	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

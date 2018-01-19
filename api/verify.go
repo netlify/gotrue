@@ -102,6 +102,10 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 			}
 		}
 
+		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
+			return terr
+		}
+
 		if config.Webhook.HasEvent("signup") {
 			if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
 				return terr
@@ -136,6 +140,10 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 			return terr
 		}
 		if !user.IsConfirmed() {
+			if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
+				return terr
+			}
+
 			if config.Webhook.HasEvent("signup") {
 				if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
 					return terr
