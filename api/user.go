@@ -124,13 +124,9 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 			}
 
 			mailer := a.Mailer(ctx)
-			if terr = a.sendEmailChange(user, mailer, params.Email); terr != nil {
+			if terr = a.sendEmailChange(tx, user, mailer, params.Email); terr != nil {
 				return internalServerError("Error sending change email").WithInternalError(terr)
 			}
-		}
-
-		if terr = tx.Update(user); terr != nil {
-			return internalServerError("Database error updating user").WithInternalError(terr)
 		}
 		return nil
 	})

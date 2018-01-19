@@ -111,9 +111,6 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 		if terr = user.Confirm(tx); terr != nil {
 			return internalServerError("Error confirming user").WithInternalError(terr)
 		}
-		if terr = tx.Update(user); terr != nil {
-			return internalServerError("Error updating user").WithInternalError(terr)
-		}
 		return nil
 	})
 	if err != nil {

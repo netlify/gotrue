@@ -37,6 +37,12 @@ func (i *Instance) Config() (*conf.Configuration, error) {
 	return baseConf, nil
 }
 
+// UpdateConfig updates the base config
+func (i *Instance) UpdateConfig(tx *storage.Connection, config *conf.Configuration) error {
+	i.BaseConfig = config
+	return tx.UpdateOnly(i, "raw_base_config")
+}
+
 // GetInstance finds an instance by ID
 func GetInstance(tx *storage.Connection, instanceID uuid.UUID) (*Instance, error) {
 	instance := Instance{}

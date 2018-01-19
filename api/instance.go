@@ -101,11 +101,9 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.BaseConfig != nil {
-		i.BaseConfig = params.BaseConfig
-	}
-
-	if err := a.db.Update(i); err != nil {
-		return internalServerError("Database error updating instance").WithInternalError(err)
+		if err := i.UpdateConfig(a.db, params.BaseConfig); err != nil {
+			return internalServerError("Database error updating instance").WithInternalError(err)
+		}
 	}
 	return sendJSON(w, http.StatusOK, i)
 }

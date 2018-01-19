@@ -55,7 +55,7 @@ func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, maile
 	return errors.Wrap(tx.UpdateOnly(u, "recovery_token", "recovery_sent_at"), "Database error updating user for recovery")
 }
 
-func (a *API) sendEmailChange(u *models.User, mailer mailer.Mailer, email string) error {
+func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mailer.Mailer, email string) error {
 	oldToken := u.EmailChangeToken
 	oldEmail := u.EmailChange
 	u.EmailChangeToken = crypto.SecureToken()
@@ -68,7 +68,7 @@ func (a *API) sendEmailChange(u *models.User, mailer mailer.Mailer, email string
 	}
 
 	u.EmailChangeSentAt = &now
-	return nil
+	return errors.Wrap(tx.UpdateOnly(u, "email_change_token", "email_change", "email_change_sent_at"), "Database error updating user for email change")
 }
 
 func (a *API) validateEmail(ctx context.Context, email string) error {

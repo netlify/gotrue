@@ -34,17 +34,6 @@ func RevokeToken(tx *storage.Connection, token *RefreshToken) error {
 	return revokeToken(tx, token, true)
 }
 
-// RollbackRefreshTokenSwap rolls back a refresh token swap by revoking the new
-// token, and un-revoking the old token.
-func RollbackRefreshTokenSwap(tx *storage.Connection, newToken, oldToken *RefreshToken) error {
-	return tx.Transaction(func(rtx *storage.Connection) error {
-		if err := revokeToken(rtx, newToken, true); err != nil {
-			return err
-		}
-		return revokeToken(rtx, oldToken, false)
-	})
-}
-
 // GrantAuthenticatedUser creates a refresh token for the provided user.
 func GrantAuthenticatedUser(tx *storage.Connection, user *User) (*RefreshToken, error) {
 	return createRefreshToken(tx, user)
