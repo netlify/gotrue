@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `users` (
+CREATE TABLE IF NOT EXISTS `{{ index .Options "Namespace" }}users` (
   `instance_id` varchar(255) DEFAULT NULL,
   `id` varchar(255) NOT NULL,
   `aud` varchar(255) DEFAULT NULL,
@@ -20,8 +20,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `is_super_admin` tinyint(1) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `users_instance_id_idx` (`instance_id`),
+  KEY `users_instance_id_email_idx` (`instance_id`,`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-CREATE INDEX users_instance_id_idx ON users (instance_id);
-CREATE INDEX users_instance_id_email_idx ON users (instance_id, email);

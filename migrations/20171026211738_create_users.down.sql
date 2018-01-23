@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `{{ index .Options "Namespace" }}users`;

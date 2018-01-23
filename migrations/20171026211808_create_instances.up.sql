@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `instances` (
+CREATE TABLE IF NOT EXISTS `{{ index .Options "Namespace" }}instances` (
   `id` varchar(255) NOT NULL,
   `uuid` varchar(255) DEFAULT NULL,
   `raw_base_config` longtext,
