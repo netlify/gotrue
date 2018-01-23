@@ -8,7 +8,6 @@ import (
 	"github.com/netlify/gotrue/api"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage"
-	"github.com/netlify/gotrue/storage/dial"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -28,11 +27,11 @@ func multi(cmd *cobra.Command, args []string) {
 		logrus.Fatal("Operator token secret is required")
 	}
 
-	var db storage.Connection
+	var db *storage.Connection
 	// try a couple times to connect to the database
 	for i := 1; i <= 3; i++ {
 		time.Sleep(time.Duration((i-1)*100) * time.Millisecond)
-		db, err = dial.Dial(globalConfig)
+		db, err = storage.Dial(globalConfig)
 		if err == nil {
 			break
 		}

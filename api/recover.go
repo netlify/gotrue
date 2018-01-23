@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/netlify/gotrue/models"
 )
@@ -16,6 +15,7 @@ type RecoverParams struct {
 // Recover sends a recovery email
 func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
+	config := a.getConfig(ctx)
 	instanceID := getInstanceID(ctx)
 	params := &RecoverParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
@@ -29,7 +29,7 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	aud := a.requestAud(ctx, r)
-	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
+	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -37,16 +37,9 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	if user.RecoverySentAt == nil || user.RecoverySentAt.Add(a.config.SMTP.MaxFrequency).Before(time.Now()) {
-		user.GenerateRecoveryToken()
-		if err := a.db.UpdateUser(user); err != nil {
-			return internalServerError("Database error updating user").WithInternalError(err)
-		}
-		mailer := getMailer(ctx)
-		if err := mailer.RecoveryMail(user); err != nil {
-			return internalServerError("Error sending recovery mail").WithInternalError(err)
-		}
+	mailer := a.Mailer(ctx)
+	if err := a.sendPasswordRecovery(a.db, user, mailer, config.SMTP.MaxFrequency); err != nil {
+		return internalServerError("Error recovering user").WithInternalError(err)
 	}
-
 	return sendJSON(w, http.StatusOK, &map[string]string{})
 }

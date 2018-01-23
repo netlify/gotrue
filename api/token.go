@@ -8,6 +8,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 )
 
 type GoTrueClaims struct {
@@ -53,7 +54,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 
-	user, err := a.db.FindUserByEmailAndAudience(instanceID, username, aud)
+	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, username, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", "No user found with this email")
@@ -69,20 +70,32 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return oauthError("invalid_grant", "Invalid Password")
 	}
 
-	if cookie != "" && config.Cookie.Duration > 0 {
-		if err = a.setCookieToken(config, user, cookie == useSessionCookie, w); err != nil {
-			return internalServerError("Failed to set JWT cookie", err)
+	var token *AccessTokenResponse
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		if config.Webhook.HasEvent("login") {
+			if terr = triggerHook(tx, LoginEvent, user, instanceID, config); terr != nil {
+				return terr
+			}
 		}
+
+		token, terr = a.issueRefreshToken(ctx, tx, user)
+		if terr != nil {
+			return terr
+		}
+
+		if cookie != "" && config.Cookie.Duration > 0 {
+			if terr = a.setCookieToken(config, token.Token, cookie == useSessionCookie, w); terr != nil {
+				return internalServerError("Failed to set JWT cookie", terr)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
-	if config.Webhook.HasEvent("login") {
-		if err := triggerHook(LoginEvent, user, instanceID, config); err != nil {
-			return err
-		}
-		a.db.UpdateUser(user)
-	}
-
-	return a.sendRefreshToken(ctx, user, w)
+	return sendJSON(w, http.StatusOK, token)
 }
 
 // RefreshTokenGrant implements the refresh_token grant type flow
@@ -95,7 +108,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		return oauthError("invalid_request", "refresh_token required")
 	}
 
-	user, token, err := a.db.FindUserWithRefreshToken(tokenStr)
+	user, token, err := models.FindUserWithRefreshToken(a.db, tokenStr)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", "Invalid Refresh Token")
@@ -108,21 +121,30 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		return oauthError("invalid_grant", "Invalid Refresh Token").WithInternalMessage("Possible abuse attempt: %v", r)
 	}
 
-	newToken, err := a.db.GrantRefreshTokenSwap(user, token)
-	if err != nil {
-		return internalServerError(err.Error())
-	}
+	var tokenString string
+	var newToken *models.RefreshToken
 
-	tokenString, err := generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
-	if err != nil {
-		a.db.RollbackRefreshTokenSwap(newToken, token)
-		return internalServerError("error generating jwt token").WithInternalError(err)
-	}
-
-	if cookie != "" && config.Cookie.Duration > 0 {
-		if err = a.setCookieToken(config, user, cookie == useSessionCookie, w); err != nil {
-			return internalServerError("Failed to set JWT cookie", err)
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		newToken, terr = models.GrantRefreshTokenSwap(tx, user, token)
+		if terr != nil {
+			return internalServerError(terr.Error())
 		}
+
+		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
+		if terr != nil {
+			return internalServerError("error generating jwt token").WithInternalError(terr)
+		}
+
+		if cookie != "" && config.Cookie.Duration > 0 {
+			if terr = a.setCookieToken(config, tokenString, cookie == useSessionCookie, w); terr != nil {
+				return internalServerError("Failed to set JWT cookie", terr)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return sendJSON(w, http.StatusOK, &AccessTokenResponse{
@@ -149,21 +171,30 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, secret stri
 	return token.SignedString([]byte(secret))
 }
 
-func (a *API) issueRefreshToken(ctx context.Context, user *models.User) (*AccessTokenResponse, error) {
+func (a *API) issueRefreshToken(ctx context.Context, conn *storage.Connection, user *models.User) (*AccessTokenResponse, error) {
 	config := a.getConfig(ctx)
 
 	now := time.Now()
 	user.LastSignInAt = &now
 
-	refreshToken, err := a.db.GrantAuthenticatedUser(user)
-	if err != nil {
-		return nil, internalServerError("Database error granting user").WithInternalError(err)
-	}
+	var tokenString string
+	var refreshToken *models.RefreshToken
 
-	tokenString, err := generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
+	err := conn.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		refreshToken, terr = models.GrantAuthenticatedUser(tx, user)
+		if terr != nil {
+			return internalServerError("Database error granting user").WithInternalError(terr)
+		}
+
+		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
+		if terr != nil {
+			return internalServerError("error generating jwt token").WithInternalError(terr)
+		}
+		return nil
+	})
 	if err != nil {
-		a.db.RevokeToken(refreshToken)
-		return nil, internalServerError("error generating jwt token").WithInternalError(err)
+		return nil, err
 	}
 
 	return &AccessTokenResponse{
@@ -174,13 +205,8 @@ func (a *API) issueRefreshToken(ctx context.Context, user *models.User) (*Access
 	}, nil
 }
 
-func (a *API) setCookieToken(config *conf.Configuration, user *models.User, session bool, w http.ResponseWriter) error {
+func (a *API) setCookieToken(config *conf.Configuration, tokenString string, session bool, w http.ResponseWriter) error {
 	exp := time.Second * time.Duration(config.Cookie.Duration)
-
-	tokenString, err := generateAccessToken(user, exp, config.JWT.Secret)
-	if err != nil {
-		return err
-	}
 	cookie := &http.Cookie{
 		Name:     config.Cookie.Key,
 		Value:    tokenString,
@@ -208,13 +234,4 @@ func (a *API) clearCookieToken(ctx context.Context, w http.ResponseWriter) {
 		HttpOnly: true,
 		Path:     "/",
 	})
-}
-
-func (a *API) sendRefreshToken(ctx context.Context, user *models.User, w http.ResponseWriter) error {
-	token, err := a.issueRefreshToken(ctx, user)
-	if err != nil {
-		return err
-	}
-
-	return sendJSON(w, http.StatusOK, token)
 }

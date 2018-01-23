@@ -1,5 +1,5 @@
-hash: 8443ccd50300b776e8dbd5083b332987d45a27279d857e849de49ab081faebbd
-updated: 2018-01-04T18:53:17.112287-05:00
+hash: 680f5cb3f0b42a2a145dcd22c52e97e8ebc7937dbd70f06a0aa45255ebeb6dcf
+updated: 2018-01-19T12:26:46.751347-05:00
 imports:
 - name: cloud.google.com/go
   version: 98f5696b1026056a47f114c4451dbc4703d67191
@@ -199,7 +199,7 @@ imports:
 - name: github.com/streadway/amqp
   version: 2cbfe40c9341ad63ba23e53013b3ddc7989d801c
 - name: github.com/stretchr/testify
-  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
+  version: b91bfb9ebec76498946beb6af7c0230c7cc7ba6c
   subpackages:
   - assert
   - require

@@ -3,9 +3,9 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 )
 
 // InviteParams are the parameters the Signup endpoint accepts
@@ -17,7 +17,6 @@ type InviteParams struct {
 // Invite is the endpoint for inviting a new user
 func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	config := a.getConfig(ctx)
 	instanceID := getInstanceID(ctx)
 	params := &InviteParams{}
 
@@ -27,43 +26,39 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read Invite params: %v", err)
 	}
 
-	if params.Email == "" {
-		return unprocessableEntityError("Invite requires a valid email")
-	}
-	mailer := getMailer(ctx)
-	if err = mailer.ValidateEmail(params.Email); err != nil {
-		return unprocessableEntityError("Unable to validate email address: " + err.Error())
+	if err := a.validateEmail(ctx, params.Email); err != nil {
+		return err
 	}
 
 	aud := a.requestAud(ctx, r)
-	user, err := a.db.FindUserByEmailAndAudience(instanceID, params.Email, aud)
-	if err == nil {
-		return unprocessableEntityError("Email address already registered by another user")
-	}
-	if !models.IsNotFoundError(err) {
+	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
+	if err != nil && !models.IsNotFoundError(err) {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
-
-	signupParams := SignupParams{
-		Email:    params.Email,
-		Data:     params.Data,
-		Provider: "email",
+	if user != nil {
+		return unprocessableEntityError("Email address already registered by another user")
 	}
 
-	user, err = a.signupNewUser(ctx, &signupParams, aud)
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		signupParams := SignupParams{
+			Email:    params.Email,
+			Data:     params.Data,
+			Aud:      aud,
+			Provider: "email",
+		}
+		user, err = a.signupNewUser(tx, ctx, &signupParams)
+		if err != nil {
+			return err
+		}
+
+		mailer := a.Mailer(ctx)
+		if err := sendInvite(tx, user, mailer); err != nil {
+			return internalServerError("Error inviting user").WithInternalError(err)
+		}
+		return nil
+	})
 	if err != nil {
 		return err
-	}
-	now := time.Now()
-	user.InvitedAt = &now
-
-	if err := mailer.InviteMail(user); err != nil {
-		return internalServerError("Error sending confirmation mail").WithInternalError(err)
-	}
-
-	user.SetRole(config.JWT.DefaultGroupName)
-	if err = a.db.UpdateUser(user); err != nil {
-		return internalServerError("Database error updating user").WithInternalError(err)
 	}
 
 	return sendJSON(w, http.StatusOK, user)

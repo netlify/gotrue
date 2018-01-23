@@ -19,7 +19,7 @@ func (a *API) loadInstance(w http.ResponseWriter, r *http.Request) (context.Cont
 	}
 	logEntrySetField(r, "instance_id", instanceID)
 
-	i, err := a.db.GetInstance(instanceID)
+	i, err := models.GetInstance(a.db, instanceID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError("Instance not found")
@@ -56,7 +56,7 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Error decoding params: %v", err)
 	}
 
-	_, err := a.db.GetInstanceByUUID(params.UUID)
+	_, err := models.GetInstanceByUUID(a.db, params.UUID)
 	if err != nil {
 		if !models.IsNotFoundError(err) {
 			return internalServerError("Database error looking up instance").WithInternalError(err)
@@ -75,7 +75,7 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		UUID:       params.UUID,
 		BaseConfig: params.BaseConfig,
 	}
-	if err = a.db.CreateInstance(&i); err != nil {
+	if err = a.db.Create(&i); err != nil {
 		return internalServerError("Database error creating instance").WithInternalError(err)
 	}
 
@@ -101,18 +101,16 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.BaseConfig != nil {
-		i.BaseConfig = params.BaseConfig
-	}
-
-	if err := a.db.UpdateInstance(i); err != nil {
-		return internalServerError("Database error updating instance").WithInternalError(err)
+		if err := i.UpdateConfig(a.db, params.BaseConfig); err != nil {
+			return internalServerError("Database error updating instance").WithInternalError(err)
+		}
 	}
 	return sendJSON(w, http.StatusOK, i)
 }
 
 func (a *API) DeleteInstance(w http.ResponseWriter, r *http.Request) error {
 	i := getInstance(r.Context())
-	if err := a.db.DeleteInstance(i); err != nil {
+	if err := models.DeleteInstance(a.db, i); err != nil {
 		return internalServerError("Database error deleting instance").WithInternalError(err)
 	}
 

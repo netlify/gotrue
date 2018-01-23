@@ -43,7 +43,7 @@ func TestAdmin(t *testing.T) {
 }
 
 func (ts *AdminTestSuite) SetupTest() {
-	ts.API.db.TruncateAll()
+	models.TruncateAll(ts.API.db)
 	ts.token = ts.makeSuperAdmin("test@example.com")
 }
 
@@ -52,11 +52,7 @@ func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
 	require.NoError(ts.T(), err, "Error making new user")
 
 	u.IsSuperAdmin = true
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
-
-	// Hack the creation time to workaround GORM always setting the timestamps to now on create :(
-	u.CreatedAt = time.Now().Add(-5 * time.Minute)
-	require.NoError(ts.T(), ts.API.db.UpdateUser(u), "Error updating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
@@ -91,7 +87,7 @@ func (ts *AdminTestSuite) TestAdminUsersUnauthorized() {
 	w := httptest.NewRecorder()
 
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), w.Code, http.StatusUnauthorized)
+	assert.Equal(ts.T(), http.StatusUnauthorized, w.Code)
 }
 
 // TestAdminUsers tests API /admin/users route
@@ -124,11 +120,11 @@ func (ts *AdminTestSuite) TestAdminUsers() {
 func (ts *AdminTestSuite) TestAdminUsers_Pagination() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	u, err = models.NewUser(ts.instanceID, "test2@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	// Setup request
 	w := httptest.NewRecorder()
@@ -156,7 +152,7 @@ func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
 
 	// if the created_at times are the same, then the sort order is not guaranteed
 	time.Sleep(1 * time.Second)
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	// Setup request
 	w := httptest.NewRecorder()
@@ -187,7 +183,7 @@ func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 	require.NoError(ts.T(), err, "Error making new user")
 	// if the created_at times are the same, then the sort order is not guaranteed
 	time.Sleep(1 * time.Second)
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	// Setup request
 	w := httptest.NewRecorder()
@@ -213,7 +209,7 @@ func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 func (ts *AdminTestSuite) TestAdminUsers_FilterEmail() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	// Setup request
 	w := httptest.NewRecorder()
@@ -238,7 +234,7 @@ func (ts *AdminTestSuite) TestAdminUsers_FilterEmail() {
 func (ts *AdminTestSuite) TestAdminUsers_FilterName() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	// Setup request
 	w := httptest.NewRecorder()
@@ -286,7 +282,7 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 func (ts *AdminTestSuite) TestAdminUserGet() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test Get User"})
 	require.NoError(ts.T(), err, "Error making new user")
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	// Setup request
 	w := httptest.NewRecorder()
@@ -312,7 +308,7 @@ func (ts *AdminTestSuite) TestAdminUserGet() {
 func (ts *AdminTestSuite) TestAdminUserUpdate() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
@@ -351,7 +347,7 @@ func (ts *AdminTestSuite) TestAdminUserUpdate() {
 func (ts *AdminTestSuite) TestAdminUserUpdateAsSystemUser() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
@@ -380,10 +376,14 @@ func (ts *AdminTestSuite) TestAdminUserUpdateAsSystemUser() {
 
 	assert.Equal(ts.T(), data["role"], "testing")
 
-	u, err = ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "test1@example.com", ts.Config.JWT.Aud)
+	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test1@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	assert.Equal(ts.T(), u.Role, "testing")
+	require.NotNil(ts.T(), u.UserMetaData)
+	require.Contains(ts.T(), u.UserMetaData, "name")
 	assert.Equal(ts.T(), u.UserMetaData["name"], "David")
+	require.NotNil(ts.T(), u.AppMetaData)
+	require.Contains(ts.T(), u.AppMetaData, "roles")
 	assert.Len(ts.T(), u.AppMetaData["roles"], 2)
 	assert.Contains(ts.T(), u.AppMetaData["roles"], "writer")
 	assert.Contains(ts.T(), u.AppMetaData["roles"], "editor")
@@ -393,7 +393,7 @@ func (ts *AdminTestSuite) TestAdminUserUpdateAsSystemUser() {
 func (ts *AdminTestSuite) TestAdminUserDelete() {
 	u, err := models.NewUser(ts.instanceID, "test-delete@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
-	require.NoError(ts.T(), ts.API.db.CreateUser(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	// Setup request
 	w := httptest.NewRecorder()

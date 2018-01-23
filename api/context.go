@@ -5,7 +5,6 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
-	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/models"
 	uuid "github.com/satori/go.uuid"
 )
@@ -20,7 +19,6 @@ const (
 	tokenKey                = contextKey("jwt")
 	requestIDKey            = contextKey("request_id")
 	configKey               = contextKey("config")
-	mailerKey               = contextKey("mailer")
 	inviteTokenKey          = contextKey("invite_token")
 	instanceIDKey           = contextKey("instance_id")
 	instanceKey             = contextKey("instance")
@@ -74,26 +72,12 @@ func withConfig(ctx context.Context, config *conf.Configuration) context.Context
 	return context.WithValue(ctx, configKey, config)
 }
 
-// withMailer adds the mailer to the context.
-func withMailer(ctx context.Context, mailer mailer.Mailer) context.Context {
-	return context.WithValue(ctx, mailerKey, mailer)
-}
-
 func getConfig(ctx context.Context) *conf.Configuration {
 	obj := ctx.Value(configKey)
 	if obj == nil {
 		return nil
 	}
 	return obj.(*conf.Configuration)
-}
-
-// getMailer reads the mailer from the context.
-func getMailer(ctx context.Context) mailer.Mailer {
-	obj := ctx.Value(mailerKey)
-	if obj == nil {
-		return nil
-	}
-	return obj.(mailer.Mailer)
 }
 
 // withInstanceID adds the instance id to the context.

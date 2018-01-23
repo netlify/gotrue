@@ -79,7 +79,7 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 
 	logEntrySetField(r, "instance_id", instanceID)
 	logEntrySetField(r, "netlify_id", claims.NetlifyID)
-	instance, err := a.db.GetInstance(instanceID)
+	instance, err := models.GetInstance(a.db, instanceID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError("Unable to locate site configuration")
@@ -98,7 +98,7 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 	logEntrySetField(r, "site_url", config.SiteURL)
 
 	ctx = withNetlifyID(ctx, claims.NetlifyID)
-	ctx, err = WithInstanceConfig(ctx, a.config.SMTP, config, instanceID)
+	ctx, err = WithInstanceConfig(ctx, config, instanceID)
 	if err != nil {
 		return nil, internalServerError("Error loading instance config").WithInternalError(err)
 	}

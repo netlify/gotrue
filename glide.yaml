@@ -13,7 +13,7 @@ import:
   version: 2.0.0
 - package: github.com/netlify/mailme
 - package: github.com/stretchr/testify
-  version: v1.1.4
+  version: v1.2.0
   subpackages:
   - suite
   - require

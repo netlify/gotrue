@@ -1,11 +1,12 @@
 package models
 
 import (
+	"database/sql"
 	"strings"
 	"time"
 
 	"github.com/markbates/pop"
-	"github.com/netlify/gotrue/crypto"
+	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -54,20 +55,19 @@ func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[str
 	if err != nil {
 		return nil, errors.Wrap(err, "Error generating unique id")
 	}
-
-	user := &User{
-		InstanceID:   instanceID,
-		ID:           id,
-		Aud:          aud,
-		Email:        email,
-		UserMetaData: userData,
-	}
-
-	if err := user.EncryptPassword(password); err != nil {
+	pw, err := hashPassword(password)
+	if err != nil {
 		return nil, err
 	}
 
-	user.GenerateConfirmationToken()
+	user := &User{
+		InstanceID:        instanceID,
+		ID:                id,
+		Aud:               aud,
+		Email:             email,
+		UserMetaData:      userData,
+		EncryptedPassword: pw,
+	}
 	return user, nil
 }
 
@@ -125,8 +125,9 @@ func (u *User) IsConfirmed() bool {
 }
 
 // SetRole sets the users Role to roleName
-func (u *User) SetRole(roleName string) {
+func (u *User) SetRole(tx *storage.Connection, roleName string) error {
 	u.Role = strings.TrimSpace(roleName)
+	return tx.UpdateOnly(u, "role")
 }
 
 // HasRole returns true when the users role is set to roleName
@@ -137,7 +138,7 @@ func (u *User) HasRole(roleName string) bool {
 // UpdateUserMetaData sets all user data from a map of updates,
 // ensuring that it doesn't override attributes that are not
 // in the provided map.
-func (u *User) UpdateUserMetaData(updates map[string]interface{}) {
+func (u *User) UpdateUserMetaData(tx *storage.Connection, updates map[string]interface{}) error {
 	if u.UserMetaData == nil {
 		u.UserMetaData = updates
 	} else if updates != nil {
@@ -149,10 +150,11 @@ func (u *User) UpdateUserMetaData(updates map[string]interface{}) {
 			}
 		}
 	}
+	return tx.UpdateOnly(u, "raw_user_meta_data")
 }
 
 // UpdateAppMetaData updates all app data from a map of updates
-func (u *User) UpdateAppMetaData(updates map[string]interface{}) {
+func (u *User) UpdateAppMetaData(tx *storage.Connection, updates map[string]interface{}) error {
 	if u.AppMetaData == nil {
 		u.AppMetaData = updates
 	} else if updates != nil {
@@ -164,16 +166,30 @@ func (u *User) UpdateAppMetaData(updates map[string]interface{}) {
 			}
 		}
 	}
+	return tx.UpdateOnly(u, "raw_app_meta_data")
 }
 
-// EncryptPassword sets the encrypted password from a plaintext string
-func (u *User) EncryptPassword(password string) error {
+func (u *User) SetEmail(tx *storage.Connection, email string) error {
+	u.Email = email
+	return tx.UpdateOnly(u, "email")
+}
+
+// hashPassword generates a hashed password from a plaintext string
+func hashPassword(password string) (string, error) {
 	pw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(pw), nil
+}
+
+func (u *User) UpdatePassword(tx *storage.Connection, password string) error {
+	pw, err := hashPassword(password)
 	if err != nil {
 		return err
 	}
-	u.EncryptedPassword = string(pw)
-	return nil
+	u.EncryptedPassword = pw
+	return tx.UpdateOnly(u, "encrypted_password")
 }
 
 // Authenticate a user from a password
@@ -182,45 +198,125 @@ func (u *User) Authenticate(password string) bool {
 	return err == nil
 }
 
-// GenerateConfirmationToken generates a secure confirmation token for confirming
-// signup
-func (u *User) GenerateConfirmationToken() {
-	token := crypto.SecureToken()
-	u.ConfirmationToken = token
-}
-
-// GenerateRecoveryToken generates a secure password recovery token
-func (u *User) GenerateRecoveryToken() {
-	token := crypto.SecureToken()
-	now := time.Now()
-	u.RecoveryToken = token
-	u.RecoverySentAt = &now
-}
-
-// GenerateEmailChange prepares for verifying a new email
-func (u *User) GenerateEmailChange(email string) {
-	token := crypto.SecureToken()
-	now := time.Now()
-	u.EmailChangeToken = token
-	u.EmailChangeSentAt = &now
-	u.EmailChange = email
-}
-
 // Confirm resets the confimation token and the confirm timestamp
-func (u *User) Confirm() {
+func (u *User) Confirm(tx *storage.Connection) error {
 	u.ConfirmationToken = ""
 	now := time.Now()
 	u.ConfirmedAt = &now
+	return tx.UpdateOnly(u, "confirmation_token", "confirmed_at")
 }
 
 // ConfirmEmailChange confirm the change of email for a user
-func (u *User) ConfirmEmailChange() {
+func (u *User) ConfirmEmailChange(tx *storage.Connection) error {
 	u.Email = u.EmailChange
 	u.EmailChange = ""
 	u.EmailChangeToken = ""
+	return tx.UpdateOnly(u, "email", "email_change", "email_change_token")
 }
 
 // Recover resets the recovery token
-func (u *User) Recover() {
+func (u *User) Recover(tx *storage.Connection) error {
 	u.RecoveryToken = ""
+	return tx.UpdateOnly(u, "recovery_token")
+}
+
+// CountOtherUsers counts how many other users exist besides the one provided
+func CountOtherUsers(tx *storage.Connection, instanceID, id uuid.UUID) (int, error) {
+	userCount, err := tx.Q().Where("instance_id = ? and id != ?", instanceID, id).Count(&User{})
+	return userCount, errors.Wrap(err, "error finding registered users")
+}
+
+func findUser(tx *storage.Connection, query string, args ...interface{}) (*User, error) {
+	obj := &User{}
+	if err := tx.Q().Where(query, args...).First(obj); err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, UserNotFoundError{}
+		}
+		return nil, errors.Wrap(err, "error finding user")
+	}
+
+	return obj, nil
+}
+
+// FindUserByConfirmationToken finds users with the matching confirmation token.
+func FindUserByConfirmationToken(tx *storage.Connection, token string) (*User, error) {
+	return findUser(tx, "confirmation_token = ?", token)
+}
+
+// FindUserByEmailAndAudience finds a user with the matching email and audience.
+func FindUserByEmailAndAudience(tx *storage.Connection, instanceID uuid.UUID, email, aud string) (*User, error) {
+	return findUser(tx, "instance_id = ? and email = ? and aud = ?", instanceID, email, aud)
+}
+
+// FindUserByID finds a user matching the provided ID.
+func FindUserByID(tx *storage.Connection, id uuid.UUID) (*User, error) {
+	return findUser(tx, "id = ?", id)
+}
+
+// FindUserByInstanceIDAndID finds a user matching the provided ID.
+func FindUserByInstanceIDAndID(tx *storage.Connection, instanceID, id uuid.UUID) (*User, error) {
+	return findUser(tx, "instance_id = ? and id = ?", instanceID, id)
+}
+
+// FindUserByRecoveryToken finds a user with the matching recovery token.
+func FindUserByRecoveryToken(tx *storage.Connection, token string) (*User, error) {
+	return findUser(tx, "recovery_token = ?", token)
+}
+
+// FindUserWithRefreshToken finds a user from the provided refresh token.
+func FindUserWithRefreshToken(tx *storage.Connection, token string) (*User, *RefreshToken, error) {
+	refreshToken := &RefreshToken{}
+	if err := tx.Where("token = ?", token).First(refreshToken); err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, nil, RefreshTokenNotFoundError{}
+		}
+		return nil, nil, errors.Wrap(err, "error finding refresh token")
+	}
+
+	user, err := findUser(tx, "id = ?", refreshToken.UserID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return user, refreshToken, nil
+}
+
+// FindUsersInAudience finds users with the matching audience.
+func FindUsersInAudience(tx *storage.Connection, instanceID uuid.UUID, aud string, pageParams *Pagination, sortParams *SortParams, filter string) ([]*User, error) {
+	users := []*User{}
+	q := tx.Q().Where("instance_id = ? and aud = ?", instanceID, aud)
+
+	if filter != "" {
+		lf := "%" + filter + "%"
+		// we must specify the collation in order to get case insensitive search for the JSON column
+		q = q.Where("email LIKE ? OR raw_user_meta_data->>'$.full_name' COLLATE utf8mb4_unicode_ci LIKE ?", lf, lf)
+	}
+
+	if sortParams != nil && len(sortParams.Fields) > 0 {
+		for _, field := range sortParams.Fields {
+			q = q.Order(field.Name + " " + string(field.Dir))
+		}
+	}
+
+	var err error
+	if pageParams != nil {
+		err = q.Paginate(int(pageParams.Page), int(pageParams.PerPage)).All(&users)
+		pageParams.Count = uint64(q.Paginator.TotalEntriesSize)
+	} else {
+		err = q.All(&users)
+	}
+
+	return users, err
+}
+
+// IsDuplicatedEmail returns whether a user exists with a matching email and audience.
+func IsDuplicatedEmail(tx *storage.Connection, instanceID uuid.UUID, email, aud string) (bool, error) {
+	_, err := FindUserByEmailAndAudience(tx, instanceID, email, aud)
+	if err != nil {
+		if IsNotFoundError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
-	"github.com/netlify/gotrue/storage/dial"
 	"github.com/netlify/netlify-commons/graceful"
 	"github.com/rs/cors"
 	uuid "github.com/satori/go.uuid"
@@ -28,7 +27,7 @@ var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 // API is the main REST API
 type API struct {
 	handler http.Handler
-	db      storage.Connection
+	db      *storage.Connection
 	config  *conf.GlobalConfiguration
 	version string
 }
@@ -47,12 +46,12 @@ func (a *API) ListenAndServe(hostAndPort string) {
 }
 
 // NewAPI instantiates a new REST API
-func NewAPI(globalConfig *conf.GlobalConfiguration, db storage.Connection) *API {
+func NewAPI(globalConfig *conf.GlobalConfiguration, db *storage.Connection) *API {
 	return NewAPIWithVersion(context.Background(), globalConfig, db, defaultVersion)
 }
 
 // NewAPIWithVersion creates a new REST API using the specified version
-func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, db storage.Connection, version string) *API {
+func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, db *storage.Connection, version string) *API {
 	api := &API{config: globalConfig, db: db, version: version}
 
 	xffmw, _ := xff.Default()
@@ -156,12 +155,12 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 		return nil, nil, err
 	}
 
-	ctx, err := WithInstanceConfig(context.Background(), globalConfig.SMTP, config, uuid.Nil)
+	ctx, err := WithInstanceConfig(context.Background(), config, uuid.Nil)
 	if err != nil {
 		logrus.Fatalf("Error loading instance config: %+v", err)
 	}
 
-	db, err := dial.Dial(globalConfig)
+	db, err := storage.Dial(globalConfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -177,14 +176,15 @@ func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
-func WithInstanceConfig(ctx context.Context, smtp conf.SMTPConfiguration, config *conf.Configuration, instanceID uuid.UUID) (context.Context, error) {
+func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanceID uuid.UUID) (context.Context, error) {
 	ctx = withConfig(ctx, config)
-
-	mailer := mailer.NewMailer(smtp, config)
-	ctx = withMailer(ctx, mailer)
 	ctx = withInstanceID(ctx, instanceID)
-
 	return ctx, nil
+}
+
+func (a *API) Mailer(ctx context.Context) mailer.Mailer {
+	config := a.getConfig(ctx)
+	return mailer.NewMailer(config)
 }
 
 func (a *API) getConfig(ctx context.Context) *conf.Configuration {
@@ -194,11 +194,18 @@ func (a *API) getConfig(ctx context.Context) *conf.Configuration {
 	}
 
 	config := obj.(*conf.Configuration)
+
 	extConfig := (*a.config).External
 	if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
 		return nil
 	}
-
 	config.External = extConfig
+
+	smtpConfig := (*a.config).SMTP
+	if err := mergo.MergeWithOverwrite(&smtpConfig, config.SMTP); err != nil {
+		return nil
+	}
+	config.SMTP = smtpConfig
+
 	return config
 }

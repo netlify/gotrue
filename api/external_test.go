@@ -9,6 +9,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/models"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -36,7 +37,7 @@ func TestExternal(t *testing.T) {
 }
 
 func (ts *ExternalTestSuite) SetupTest() {
-	ts.API.db.TruncateAll()
+	models.TruncateAll(ts.API.db)
 }
 
 // TestSignupExternalUnsupported tests API /authorize for an unsupported external provider
@@ -148,6 +149,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogle() {
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
+	ts.Config.Mailer.Autoconfirm = true
+
 	tokenCount, userCount := 0, 0
 	code := "authcode"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -216,7 +219,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 	ts.Equal(1, userCount)
 
 	// ensure user has been created with metadata
-	user, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
+	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
 	ts.Require().NoError(err)
 	ts.Equal("Gitlab Test", user.UserMetaData["full_name"])
 	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
@@ -241,7 +244,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHub_AuthorizationCode() {
 			fmt.Fprint(w, `{"name":"GitHub Test","avatar_url":"http://example.com/avatar"}`)
 		case "/api/v3/user/emails":
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, `[{"email":"github@example.com", "primary": true, "validated": true}]`)
+			fmt.Fprint(w, `[{"email":"github@example.com", "primary": true, "verified": true}]`)
 		default:
 			w.WriteHeader(500)
 			ts.Fail("unknown github oauth call %s", r.URL.Path)
@@ -289,7 +292,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHub_AuthorizationCode() {
 	ts.Equal(1, userCount)
 
 	// ensure user has been created with metadata
-	user, err := ts.API.db.FindUserByEmailAndAudience(ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
+	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
 	ts.Require().NoError(err)
 	ts.Equal("GitHub Test", user.UserMetaData["full_name"])
 	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
