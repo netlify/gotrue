@@ -10,5 +10,5 @@ USER netlify
 COPY --from=0 /go/src/github.com/netlify/gotrue/gotrue /usr/local/bin/gotrue
 COPY --from=0 /go/src/github.com/netlify/gotrue/migrations /usr/local/etc/gotrue/migrations/
 
-ENV DB_MIGRATIONS_PATH /usr/local/etc/gotrue/migrations
+ENV GOTRUE_DB_MIGRATIONS_PATH /usr/local/etc/gotrue/migrations
 CMD ["gotrue"]
