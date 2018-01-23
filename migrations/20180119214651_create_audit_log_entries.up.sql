@@ -1,4 +1,4 @@
-CREATE TABLE `audit_log_entries` (
+CREATE TABLE IF NOT EXISTS `audit_log_entries` (
   `instance_id` varchar(255) DEFAULT NULL,
   `id` varchar(255) NOT NULL,
   `payload` JSON NULL DEFAULT NULL,

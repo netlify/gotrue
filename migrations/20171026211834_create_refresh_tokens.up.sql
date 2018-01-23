@@ -1,4 +1,4 @@
-CREATE TABLE `refresh_tokens` (
+CREATE TABLE IF NOT EXISTS `refresh_tokens` (
   `instance_id` varchar(255) DEFAULT NULL,
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `token` varchar(255) DEFAULT NULL,
