@@ -77,7 +77,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 			return terr
 		}
 		if config.Webhook.HasEvent("login") {
-			if terr = triggerHook(tx, LoginEvent, user, instanceID, config); terr != nil {
+			if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
 				return terr
 			}
 		}

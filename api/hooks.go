@@ -2,6 +2,9 @@ package api
 
 import (
 	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net"
@@ -23,7 +26,7 @@ import (
 type HookEvent string
 
 const (
-	headerHookSignature = "x-gotrue-signature"
+	headerHookSignature = "x-webhook-signature"
 	defaultHookRetries  = 3
 	gotrueIssuer        = "gotrue"
 	ValidateEvent       = "validate"
@@ -32,6 +35,11 @@ const (
 )
 
 var defaultTimeout time.Duration = time.Second * 5
+
+type webhookClaims struct {
+	jwt.StandardClaims
+	SHA256 string `json:"sha256"`
+}
 
 type Webhook struct {
 	*conf.WebhookConfig
@@ -144,13 +152,32 @@ func closeBody(rsp *http.Response) {
 	}
 }
 
-func triggerHook(conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
-	if config.Webhook.URL == "" {
-		return nil
+func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
+	var hookURL *url.URL
+	if config.Webhook.URL != "" {
+		var err error
+		hookURL, err = url.Parse(config.Webhook.URL)
+		if err != nil {
+			return errors.Wrapf(err, "Failed to parse Webhook URL")
+		}
 	}
-	hookURL, err := url.Parse(config.Webhook.URL)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to parse Webhook URL")
+
+	if hookURL == nil {
+		fun := getFunctionHooks(ctx)
+		if fun == nil {
+			return nil
+		}
+
+		if eventHookURL, ok := fun[string(event)]; ok {
+			var err error
+			hookURL, err = url.Parse(eventHookURL)
+			if err != nil {
+				return errors.Wrapf(err, "Failed to parse Event Function Hook URL")
+			}
+		} else {
+			// abort hook call if there are no functions for this event
+			return nil
+		}
 	}
 
 	if !hookURL.IsAbs() {
@@ -176,17 +203,29 @@ func triggerHook(conn *storage.Connection, event HookEvent, user *models.User, i
 	if err != nil {
 		return internalServerError("Failed to serialize the data for signup webhook").WithInternalError(err)
 	}
-	w := Webhook{
-		WebhookConfig: &config.Webhook,
-		jwtSecret:     config.Webhook.Secret,
-		instanceID:    instanceID,
-		claims: &jwt.StandardClaims{
+
+	sha, err := checksum(data)
+	if err != nil {
+		return internalServerError("Failed to checksum the data for signup webhook").WithInternalError(err)
+	}
+
+	claims := webhookClaims{
+		StandardClaims: jwt.StandardClaims{
 			IssuedAt: time.Now().Unix(),
 			Subject:  instanceID.String(),
 			Issuer:   gotrueIssuer,
 		},
-		payload: data,
+		SHA256: sha,
 	}
+
+	w := Webhook{
+		WebhookConfig: &config.Webhook,
+		jwtSecret:     config.Webhook.Secret,
+		instanceID:    instanceID,
+		claims:        claims,
+		payload:       data,
+	}
+
 	w.URL = hookURL.String()
 
 	body, err := w.trigger()
@@ -228,6 +267,16 @@ func watchForConnection(req *http.Request) (*connectionWatcher, *http.Request) {
 
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), t))
 	return w, req
+}
+
+func checksum(data []byte) (string, error) {
+	sha := sha256.New()
+	_, err := sha.Write(data)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(sha.Sum(nil)), nil
 }
 
 type connectionWatcher struct {

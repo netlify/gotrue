@@ -107,7 +107,7 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 		}
 
 		if config.Webhook.HasEvent("signup") {
-			if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
+			if terr = triggerHook(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
 				return terr
 			}
 		}
@@ -145,7 +145,7 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 			}
 
 			if config.Webhook.HasEvent("signup") {
-				if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
+				if terr = triggerHook(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
 					return terr
 				}
 			}

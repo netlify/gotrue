@@ -182,7 +182,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					return terr
 				}
 				if config.Webhook.HasEvent("signup") {
-					if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
+					if terr = triggerHook(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
 						return terr
 					}
 				}
@@ -196,7 +196,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					return terr
 				}
 				if config.Webhook.HasEvent("login") {
-					if terr = triggerHook(tx, LoginEvent, user, instanceID, config); terr != nil {
+					if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
 						return terr
 					}
 				}
@@ -257,7 +257,7 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 		return nil, err
 	}
 	if config.Webhook.HasEvent("signup") {
-		if err := triggerHook(tx, SignupEvent, user, instanceID, config); err != nil {
+		if err := triggerHook(ctx, tx, SignupEvent, user, instanceID, config); err != nil {
 			return nil, err
 		}
 	}

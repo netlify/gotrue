@@ -27,6 +27,7 @@ const (
 	externalProviderTypeKey = contextKey("external_provider_type")
 	userKey                 = contextKey("user")
 	externalReferrerKey     = contextKey("external_referrer")
+	functionHooksKey        = contextKey("function_hooks")
 	adminUserKey            = contextKey("admin_user")
 )
 
@@ -192,6 +193,21 @@ func getExternalReferrer(ctx context.Context) string {
 	}
 
 	return obj.(string)
+}
+
+// withFunctionHooks adds the provided function hooks to the context.
+func withFunctionHooks(ctx context.Context, hooks map[string]string) context.Context {
+	return context.WithValue(ctx, functionHooksKey, hooks)
+}
+
+// getFunctionHooks reads the request ID from the context.
+func getFunctionHooks(ctx context.Context) map[string]string {
+	obj := ctx.Value(functionHooksKey)
+	if obj == nil {
+		return map[string]string{}
+	}
+
+	return obj.(map[string]string)
 }
 
 // withAdminUser adds the admin user to the context.
