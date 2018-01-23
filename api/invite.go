@@ -18,6 +18,7 @@ type InviteParams struct {
 func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	instanceID := getInstanceID(ctx)
+	adminUser := getAdminUser(ctx)
 	params := &InviteParams{}
 
 	jsonDecoder := json.NewDecoder(r.Body)
@@ -49,6 +50,13 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 		user, err = a.signupNewUser(tx, ctx, &signupParams)
 		if err != nil {
 			return err
+		}
+
+		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserInvitedAction, map[string]interface{}{
+			"user_id":    user.ID,
+			"user_email": user.Email,
+		}); terr != nil {
+			return terr
 		}
 
 		mailer := a.Mailer(ctx)

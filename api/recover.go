@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 )
 
 // RecoverParams holds the parameters for a password recovery request
@@ -37,9 +38,17 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	mailer := a.Mailer(ctx)
-	if err := a.sendPasswordRecovery(a.db, user, mailer, config.SMTP.MaxFrequency); err != nil {
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		if terr := models.NewAuditLogEntry(tx, instanceID, user, models.UserRecoveryRequestedAction, nil); terr != nil {
+			return terr
+		}
+
+		mailer := a.Mailer(ctx)
+		return a.sendPasswordRecovery(tx, user, mailer, config.SMTP.MaxFrequency)
+	})
+	if err != nil {
 		return internalServerError("Error recovering user").WithInternalError(err)
 	}
+
 	return sendJSON(w, http.StatusOK, &map[string]string{})
 }

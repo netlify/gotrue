@@ -73,6 +73,9 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	var token *AccessTokenResponse
 	err = a.db.Transaction(func(tx *storage.Connection) error {
 		var terr error
+		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
+			return terr
+		}
 		if config.Webhook.HasEvent("login") {
 			if terr = triggerHook(tx, LoginEvent, user, instanceID, config); terr != nil {
 				return terr
@@ -101,6 +104,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 // RefreshTokenGrant implements the refresh_token grant type flow
 func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	config := a.getConfig(ctx)
+	instanceID := getInstanceID(ctx)
 	tokenStr := r.FormValue("refresh_token")
 	cookie := r.Header.Get(useCookieHeader)
 
@@ -126,6 +130,10 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 
 	err = a.db.Transaction(func(tx *storage.Connection) error {
 		var terr error
+		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.TokenRefreshedAction, nil); terr != nil {
+			return terr
+		}
+
 		newToken, terr = models.GrantRefreshTokenSwap(tx, user, token)
 		if terr != nil {
 			return internalServerError(terr.Error())

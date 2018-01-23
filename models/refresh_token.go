@@ -24,16 +24,6 @@ type RefreshToken struct {
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
-func revokeToken(tx *storage.Connection, token *RefreshToken, revoked bool) error {
-	token.Revoked = revoked
-	return tx.UpdateOnly(token, "revoked")
-}
-
-// RevokeToken revokes a refresh token.
-func RevokeToken(tx *storage.Connection, token *RefreshToken) error {
-	return revokeToken(tx, token, true)
-}
-
 // GrantAuthenticatedUser creates a refresh token for the provided user.
 func GrantAuthenticatedUser(tx *storage.Connection, user *User) (*RefreshToken, error) {
 	return createRefreshToken(tx, user)
@@ -43,8 +33,13 @@ func GrantAuthenticatedUser(tx *storage.Connection, user *User) (*RefreshToken, 
 func GrantRefreshTokenSwap(tx *storage.Connection, user *User, token *RefreshToken) (*RefreshToken, error) {
 	var newToken *RefreshToken
 	err := tx.Transaction(func(rtx *storage.Connection) error {
-		terr := revokeToken(rtx, token, true)
-		if terr != nil {
+		var terr error
+		if terr = NewAuditLogEntry(tx, user.InstanceID, user, TokenRevokedAction, nil); terr != nil {
+			return errors.Wrap(terr, "error creating audit log entry")
+		}
+
+		token.Revoked = true
+		if terr = tx.UpdateOnly(token, "revoked"); terr != nil {
 			return terr
 		}
 		newToken, terr = createRefreshToken(rtx, user)
@@ -54,8 +49,8 @@ func GrantRefreshTokenSwap(tx *storage.Connection, user *User, token *RefreshTok
 }
 
 // Logout deletes all refresh tokens for a user.
-func Logout(tx *storage.Connection, id uuid.UUID) {
-	tx.RawQuery("DELETE FROM "+(&pop.Model{Value: RefreshToken{}}).TableName()+" WHERE user_id = ?", id).Exec()
+func Logout(tx *storage.Connection, instanceID uuid.UUID, id uuid.UUID) error {
+	return tx.RawQuery("DELETE FROM "+(&pop.Model{Value: RefreshToken{}}).TableName()+" WHERE instance_id = ? AND user_id = ?", instanceID, id).Exec()
 }
 
 func createRefreshToken(tx *storage.Connection, user *User) (*RefreshToken, error) {

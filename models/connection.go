@@ -38,6 +38,9 @@ func TruncateAll(conn *storage.Connection) error {
 		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: RefreshToken{}}).TableName()).Exec(); err != nil {
 			return err
 		}
+		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: AuditLogEntry{}}).TableName()).Exec(); err != nil {
+			return err
+		}
 		return tx.RawQuery("TRUNCATE " + (&pop.Model{Value: Instance{}}).TableName()).Exec()
 	})
 }

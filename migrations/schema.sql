@@ -16,6 +16,23 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `audit_log_entries`
+--
+
+DROP TABLE IF EXISTS `audit_log_entries`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `audit_log_entries` (
+  `instance_id` varchar(255) DEFAULT NULL,
+  `id` varchar(255) NOT NULL,
+  `payload` json DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `audit_logs_instance_id_idx` (`instance_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `instances`
 --
 
@@ -111,4 +128,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2018-01-03 17:39:06
+-- Dump completed on 2018-01-19 17:00:48

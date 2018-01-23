@@ -56,7 +56,7 @@ func (a *API) requireAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 	if !a.isAdmin(ctx, adminUser, aud) {
 		return nil, unauthorizedError("User not allowed")
 	}
-	return ctx, nil
+	return withAdminUser(ctx, adminUser), nil
 }
 
 func (a *API) extractBearerToken(w http.ResponseWriter, r *http.Request) (string, error) {

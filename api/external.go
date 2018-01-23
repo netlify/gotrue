@@ -178,6 +178,9 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					return nil
 				}
 
+				if terr := models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
+					return terr
+				}
 				if config.Webhook.HasEvent("signup") {
 					if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
 						return terr
@@ -189,6 +192,9 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					return internalServerError("Error updating user").WithInternalError(terr)
 				}
 			} else {
+				if terr := models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
+					return terr
+				}
 				if config.Webhook.HasEvent("login") {
 					if terr = triggerHook(tx, LoginEvent, user, instanceID, config); terr != nil {
 						return terr
@@ -247,6 +253,9 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 		return nil, internalServerError("Database error updating user").WithInternalError(err)
 	}
 
+	if err := models.NewAuditLogEntry(tx, instanceID, user, models.InviteAcceptedAction, nil); err != nil {
+		return nil, err
+	}
 	if config.Webhook.HasEvent("signup") {
 		if err := triggerHook(tx, SignupEvent, user, instanceID, config); err != nil {
 			return nil, err

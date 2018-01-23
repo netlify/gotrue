@@ -51,6 +51,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
+	instanceID := getInstanceID(ctx)
 
 	params := &UserUpdateParams{}
 	jsonDecoder := json.NewDecoder(r.Body)
@@ -115,7 +116,6 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 				return terr
 			}
 
-			instanceID := getInstanceID(ctx)
 			var exists bool
 			if exists, terr = models.IsDuplicatedEmail(tx, instanceID, params.Email, user.Aud); terr != nil {
 				return internalServerError("Database error checking email").WithInternalError(terr)
@@ -128,6 +128,11 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 				return internalServerError("Error sending change email").WithInternalError(terr)
 			}
 		}
+
+		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserModifiedAction, nil); terr != nil {
+			return internalServerError("Error recording audit log entry").WithInternalError(terr)
+		}
+
 		return nil
 	})
 	if err != nil {

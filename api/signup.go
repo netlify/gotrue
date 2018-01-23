@@ -67,6 +67,9 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		if config.Mailer.Autoconfirm {
+			if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
+				return terr
+			}
 			if config.Webhook.HasEvent("signup") {
 				if terr = triggerHook(tx, SignupEvent, user, instanceID, config); terr != nil {
 					return terr
