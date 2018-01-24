@@ -49,4 +49,4 @@ import:
 - package: github.com/joho/godotenv
   version: v1.1
 - package: github.com/markbates/pop
-  version: 3.42.0
+  version: 3.42.1
