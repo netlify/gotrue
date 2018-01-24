@@ -9,6 +9,8 @@ RUN adduser -D -u 1000 netlify && mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so
 USER netlify
 COPY --from=0 /go/src/github.com/netlify/gotrue/gotrue /usr/local/bin/gotrue
 COPY --from=0 /go/src/github.com/netlify/gotrue/migrations /usr/local/etc/gotrue/migrations/
+RUN chown netlify:netlify /usr/local/bin/gotrue
+RUN chown -R netlify:netlify /usr/local/etc/gotrue
 
 ENV GOTRUE_DB_MIGRATIONS_PATH /usr/local/etc/gotrue/migrations
 CMD ["gotrue"]
