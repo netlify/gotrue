@@ -55,12 +55,22 @@ func migrate(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("%+v", errors.Wrap(err, "creating db migrator"))
 	}
-	logrus.Infof("%d up / %d down migrations found", len(mig.Migrations["up"]), len(mig.Migrations["down"]))
+	logrus.Infof("before status")
+	err = mig.Status()
+	if err != nil {
+		logrus.Fatalf("%+v", errors.Wrap(err, "migration status"))
+	}
 	// turn off schema dump
 	mig.SchemaPath = ""
 
 	err = mig.Up()
 	if err != nil {
 		logrus.Fatalf("%+v", errors.Wrap(err, "running db migrations"))
+	}
+
+	logrus.Infof("after status")
+	err = mig.Status()
+	if err != nil {
+		logrus.Fatalf("%+v", errors.Wrap(err, "migration status"))
 	}
 }
