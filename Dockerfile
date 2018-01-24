@@ -7,8 +7,8 @@ FROM alpine:3.7
 RUN apk add --no-cache ca-certificates
 RUN adduser -D -u 1000 netlify && mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
 USER netlify
-COPY --from=0 /go/src/github.com/netlify/gotrue/gotrue /usr/local/bin/gotrue
-COPY --from=0 /go/src/github.com/netlify/gotrue/migrations /usr/local/etc/gotrue/migrations/
+COPY --chown=netlify --from=0 /go/src/github.com/netlify/gotrue/gotrue /usr/local/bin/gotrue
+COPY --chown=netlify --from=0 /go/src/github.com/netlify/gotrue/migrations /usr/local/etc/gotrue/migrations/
 
 ENV GOTRUE_DB_MIGRATIONS_PATH /usr/local/etc/gotrue/migrations
 CMD ["gotrue"]

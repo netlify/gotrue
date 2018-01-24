@@ -50,6 +50,7 @@ func migrate(cmd *cobra.Command, args []string) {
 		logrus.Fatalf("%+v", errors.Wrap(err, "checking database connection"))
 	}
 
+	logrus.Infof("Reading migrations from %s", globalConfig.DB.MigrationsPath)
 	mig, err := pop.NewFileMigrator(globalConfig.DB.MigrationsPath, db)
 	if err != nil {
 		logrus.Fatalf("%+v", errors.Wrap(err, "creating db migrator"))
