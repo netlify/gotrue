@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"fmt"
 	"net/url"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/markbates/pop"
 	"github.com/netlify/gotrue/conf"
 	"github.com/pkg/errors"
@@ -48,11 +46,6 @@ func migrate(cmd *cobra.Command, args []string) {
 	}
 	defer db.Close()
 
-	err = createDB(db)
-	if err != nil {
-		logrus.Fatalf("%+v", errors.Wrap(err, "creating database"))
-	}
-
 	if err := db.Open(); err != nil {
 		logrus.Fatalf("%+v", errors.Wrap(err, "checking database connection"))
 	}
@@ -68,23 +61,4 @@ func migrate(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("%+v", errors.Wrap(err, "running db migrations"))
 	}
-}
-
-func createDB(conn *pop.Connection) error {
-	deets := conn.Dialect.Details()
-	s := "%s:%s@(%s:%s)/?parseTime=true&multiStatements=true&readTimeout=1s"
-	urlWithoutDb := fmt.Sprintf(s, deets.User, deets.Password, deets.Host, deets.Port)
-
-	db, err := sqlx.Open(deets.Dialect, urlWithoutDb)
-	if err != nil {
-		return errors.Wrapf(err, "error creating MySQL database %s", deets.Database)
-	}
-	defer db.Close()
-	query := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` DEFAULT COLLATE `utf8mb4_unicode_ci`", deets.Database)
-
-	_, err = db.Exec(query)
-	if err != nil {
-		return errors.Wrapf(err, "error creating MySQL database %s", deets.Database)
-	}
-	return nil
 }
