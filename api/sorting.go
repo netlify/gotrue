@@ -23,13 +23,15 @@ func sort(r *http.Request, allowedFields map[string]bool, defaultSort []models.S
 			}
 
 			dir := models.Descending
-			switch strings.ToUpper(parts[1]) {
-			case string(models.Ascending):
-				dir = models.Ascending
-			case string(models.Descending):
-				dir = models.Descending
-			default:
-				return nil, fmt.Errorf("bad direction for sort '%v', only 'asc' and 'desc' allowed", parts[1])
+			if len(parts) > 1 {
+				switch strings.ToUpper(parts[1]) {
+				case string(models.Ascending):
+					dir = models.Ascending
+				case string(models.Descending):
+					dir = models.Descending
+				default:
+					return nil, fmt.Errorf("bad direction for sort '%v', only 'asc' and 'desc' allowed", parts[1])
+				}
 			}
 			sortParams.Fields = append(sortParams.Fields, models.SortField{Name: field, Dir: dir})
 		}
