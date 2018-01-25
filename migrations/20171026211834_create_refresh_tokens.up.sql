@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS `{{ index .Options "Namespace" }}refresh_tokens` (
   `user_id` varchar(255) DEFAULT NULL,
   `revoked` tinyint(1) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `refresh_tokens_instance_id_idx` (`instance_id`),
   KEY `refresh_tokens_instance_id_user_id_idx` (`instance_id`,`user_id`),
