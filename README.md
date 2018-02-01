@@ -21,7 +21,7 @@ GOTRUE_SITE_URL=https://example.netlify.com/
 
 The base URL your site is located at. Currently used in combination with other settings to construct URLs used in emails.
 
-`OPERATOR_TOKEN` - `string` *Multi-instance mode only*
+`OPERATOR_TOKEN` - `string` _Multi-instance mode only_
 
 The shared secret with an operator (usually Netlify) for this microservice. Used to verify requests have been proxied through the operator and
 the payload values can be trusted.
@@ -45,9 +45,13 @@ Hostname to listen on.
 
 Port number to listen on. Defaults to `8081`.
 
-`API_ENDPOINT` - `string` *Multi-instance mode only*
+`API_ENDPOINT` - `string` _Multi-instance mode only_
 
 Controls what endpoint Netlify can access this API on.
+
+`REQUEST_ID_HEADER` - `string`
+
+If you wish to inherit a request ID from the incoming request, specify the name in this value.
 
 ### Database
 
@@ -218,10 +222,11 @@ Email subject to use for email change confirmation. Defaults to `Confirm Email C
 
 `MAILER_TEMPLATES_INVITE` - `string`
 
-URL path to an email template to use when inviting a user. 
+URL path to an email template to use when inviting a user.
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
 
 Default Content (if template is unavailable):
+
 ```html
 <h2>You have been invited</h2>
 
@@ -231,10 +236,11 @@ Default Content (if template is unavailable):
 
 `MAILER_TEMPLATES_CONFIRMATION` - `string`
 
-URL path to an email template to use when confirming a signup. 
+URL path to an email template to use when confirming a signup.
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
 
 Default Content (if template is unavailable):
+
 ```html
 <h2>Confirm your signup</h2>
 
@@ -244,10 +250,11 @@ Default Content (if template is unavailable):
 
 `MAILER_TEMPLATES_RECOVERY` - `string`
 
-URL path to an email template to use when resetting a password. 
+URL path to an email template to use when resetting a password.
 `SiteURL`, `Email`, and `ConfirmationURL` variables are available.
 
 Default Content (if template is unavailable):
+
 ```html
 <h2>Reset Password</h2>
 
@@ -257,17 +264,17 @@ Default Content (if template is unavailable):
 
 `MAILER_TEMPLATES_EMAIL_CHANGE` - `string`
 
-URL path to an email template to use when confirming the change of an email address. 
+URL path to an email template to use when confirming the change of an email address.
 `SiteURL`, `Email`, `NewEmail`, and `ConfirmationURL` variables are available.
 
 Default Content (if template is unavailable):
+
 ```html
 <h2>Confirm Change of Email</h2>
 
 <p>Follow this link to confirm the update of your email from {{ .Email }} to {{ .NewEmail }}:</p>
 <p><a href="{{ .ConfirmationURL }}">Change Email</a></p>
 ```
-
 
 ## Endpoints
 
@@ -305,8 +312,8 @@ GoTrue exposes the following endpoints:
 
   ```json
   {
-    "id":"11111111-2222-3333-4444-5555555555555",
-    "email":"email@example.com",
+    "id": "11111111-2222-3333-4444-5555555555555",
+    "email": "email@example.com",
     "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
     "updated_at": "2016-05-15T19:53:12.368652374-07:00"
@@ -327,12 +334,12 @@ GoTrue exposes the following endpoints:
 
   ```json
   {
-    "id":"11111111-2222-3333-4444-5555555555555",
-    "email":"email@example.com",
+    "id": "11111111-2222-3333-4444-5555555555555",
+    "email": "email@example.com",
     "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
     "updated_at": "2016-05-15T19:53:12.368652374-07:00",
-    "invited_at": "2016-05-15T19:53:12.368652374-07:00",
+    "invited_at": "2016-05-15T19:53:12.368652374-07:00"
   }
   ```
 
@@ -413,8 +420,8 @@ GoTrue exposes the following endpoints:
 
   ```json
   {
-    "id":"11111111-2222-3333-4444-5555555555555",
-    "email":"email@example.com",
+    "id": "11111111-2222-3333-4444-5555555555555",
+    "email": "email@example.com",
     "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
     "updated_at": "2016-05-15T19:53:12.368652374-07:00"
@@ -442,8 +449,8 @@ GoTrue exposes the following endpoints:
 
   ```json
   {
-    "id":"11111111-2222-3333-4444-5555555555555",
-    "email":"email@example.com",
+    "id": "11111111-2222-3333-4444-5555555555555",
+    "email": "email@example.com",
     "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
     "updated_at": "2016-05-15T19:53:12.368652374-07:00"
@@ -456,7 +463,6 @@ GoTrue exposes the following endpoints:
 
   This will revoke all refresh tokens for the user. Remember that the JWT tokens
   will still be valid for stateless auth until they expires.
-
 
 ## TODO
 

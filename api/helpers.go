@@ -6,21 +6,31 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 )
 
-func addRequestID(w http.ResponseWriter, r *http.Request) (context.Context, error) {
-	id, err := uuid.NewV4()
-	if err != nil {
-		return nil, err
-	}
+func addRequestID(globalConfig *conf.GlobalConfiguration) middlewareHandler {
+	return func(w http.ResponseWriter, r *http.Request) (context.Context, error) {
+		id := ""
+		if globalConfig.API.RequestIDHeader != "" {
+			id = r.Header.Get(globalConfig.API.RequestIDHeader)
+		}
+		if id == "" {
+			uid, err := uuid.NewV4()
+			if err != nil {
+				return nil, err
+			}
+			id = uid.String()
+		}
 
-	ctx := r.Context()
-	ctx = withRequestID(ctx, id.String())
-	return ctx, nil
+		ctx := r.Context()
+		ctx = withRequestID(ctx, id)
+		return ctx, nil
+	}
 }
 
 func sendJSON(w http.ResponseWriter, status int, obj interface{}) error {
