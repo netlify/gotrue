@@ -83,12 +83,16 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		}
 
 		r.Get("/settings", api.Settings)
+
 		r.Get("/authorize", api.ExternalProviderRedirect)
-		r.Post("/signup", api.Signup)
+
 		r.With(api.requireAdminCredentials).Post("/invite", api.Invite)
-		r.Post("/recover", api.Recover)
-		r.Post("/verify", api.Verify)
-		r.Post("/token", api.Token)
+
+		r.With(api.requireEmailProvider).Post("/signup", api.Signup)
+		r.With(api.requireEmailProvider).Post("/recover", api.Recover)
+		r.With(api.requireEmailProvider).Post("/verify", api.Verify)
+		r.With(api.requireEmailProvider).Post("/token", api.Token)
+
 		r.With(api.requireAuthentication).Post("/logout", api.Logout)
 
 		r.Route("/user", func(r *router) {
@@ -202,6 +206,11 @@ func (a *API) getConfig(ctx context.Context) *conf.Configuration {
 	extConfig := (*a.config).External
 	if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
 		return nil
+	}
+	// mergo only assigns zero values on destination
+	// See https://github.com/imdario/mergo/issues/24
+	if !config.External.Email.Enabled {
+		extConfig.Email.Enabled = false
 	}
 	config.External = extConfig
 

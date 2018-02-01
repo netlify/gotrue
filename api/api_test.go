@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"math/rand"
+	"testing"
 	"time"
 
 	"github.com/netlify/gotrue/conf"
@@ -10,6 +11,7 @@ import (
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/test"
 	"github.com/satori/go.uuid"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -88,6 +90,13 @@ func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Config
 	}
 
 	return NewAPIWithVersion(ctx, globalConfig, conn, apiTestVersion), config, nil
+}
+
+func TestEmailEnabledByDefault(t *testing.T) {
+	api, _, err := setupAPIForTest()
+	require.NoError(t, err)
+
+	require.True(t, api.config.External.Email.Enabled)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

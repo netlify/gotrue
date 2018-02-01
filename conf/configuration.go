@@ -21,6 +21,10 @@ type OAuthProviderConfiguration struct {
 	Enabled     bool   `json:"enabled"`
 }
 
+type EmailProviderConfiguration struct {
+	Enabled bool `json:"enabled" default:"true"`
+}
+
 // DBConfiguration holds all the database related configuration.
 type DBConfiguration struct {
 	Driver         string `json:"driver" required:"true"`
@@ -47,7 +51,7 @@ type GlobalConfiguration struct {
 		RequestIDHeader string `envconfig:"REQUEST_ID_HEADER"`
 	}
 	DB                DBConfiguration
-	External          ExternalProviderConfiguration
+	External          ProviderConfiguration
 	Logging           nconf.LoggingConfig `envconfig:"LOG"`
 	OperatorToken     string              `split_words:"true" required:"true"`
 	MultiInstanceMode bool
@@ -62,12 +66,13 @@ type EmailContentConfiguration struct {
 	EmailChange  string `json:"email_change" split_words:"true"`
 }
 
-type ExternalProviderConfiguration struct {
+type ProviderConfiguration struct {
 	Bitbucket   OAuthProviderConfiguration `json:"bitbucket"`
 	Github      OAuthProviderConfiguration `json:"github"`
 	Gitlab      OAuthProviderConfiguration `json:"gitlab"`
 	Google      OAuthProviderConfiguration `json:"google"`
 	Facebook    OAuthProviderConfiguration `json:"facebook"`
+	Email       EmailProviderConfiguration `json:"email"`
 	RedirectURL string                     `json:"redirect_url"`
 }
 
@@ -91,9 +96,9 @@ type Configuration struct {
 		Templates   EmailContentConfiguration `json:"templates"`
 		URLPaths    EmailContentConfiguration `json:"url_paths"`
 	} `json:"mailer"`
-	External      ExternalProviderConfiguration `json:"external"`
-	DisableSignup bool                          `json:"disable_signup" split_words:"true"`
-	Webhook       WebhookConfig                 `json:"webhook" split_words:"true"`
+	External      ProviderConfiguration `json:"external"`
+	DisableSignup bool                  `json:"disable_signup" split_words:"true"`
+	Webhook       WebhookConfig         `json:"webhook" split_words:"true"`
 	Cookie        struct {
 		Key      string `json:"key"`
 		Duration int    `json:"duration"`

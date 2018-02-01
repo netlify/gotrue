@@ -142,3 +142,14 @@ func (a *API) requireAdminCredentials(w http.ResponseWriter, req *http.Request) 
 
 	return a.requireAdmin(c, w, req)
 }
+
+func (a *API) requireEmailProvider(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+	ctx := req.Context()
+	config := a.getConfig(ctx)
+
+	if !config.External.Email.Enabled {
+		return nil, badRequestError("Unsupported email provider")
+	}
+
+	return ctx, nil
+}

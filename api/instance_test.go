@@ -135,3 +135,42 @@ func (ts *InstanceTestSuite) TestUpdate() {
 	require.Equal(ts.T(), i.BaseConfig.JWT.Secret, "testsecret")
 	require.Equal(ts.T(), i.BaseConfig.SiteURL, "https://test.mysite.com")
 }
+
+func (ts *InstanceTestSuite) TestUpdate_DisableEmail() {
+	instanceID := uuid.Must(uuid.NewV4())
+	err := ts.API.db.Create(&models.Instance{
+		ID:   instanceID,
+		UUID: testUUID,
+		BaseConfig: &conf.Configuration{
+			External: conf.ProviderConfiguration{
+				Email: conf.EmailProviderConfiguration{
+					Enabled: true,
+				},
+			},
+		},
+	})
+	require.NoError(ts.T(), err)
+
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"config": &conf.Configuration{
+			External: conf.ProviderConfiguration{
+				Email: conf.EmailProviderConfiguration{
+					Enabled: false,
+				},
+			},
+		},
+	}))
+
+	req := httptest.NewRequest(http.MethodPut, "/instances/"+instanceID.String(), &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), w.Code, http.StatusOK)
+
+	i, err := models.GetInstanceByUUID(ts.API.db, testUUID)
+	require.NoError(ts.T(), err)
+	require.False(ts.T(), i.BaseConfig.External.Email.Enabled)
+}
