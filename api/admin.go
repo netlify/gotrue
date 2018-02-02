@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi"
 	"github.com/netlify/gotrue/models"
@@ -56,16 +55,6 @@ func (a *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	instanceID := getInstanceID(ctx)
 	aud := a.requestAud(ctx, r)
-
-	hvals := []string{}
-	for n, vals := range r.Header {
-		if strings.HasPrefix(n, "X-") && n != "X-Nf-Sign" {
-			hvals = append(hvals, n+"="+strings.Join(vals, ","))
-		}
-	}
-
-	logEntrySetField(r, "req-id-header", a.config.API.RequestIDHeader)
-	logEntrySetField(r, "x-headers", strings.Join(hvals, ";"))
 
 	pageParams, err := paginate(r)
 	if err != nil {
