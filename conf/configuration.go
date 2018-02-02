@@ -41,9 +41,10 @@ type JWTConfiguration struct {
 // GlobalConfiguration holds all the configuration that applies to all instances.
 type GlobalConfiguration struct {
 	API struct {
-		Host     string
-		Port     int `envconfig:"PORT" default:"8081"`
-		Endpoint string
+		Host            string
+		Port            int `envconfig:"PORT" default:"8081"`
+		Endpoint        string
+		RequestIDHeader string `split_words:"true"`
 	}
 	DB                DBConfiguration
 	External          ExternalProviderConfiguration
