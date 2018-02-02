@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
@@ -17,6 +18,14 @@ func addRequestID(globalConfig *conf.GlobalConfiguration) middlewareHandler {
 	return func(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 		id := ""
 		if globalConfig.API.RequestIDHeader != "" {
+			hvals := []string{}
+			for n, vals := range r.Header {
+				if strings.HasPrefix(n, "X-") && n != "X-Nf-Sign" {
+					hvals = append(hvals, n+"="+strings.Join(vals, ","))
+				}
+			}
+
+			logEntrySetField(r, "x-headers", strings.Join(hvals, ";"))
 			id = r.Header.Get(globalConfig.API.RequestIDHeader)
 		}
 		if id == "" {
