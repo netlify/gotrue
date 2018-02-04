@@ -174,7 +174,6 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 						return internalServerError("Error sending confirmation mail").WithInternalError(terr)
 					}
 					// email must be verified to issue a token
-					http.Redirect(w, r, a.getExternalRedirectURL(r), http.StatusFound)
 					return nil
 				}
 
@@ -213,13 +212,16 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		return err
 	}
 
-	q := url.Values{}
-	q.Set("access_token", token.Token)
-	q.Set("token_type", token.TokenType)
-	q.Set("expires_in", strconv.Itoa(token.ExpiresIn))
-	q.Set("refresh_token", token.RefreshToken)
-
-	http.Redirect(w, r, a.getExternalRedirectURL(r)+"#"+q.Encode(), http.StatusFound)
+	rurl := a.getExternalRedirectURL(r)
+	if token != nil {
+		q := url.Values{}
+		q.Set("access_token", token.Token)
+		q.Set("token_type", token.TokenType)
+		q.Set("expires_in", strconv.Itoa(token.ExpiresIn))
+		q.Set("refresh_token", token.RefreshToken)
+		rurl += "#" + q.Encode()
+	}
+	http.Redirect(w, r, rurl, http.StatusFound)
 	return nil
 }
 
