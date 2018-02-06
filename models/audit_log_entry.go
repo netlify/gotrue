@@ -24,10 +24,10 @@ const (
 	TokenRevokedAction          AuditAction = "token_revoked"
 	TokenRefreshedAction        AuditAction = "token_refreshed"
 
-	account auditLogType = "account"
-	team    auditLogType = "team"
-	token   auditLogType = "token"
-	user    auditLogType = "user"
+	account auditLogType = "gotrue-account"
+	team    auditLogType = "gotrue-team"
+	token   auditLogType = "gotrue-token"
+	user    auditLogType = "gotrue-user"
 )
 
 var actionLogTypeMap = map[AuditAction]auditLogType{
