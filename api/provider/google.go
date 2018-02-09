@@ -9,7 +9,7 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-const googleBaseURL = "https://www.googleapis.com/oauth2/v2/userinfo"
+const googleBaseURL = "https://www.googleapis.com/userinfo/v2/me"
 
 type googleProvider struct {
 	*oauth2.Config
@@ -19,7 +19,7 @@ type googleUser struct {
 	Name          string `json:"name"`
 	AvatarURL     string `json:"picture"`
 	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
+	EmailVerified bool   `json:"verified_email"`
 }
 
 // NewGoogleProvider creates a Google account provider.
@@ -34,7 +34,8 @@ func NewGoogleProvider(ext conf.OAuthProviderConfiguration) (Provider, error) {
 			ClientSecret: ext.Secret,
 			Endpoint:     google.Endpoint,
 			Scopes: []string{
-				"https://www.googleapis.com/auth/userinfo.email",
+				"email",
+				"profile",
 			},
 			RedirectURL: ext.RedirectURI,
 		},

@@ -135,7 +135,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogle() {
 	ts.Equal(ts.Config.External.Google.RedirectURI, q.Get("redirect_uri"))
 	ts.Equal(ts.Config.External.Google.ClientID, q.Get("client_id"))
 	ts.Equal("code", q.Get("response_type"))
-	ts.Equal("https://www.googleapis.com/auth/userinfo.email", q.Get("scope"))
+	ts.Equal("email profile", q.Get("scope"))
 
 	claims := ExternalProviderClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
