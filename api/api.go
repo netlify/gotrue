@@ -90,8 +90,8 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 		r.With(api.requireEmailProvider).Post("/signup", api.Signup)
 		r.With(api.requireEmailProvider).Post("/recover", api.Recover)
-		r.With(api.requireEmailProvider).Post("/verify", api.Verify)
 		r.With(api.requireEmailProvider).Post("/token", api.Token)
+		r.Post("/verify", api.Verify)
 
 		r.With(api.requireAuthentication).Post("/logout", api.Logout)
 
@@ -110,7 +110,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 			r.Route("/users", func(r *router) {
 				r.Get("/", api.adminUsers)
-				r.Post("/", api.adminUserCreate)
+				r.With(api.requireEmailProvider).Post("/", api.adminUserCreate)
 
 				r.Route("/{user_id}", func(r *router) {
 					r.Use(api.loadUser)

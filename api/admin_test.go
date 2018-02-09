@@ -44,6 +44,7 @@ func TestAdmin(t *testing.T) {
 
 func (ts *AdminTestSuite) SetupTest() {
 	models.TruncateAll(ts.API.db)
+	ts.Config.External.Email.Enabled = true
 	ts.token = ts.makeSuperAdmin("test@example.com")
 }
 
@@ -428,4 +429,23 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithManagementToken() {
 
 	assert.NotNil(ts.T(), data.ID)
 	assert.Equal(ts.T(), "test2@example.com", data.Email)
+}
+
+func (ts *AdminTestSuite) TestAdminUserCreateWithDisabledEmailLogin() {
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"email":    "test1@example.com",
+		"password": "test1",
+	}))
+
+	// Setup request
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+
+	ts.Config.External.Email.Enabled = false
+
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusBadRequest, w.Code)
 }
