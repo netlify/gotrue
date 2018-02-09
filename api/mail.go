@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration) error {
+func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
 	if u.ConfirmationSentAt != nil && !u.ConfirmationSentAt.Add(maxFrequency).Before(time.Now()) {
 		return nil
 	}
@@ -19,7 +19,7 @@ func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mail
 	oldToken := u.ConfirmationToken
 	u.ConfirmationToken = crypto.SecureToken()
 	now := time.Now()
-	if err := mailer.ConfirmationMail(u); err != nil {
+	if err := mailer.ConfirmationMail(u, referrerURL); err != nil {
 		u.ConfirmationToken = oldToken
 		return errors.Wrap(err, "Error sending confirmation email")
 	}
@@ -27,11 +27,11 @@ func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mail
 	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "confirmation_sent_at"), "Database error updating user for confirmation")
 }
 
-func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer) error {
+func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer, referrerURL string) error {
 	oldToken := u.ConfirmationToken
 	u.ConfirmationToken = crypto.SecureToken()
 	now := time.Now()
-	if err := mailer.InviteMail(u); err != nil {
+	if err := mailer.InviteMail(u, referrerURL); err != nil {
 		u.ConfirmationToken = oldToken
 		return errors.Wrap(err, "Error sending invite email")
 	}
@@ -39,7 +39,7 @@ func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer) er
 	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "invited_at"), "Database error updating user for invite")
 }
 
-func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration) error {
+func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
 	if u.RecoverySentAt != nil && !u.RecoverySentAt.Add(maxFrequency).Before(time.Now()) {
 		return nil
 	}
@@ -47,7 +47,7 @@ func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, maile
 	oldToken := u.RecoveryToken
 	u.RecoveryToken = crypto.SecureToken()
 	now := time.Now()
-	if err := mailer.RecoveryMail(u); err != nil {
+	if err := mailer.RecoveryMail(u, referrerURL); err != nil {
 		u.RecoveryToken = oldToken
 		return errors.Wrap(err, "Error sending recovery email")
 	}
@@ -55,13 +55,13 @@ func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, maile
 	return errors.Wrap(tx.UpdateOnly(u, "recovery_token", "recovery_sent_at"), "Database error updating user for recovery")
 }
 
-func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mailer.Mailer, email string) error {
+func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mailer.Mailer, email string, referrerURL string) error {
 	oldToken := u.EmailChangeToken
 	oldEmail := u.EmailChange
 	u.EmailChangeToken = crypto.SecureToken()
 	u.EmailChange = email
 	now := time.Now()
-	if err := mailer.EmailChangeMail(u); err != nil {
+	if err := mailer.EmailChangeMail(u, referrerURL); err != nil {
 		u.EmailChangeToken = oldToken
 		u.EmailChange = oldEmail
 		return err

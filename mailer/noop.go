@@ -9,19 +9,19 @@ func (m noopMailer) ValidateEmail(email string) error {
 	return nil
 }
 
-func (m *noopMailer) InviteMail(user *models.User) error {
+func (m *noopMailer) InviteMail(user *models.User, referrerURL string) error {
 	return nil
 }
 
-func (m *noopMailer) ConfirmationMail(user *models.User) error {
+func (m *noopMailer) ConfirmationMail(user *models.User, referrerURL string) error {
 	return nil
 }
 
-func (m noopMailer) RecoveryMail(user *models.User) error {
+func (m noopMailer) RecoveryMail(user *models.User, referrerURL string) error {
 	return nil
 }
 
-func (m *noopMailer) EmailChangeMail(user *models.User) error {
+func (m *noopMailer) EmailChangeMail(user *models.User, referrerURL string) error {
 	return nil
 }
 
