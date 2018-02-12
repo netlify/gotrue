@@ -207,11 +207,6 @@ func (a *API) getConfig(ctx context.Context) *conf.Configuration {
 	if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
 		return nil
 	}
-	// mergo only assigns zero values on destination
-	// See https://github.com/imdario/mergo/issues/24
-	if !config.External.Email.Enabled {
-		extConfig.Email.Enabled = false
-	}
 	config.External = extConfig
 
 	smtpConfig := (*a.config).SMTP
