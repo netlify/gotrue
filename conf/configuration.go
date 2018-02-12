@@ -22,7 +22,7 @@ type OAuthProviderConfiguration struct {
 }
 
 type EmailProviderConfiguration struct {
-	Disabled bool `json:"enabled"`
+	Disabled bool `json:"disabled"`
 }
 
 // DBConfiguration holds all the database related configuration.
