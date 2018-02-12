@@ -44,7 +44,8 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		mailer := a.Mailer(ctx)
-		return a.sendPasswordRecovery(tx, user, mailer, config.SMTP.MaxFrequency)
+		referrer := a.getReferrer(r)
+		return a.sendPasswordRecovery(tx, user, mailer, config.SMTP.MaxFrequency, referrer)
 	})
 	if err != nil {
 		return internalServerError("Error recovering user").WithInternalError(err)

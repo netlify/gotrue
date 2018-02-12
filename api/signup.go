@@ -80,7 +80,8 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 			}
 		} else {
 			mailer := a.Mailer(ctx)
-			if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency); terr != nil {
+			referrer := a.getReferrer(r)
+			if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
 				return internalServerError("Error sending confirmation mail").WithInternalError(terr)
 			}
 		}

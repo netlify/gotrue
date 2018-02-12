@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
@@ -90,4 +91,19 @@ func (a *API) requestAud(ctx context.Context, r *http.Request) string {
 
 	// Finally, return the default of none of the above methods are successful
 	return config.JWT.Aud
+}
+
+func (a *API) getReferrer(r *http.Request) string {
+	ctx := r.Context()
+	config := a.getConfig(ctx)
+	referrer := ""
+	if reqref := r.Referer(); reqref != "" {
+		base, berr := url.Parse(config.SiteURL)
+		refurl, rerr := url.Parse(reqref)
+		// As long as the referrer came from the site, we will redirect back there
+		if berr == nil && rerr == nil && base.Hostname() == refurl.Hostname() {
+			referrer = reqref
+		}
+	}
+	return referrer
 }

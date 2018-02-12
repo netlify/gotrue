@@ -51,16 +51,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		}
 	}
 
-	referrer := ""
-	if reqref := r.Referer(); reqref != "" {
-		base, berr := url.Parse(config.SiteURL)
-		refurl, rerr := url.Parse(reqref)
-		// As long as the referrer came from the site, we will redirect back there
-		if berr == nil && rerr == nil && base.Hostname() == refurl.Hostname() {
-			referrer = reqref
-		}
-	}
-
+	referrer := a.getReferrer(r)
 	log := getLogEntry(r)
 	log.WithField("provider", providerType).Info("Redirecting to external provider")
 
@@ -170,7 +161,8 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			if !user.IsConfirmed() {
 				if !userData.Verified && !config.Mailer.Autoconfirm {
 					mailer := a.Mailer(ctx)
-					if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency); terr != nil {
+					referrer := a.getReferrer(r)
+					if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
 						return internalServerError("Error sending confirmation mail").WithInternalError(terr)
 					}
 					// email must be verified to issue a token

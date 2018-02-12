@@ -11,10 +11,10 @@ import (
 // Mailer defines the interface a mailer must implement.
 type Mailer interface {
 	Send(user *models.User, subject, body string, data map[string]interface{}) error
-	InviteMail(user *models.User) error
-	ConfirmationMail(user *models.User) error
-	RecoveryMail(user *models.User) error
-	EmailChangeMail(user *models.User) error
+	InviteMail(user *models.User, referrerURL string) error
+	ConfirmationMail(user *models.User, referrerURL string) error
+	RecoveryMail(user *models.User, referrerURL string) error
+	EmailChangeMail(user *models.User, referrerURL string) error
 	ValidateEmail(email string) error
 }
 
@@ -45,16 +45,23 @@ func withDefault(value, defaultValue string) string {
 	return value
 }
 
-func getSiteURL(siteURL, filepath, fragment string) (string, error) {
-	site, err := url.Parse(siteURL)
+func getSiteURL(referrerURL, siteURL, filepath, fragment string) (string, error) {
+	baseURL := siteURL
+	if filepath == "" && referrerURL != "" {
+		baseURL = referrerURL
+	}
+
+	site, err := url.Parse(baseURL)
 	if err != nil {
 		return "", err
 	}
-	path, err := url.Parse(filepath)
-	if err != nil {
-		return "", err
+	if filepath != "" {
+		path, err := url.Parse(filepath)
+		if err != nil {
+			return "", err
+		}
+		site = site.ResolveReference(path)
 	}
-	u := site.ResolveReference(path)
-	u.Fragment = fragment
-	return u.String(), nil
+	site.Fragment = fragment
+	return site.String(), nil
 }

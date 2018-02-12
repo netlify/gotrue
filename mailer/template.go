@@ -41,8 +41,8 @@ func (m TemplateMailer) ValidateEmail(email string) error {
 }
 
 // InviteMail sends a invite mail to a new user
-func (m *TemplateMailer) InviteMail(user *models.User) error {
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Invite, "invite_token="+user.ConfirmationToken)
+func (m *TemplateMailer) InviteMail(user *models.User, referrerURL string) error {
+	url, err := getSiteURL(referrerURL, m.Config.SiteURL, m.Config.Mailer.URLPaths.Invite, "invite_token="+user.ConfirmationToken)
 	if err != nil {
 		return err
 	}
@@ -64,8 +64,8 @@ func (m *TemplateMailer) InviteMail(user *models.User) error {
 }
 
 // ConfirmationMail sends a signup confirmation mail to a new user
-func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Confirmation, "confirmation_token="+user.ConfirmationToken)
+func (m *TemplateMailer) ConfirmationMail(user *models.User, referrerURL string) error {
+	url, err := getSiteURL(referrerURL, m.Config.SiteURL, m.Config.Mailer.URLPaths.Confirmation, "confirmation_token="+user.ConfirmationToken)
 	if err != nil {
 		return err
 	}
@@ -87,8 +87,8 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User) error {
 }
 
 // EmailChangeMail sends an email change confirmation mail to a user
-func (m *TemplateMailer) EmailChangeMail(user *models.User) error {
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.EmailChange, "email_change_token="+user.EmailChangeToken)
+func (m *TemplateMailer) EmailChangeMail(user *models.User, referrerURL string) error {
+	url, err := getSiteURL(referrerURL, m.Config.SiteURL, m.Config.Mailer.URLPaths.EmailChange, "email_change_token="+user.EmailChangeToken)
 	if err != nil {
 		return err
 	}
@@ -111,8 +111,8 @@ func (m *TemplateMailer) EmailChangeMail(user *models.User) error {
 }
 
 // RecoveryMail sends a password recovery mail
-func (m *TemplateMailer) RecoveryMail(user *models.User) error {
-	url, err := getSiteURL(m.Config.SiteURL, m.Config.Mailer.URLPaths.Recovery, "recovery_token="+user.RecoveryToken)
+func (m *TemplateMailer) RecoveryMail(user *models.User, referrerURL string) error {
+	url, err := getSiteURL(referrerURL, m.Config.SiteURL, m.Config.Mailer.URLPaths.Recovery, "recovery_token="+user.RecoveryToken)
 	if err != nil {
 		return err
 	}
