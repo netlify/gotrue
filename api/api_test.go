@@ -96,7 +96,7 @@ func TestEmailEnabledByDefault(t *testing.T) {
 	api, _, err := setupAPIForTest()
 	require.NoError(t, err)
 
-	require.True(t, api.config.External.Email.Enabled)
+	require.False(t, api.config.External.Email.Disabled)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

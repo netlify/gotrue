@@ -147,7 +147,7 @@ func (a *API) requireEmailProvider(w http.ResponseWriter, req *http.Request) (co
 	ctx := req.Context()
 	config := a.getConfig(ctx)
 
-	if !config.External.Email.Enabled {
+	if config.External.Email.Disabled {
 		return nil, badRequestError("Unsupported email provider")
 	}
 
