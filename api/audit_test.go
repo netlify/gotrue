@@ -65,23 +65,11 @@ func (ts *AuditTestSuite) makeSuperAdmin(email string) string {
 }
 
 func (ts *AuditTestSuite) TestAuditGet() {
-	// DELETE USER
-	u, err := models.NewUser(ts.instanceID, "test-delete@example.com", "test", ts.Config.JWT.Aud, nil)
-	require.NoError(ts.T(), err, "Error making new user")
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
-
-	// Setup request
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/admin/users/%s", u.ID), nil)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
-
-	ts.API.handler.ServeHTTP(w, req)
-	require.Equal(ts.T(), http.StatusOK, w.Code)
-
+	ts.prepareDeleteEvent()
 	// CHECK FOR AUDIT LOG
 
-	w = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/admin/audit", nil)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/admin/audit", nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
 
 	ts.API.handler.ServeHTTP(w, req)
@@ -100,4 +88,48 @@ func (ts *AuditTestSuite) TestAuditGet() {
 	require.True(ts.T(), ok)
 	require.Contains(ts.T(), traits, "user_email")
 	assert.Equal(ts.T(), "test-delete@example.com", traits["user_email"])
+}
+
+func (ts *AuditTestSuite) TestAuditFilters() {
+	ts.prepareDeleteEvent()
+
+	queries := []string{
+		"/admin/audit?query=action:user_deleted",
+		"/admin/audit?query=type:team",
+	}
+
+	for _, q := range queries {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, q, nil)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+
+		ts.API.handler.ServeHTTP(w, req)
+		require.Equal(ts.T(), http.StatusOK, w.Code)
+
+		logs := []models.AuditLogEntry{}
+		require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&logs))
+
+		require.Len(ts.T(), logs, 1)
+		require.Contains(ts.T(), logs[0].Payload, "actor_email")
+		assert.Equal(ts.T(), "test@example.com", logs[0].Payload["actor_email"])
+		traits, ok := logs[0].Payload["traits"].(map[string]interface{})
+		require.True(ts.T(), ok)
+		require.Contains(ts.T(), traits, "user_email")
+		assert.Equal(ts.T(), "test-delete@example.com", traits["user_email"])
+	}
+}
+
+func (ts *AuditTestSuite) prepareDeleteEvent() {
+	// DELETE USER
+	u, err := models.NewUser(ts.instanceID, "test-delete@example.com", "test", ts.Config.JWT.Aud, nil)
+	require.NoError(ts.T(), err, "Error making new user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
+
+	// Setup request
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/admin/users/%s", u.ID), nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusOK, w.Code)
 }
