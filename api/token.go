@@ -7,9 +7,9 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/metering"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/sirupsen/logrus"
 )
 
 type GoTrueClaims struct {
@@ -98,15 +98,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	if err != nil {
 		return err
 	}
-
-	// This is a load bearing log - it is used in metering.
-	log := getLogEntry(r)
-	log.WithFields(logrus.Fields{
-		"metering": true,
-		"action":   "login",
-		"user_id":  user.ID.String(),
-	}).Info("Login Completed")
-
+	metering.RecordLogin(r, user.ID, instanceID)
 	return sendJSON(w, http.StatusOK, token)
 }
 
