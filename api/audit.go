@@ -9,6 +9,8 @@ import (
 
 var filterColumnMap = map[string][]string{
 	"author": []string{"actor_email", "actor_name"},
+	"action": []string{"action"},
+	"type":   []string{"log_type"},
 }
 
 func (a *API) adminAuditLog(w http.ResponseWriter, r *http.Request) error {
