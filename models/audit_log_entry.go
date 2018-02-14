@@ -82,7 +82,7 @@ func NewAuditLogEntry(tx *storage.Connection, instanceID uuid.UUID, actor *User,
 }
 
 func FindAuditLogEntries(tx *storage.Connection, instanceID uuid.UUID, filterColumns []string, filterValue string, pageParams *Pagination) ([]*AuditLogEntry, error) {
-	q := tx.Q().Where("instance_id = ?", instanceID)
+	q := tx.Q().Order("created_at desc").Where("instance_id = ?", instanceID)
 
 	if len(filterColumns) > 0 && filterValue != "" {
 		lf := "%" + filterValue + "%"
