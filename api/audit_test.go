@@ -96,6 +96,8 @@ func (ts *AuditTestSuite) TestAuditFilters() {
 	queries := []string{
 		"/admin/audit?query=action:user_deleted",
 		"/admin/audit?query=type:team",
+		"/admin/audit?query=author:user",
+		"/admin/audit?query=author:@example.com",
 	}
 
 	for _, q := range queries {
