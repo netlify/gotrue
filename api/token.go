@@ -98,7 +98,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	if err != nil {
 		return err
 	}
-	metering.RecordLogin(r, user.ID, instanceID)
+	metering.RecordLogin("password", user.ID, instanceID)
 	return sendJSON(w, http.StatusOK, token)
 }
 
@@ -155,7 +155,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	if err != nil {
 		return err
 	}
-
+	metering.RecordLogin("token", user.ID, instanceID)
 	return sendJSON(w, http.StatusOK, &AccessTokenResponse{
 		Token:        tokenString,
 		TokenType:    "bearer",
