@@ -9,7 +9,7 @@ import (
 
 var logger = logrus.StandardLogger().WithField("metering", true)
 
-func RecordLogin(r *http.Request, userID, instanceID uuid.UUID) {
+func RecordLogin(r *http.Request, loginType string, userID, instanceID uuid.UUID) {
 	logger.WithFields(logrus.Fields{
 		"action":      "login",
 		"domain":      r.Host,
