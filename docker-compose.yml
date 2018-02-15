@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  gotrue:
+    build: .
+    env_file: .env
+    depends_on:
+      - mysql
+    ports:
+      - 8081:8081
+
+  mysql:
+    image: mysql
+    env_file: .mysql.env
+    restart: always
+    volumes:
+      - gotrue_mysql_data:/var/lib/mysql
+    ports:
+      - 3306:3306
+
+volumes:
+  gotrue_mysql_data:
