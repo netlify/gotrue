@@ -345,7 +345,7 @@ GoTrue exposes the following endpoints:
 
 * **POST /verify**
 
-  Verify a registration or a password recovery. Type can be `signup` or `recover`
+  Verify a registration or a password recovery. Type can be `signup` or `recovery`
   and the `token` is a token returned from either `/signup` or `/recover`.
 
   ```json
