@@ -77,10 +77,8 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
 			return terr
 		}
-		if config.Webhook.HasEvent("login") {
-			if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
-				return terr
-			}
+		if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
+			return terr
 		}
 
 		token, terr = a.issueRefreshToken(ctx, tx, user)
