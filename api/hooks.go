@@ -161,6 +161,9 @@ func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent,
 		if err != nil {
 			return errors.Wrapf(err, "Failed to parse Webhook URL")
 		}
+		if !config.Webhook.HasEvent(string(event)) {
+			return nil
+		}
 	}
 
 	if hookURL == nil {
