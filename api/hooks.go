@@ -154,6 +154,7 @@ func closeBody(rsp *http.Response) {
 
 func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
 	var hookURL *url.URL
+	secret := config.Webhook.Secret
 	if config.Webhook.URL != "" {
 		var err error
 		hookURL, err = url.Parse(config.Webhook.URL)
@@ -174,6 +175,7 @@ func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent,
 			if err != nil {
 				return errors.Wrapf(err, "Failed to parse Event Function Hook URL")
 			}
+			secret = config.JWT.Secret
 		} else {
 			// abort hook call if there are no functions for this event
 			return nil
@@ -220,7 +222,7 @@ func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent,
 
 	w := Webhook{
 		WebhookConfig: &config.Webhook,
-		jwtSecret:     config.Webhook.Secret,
+		jwtSecret:     secret,
 		instanceID:    instanceID,
 		claims:        claims,
 		payload:       data,
