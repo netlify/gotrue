@@ -49,5 +49,5 @@ import:
   version: v1.3.0
 - package: github.com/joho/godotenv
   version: v1.2.0
-- package: github.com/markbates/pop
+- package: github.com/gobuffalo/pop
   version: 3.42.1

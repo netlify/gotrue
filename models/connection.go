@@ -1,7 +1,7 @@
 package models
 
 import (
-	"github.com/markbates/pop"
+	"github.com/gobuffalo/pop"
 	"github.com/netlify/gotrue/storage"
 )
 

@@ -6,8 +6,8 @@ import (
 
 	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/markbates/pop"
-	"github.com/markbates/pop/columns"
+	"github.com/gobuffalo/pop"
+	"github.com/gobuffalo/pop/columns"
 	"github.com/netlify/gotrue/conf"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

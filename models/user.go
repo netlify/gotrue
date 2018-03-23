@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/markbates/pop"
+	"github.com/gobuffalo/pop"
 	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
