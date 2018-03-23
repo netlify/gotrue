@@ -10,7 +10,7 @@ build: ## Build the binary.
 	go build -ldflags "-X github.com/netlify/gotrue/cmd.Version=`git rev-parse HEAD`"
 
 deps: ## Install dependencies.
-	@go get -u github.com/markbates/pop/soda
+	@go get -u github.com/gobuffalo/pop/soda
 	@go get -u github.com/golang/lint/golint
 	@go get -u github.com/Masterminds/glide && glide install
 

@@ -1,5 +1,5 @@
-hash: ed25149542632dd64cc3af8a2a5aa0df64449b08a2c896215c10bd76f140a673
-updated: 2018-02-03T20:00:31.916096-05:00
+hash: 2e0460eb69793c4e97139af3ea73426f5bce39a1ed006deeefca553d1006d59d
+updated: 2018-03-23T13:55:27.470557-04:00
 imports:
 - name: cloud.google.com/go
   version: 98f5696b1026056a47f114c4451dbc4703d67191
@@ -31,6 +31,10 @@ imports:
   version: a1789093e51b497900a240e15b39d8a97bfbc5d0
 - name: github.com/gobuffalo/packr
   version: 7458c919b2ddc10bfb5588b6645b7aefd1c60418
+- name: github.com/gobuffalo/pop
+  version: 11447b06bdc024968c2c62c96d1de29b9b846b48
+  subpackages:
+  - columns
 - name: github.com/gogo/protobuf
   version: 616a82ed12d78d24d4839363e8f3c5d3f20627cf
   subpackages:

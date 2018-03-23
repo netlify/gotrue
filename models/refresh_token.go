@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"github.com/markbates/pop"
+	"github.com/gobuffalo/pop"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"

@@ -3,7 +3,7 @@ package cmd
 import (
 	"net/url"
 
-	"github.com/markbates/pop"
+	"github.com/gobuffalo/pop"
 	"github.com/netlify/gotrue/conf"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
