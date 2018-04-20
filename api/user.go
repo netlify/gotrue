@@ -92,7 +92,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		if params.AppData != nil {
-			if a.isAdmin(ctx, user, config.JWT.Aud) {
+			if !a.isAdmin(ctx, user, config.JWT.Aud) {
 				return unauthorizedError("Updating app_metadata requires admin privileges")
 			}
 
