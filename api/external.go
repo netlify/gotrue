@@ -172,10 +172,8 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				if terr := models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
 					return terr
 				}
-				if config.Webhook.HasEvent("signup") {
-					if terr = triggerHook(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
-						return terr
-					}
+				if terr = triggerHook(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+					return terr
 				}
 
 				// fall through to auto-confirm and issue token
@@ -186,10 +184,8 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				if terr := models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
 					return terr
 				}
-				if config.Webhook.HasEvent("login") {
-					if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
-						return terr
-					}
+				if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
+					return terr
 				}
 			}
 		}
@@ -250,10 +246,8 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 	if err := models.NewAuditLogEntry(tx, instanceID, user, models.InviteAcceptedAction, nil); err != nil {
 		return nil, err
 	}
-	if config.Webhook.HasEvent("signup") {
-		if err := triggerHook(ctx, tx, SignupEvent, user, instanceID, config); err != nil {
-			return nil, err
-		}
+	if err := triggerHook(ctx, tx, SignupEvent, user, instanceID, config); err != nil {
+		return nil, err
 	}
 
 	// confirm because they were able to respond to invite email
