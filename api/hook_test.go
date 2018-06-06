@@ -46,7 +46,8 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 
 	config := &conf.Configuration{
 		Webhook: conf.WebhookConfig{
-			URL: svr.URL,
+			URL:    svr.URL,
+			Events: []string{SignupEvent},
 		},
 	}
 
