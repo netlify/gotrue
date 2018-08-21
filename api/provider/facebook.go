@@ -32,7 +32,7 @@ type facebookUser struct {
 }
 
 // NewFacebookProvider creates a Facebook account provider.
-func NewFacebookProvider(ext conf.OAuthProviderConfiguration) (Provider, error) {
+func NewFacebookProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
 	return &facebookProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,

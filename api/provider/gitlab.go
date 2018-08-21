@@ -31,7 +31,7 @@ func chooseHost(base, defaultHost string) string {
 }
 
 // NewGitlabProvider creates a Gitlab account provider.
-func NewGitlabProvider(ext conf.OAuthProviderConfiguration) (Provider, error) {
+func NewGitlabProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}

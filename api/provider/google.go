@@ -23,7 +23,7 @@ type googleUser struct {
 }
 
 // NewGoogleProvider creates a Google account provider.
-func NewGoogleProvider(ext conf.OAuthProviderConfiguration) (Provider, error) {
+func NewGoogleProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}
