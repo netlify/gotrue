@@ -12,8 +12,13 @@ type ProviderSettings struct {
 	SAML      bool `json:"saml"`
 }
 
+type ProviderLabels struct {
+	SAML string `json:"saml,omitempty"`
+}
+
 type Settings struct {
 	ExternalProviders ProviderSettings `json:"external"`
+	ExternalLabels    ProviderLabels   `json:"external_labels"`
 	DisableSignup     bool             `json:"disable_signup"`
 	Autoconfirm       bool             `json:"autoconfirm"`
 }
@@ -30,6 +35,9 @@ func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
 			Facebook:  config.External.Facebook.Enabled,
 			Email:     !config.External.Email.Disabled,
 			SAML:      config.External.Saml.Enabled,
+		},
+		ExternalLabels: ProviderLabels{
+			SAML: config.External.Saml.Name,
 		},
 		DisableSignup: config.DisableSignup,
 		Autoconfirm:   config.Mailer.Autoconfirm,
