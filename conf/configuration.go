@@ -25,6 +25,13 @@ type EmailProviderConfiguration struct {
 	Disabled bool `json:"disabled"`
 }
 
+type SamlProviderConfiguration struct {
+	Enabled     bool   `json:"enabled"`
+	MetadataURL string `json:"metadata_url" envconfig:"METADATA_URL"`
+	APIBase     string `json:"api_base" envconfig:"API_BASE"`
+	Name        string `json:"name"`
+}
+
 // DBConfiguration holds all the database related configuration.
 type DBConfiguration struct {
 	Driver         string `json:"driver" required:"true"`
@@ -73,6 +80,7 @@ type ProviderConfiguration struct {
 	Google      OAuthProviderConfiguration `json:"google"`
 	Facebook    OAuthProviderConfiguration `json:"facebook"`
 	Email       EmailProviderConfiguration `json:"email"`
+	Saml        SamlProviderConfiguration  `json:"saml"`
 	RedirectURL string                     `json:"redirect_url"`
 }
 

@@ -88,14 +88,24 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 	instanceID := getInstanceID(ctx)
 
 	providerType := getExternalProviderType(ctx)
-	userData, err := a.oAuthCallback(r, ctx, providerType)
-	if err != nil {
-		return err
+	var userData *provider.UserProvidedData
+	if providerType == "saml" {
+		samlUserData, err := a.samlCallback(r, ctx)
+		if err != nil {
+			return err
+		}
+		userData = samlUserData
+	} else {
+		oAuthUserData, err := a.oAuthCallback(r, ctx, providerType)
+		if err != nil {
+			return err
+		}
+		userData = oAuthUserData
 	}
 
 	var user *models.User
 	var token *AccessTokenResponse
-	err = a.db.Transaction(func(tx *storage.Connection) error {
+	err := a.db.Transaction(func(tx *storage.Connection) error {
 		var terr error
 		inviteToken := getInviteToken(ctx)
 		if inviteToken != "" {
@@ -266,6 +276,8 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 		return provider.NewGoogleProvider(config.External.Google)
 	case "facebook":
 		return provider.NewFacebookProvider(config.External.Facebook)
+	case "saml":
+		return provider.NewSamlProvider(config.External.Saml)
 	default:
 		return nil, fmt.Errorf("Provider %s could not be found", name)
 	}

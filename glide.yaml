@@ -51,3 +51,6 @@ import:
   version: v1.2.0
 - package: github.com/gobuffalo/pop
   version: 3.42.1
+- package: github.com/russellhaering/gosaml2
+  version: ~0.3.1
+- package: github.com/russellhaering/goxmldsig

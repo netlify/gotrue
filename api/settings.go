@@ -9,6 +9,7 @@ type ProviderSettings struct {
 	Google    bool `json:"google"`
 	Facebook  bool `json:"facebook"`
 	Email     bool `json:"email"`
+	SAML      bool `json:"saml"`
 }
 
 type Settings struct {
@@ -28,6 +29,7 @@ func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
 			Google:    config.External.Google.Enabled,
 			Facebook:  config.External.Facebook.Enabled,
 			Email:     !config.External.Email.Disabled,
+			SAML:      config.External.Saml.Enabled,
 		},
 		DisableSignup: config.DisableSignup,
 		Autoconfirm:   config.Mailer.Autoconfirm,
