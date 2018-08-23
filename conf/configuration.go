@@ -30,6 +30,8 @@ type SamlProviderConfiguration struct {
 	MetadataURL string `json:"metadata_url" envconfig:"METADATA_URL"`
 	APIBase     string `json:"api_base" envconfig:"API_BASE"`
 	Name        string `json:"name"`
+	SigningCert string `json:"signing_cert" envconfig:"SIGNING_CERT"`
+	SigningKey  string `json:"signing_key" envconfig:"SIGNING_KEY"`
 }
 
 // DBConfiguration holds all the database related configuration.

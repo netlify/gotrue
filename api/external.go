@@ -277,7 +277,7 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 	case "facebook":
 		return provider.NewFacebookProvider(config.External.Facebook)
 	case "saml":
-		return provider.NewSamlProvider(config.External.Saml)
+		return provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	default:
 		return nil, fmt.Errorf("Provider %s could not be found", name)
 	}

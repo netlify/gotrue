@@ -22,7 +22,7 @@ func (a *API) loadSAMLState(w http.ResponseWriter, r *http.Request) (context.Con
 func (a *API) samlCallback(r *http.Request, ctx context.Context) (*provider.UserProvidedData, error) {
 	config := a.getConfig(ctx)
 
-	samlProvider, err := provider.NewSamlProvider(config.External.Saml)
+	samlProvider, err := provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	if err != nil {
 		return nil, badRequestError("Could not initialize SAML provider: %+v", err).WithInternalError(err)
 	}
@@ -59,7 +59,7 @@ func (a *API) SAMLMetadata(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	config := getConfig(ctx)
 
-	samlProvider, err := provider.NewSamlProvider(config.External.Saml)
+	samlProvider, err := provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	if err != nil {
 		return internalServerError("Could not create SAML Provider: %+v", err).WithInternalError(err)
 	}
