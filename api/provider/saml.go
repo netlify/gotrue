@@ -158,6 +158,10 @@ func (p SamlProvider) SPMetadata() ([]byte, error) {
 		return nil, err
 	}
 
+	// the typing for encryption methods currently causes the xml to violate the spec
+	// therefore they are removed since they are optional anyways and mostly unused
+	metadata.SPSSODescriptor.KeyDescriptors[1].EncryptionMethods = []types.EncryptionMethod{}
+
 	rawMetadata, err := xml.Marshal(metadata)
 	if err != nil {
 		return nil, err
