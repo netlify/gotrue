@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"encoding/xml"
 	"html/template"
 	"io"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"github.com/beevik/etree"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	"github.com/russellhaering/gosaml2/types"
 	dsig "github.com/russellhaering/goxmldsig"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
@@ -186,4 +188,32 @@ func (ts *ExternalSamlTestSuite) TestSignupExternalSaml_Callback() {
 	// ensure user has been created
 	_, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "saml@example.com", ts.Config.JWT.Aud)
 	ts.Require().NoError(err)
+}
+
+func (ts *ExternalSamlTestSuite) TestMetadata() {
+	server, _ := ts.setupSamlMetadata()
+	defer server.Close()
+	ts.Config.External.Saml.MetadataURL = server.URL
+
+	key, cert := ts.setupSamlSPCert()
+	ts.Config.External.Saml.SigningKey = key
+	ts.Config.External.Saml.SigningCert = cert
+
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/saml/metadata", nil)
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+
+	ts.Require().Equal(http.StatusOK, w.Code)
+
+	md := &types.EntityDescriptor{}
+	err := xml.NewDecoder(w.Body).Decode(md)
+	ts.Require().NoError(err)
+
+	ts.Equal("http://localhost/saml", md.EntityID)
+	for _, acs := range md.SPSSODescriptor.AssertionConsumerServices {
+		if acs.Binding == "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" {
+			ts.Equal("http://localhost/saml/acs", acs.Location)
+			break
+		}
+	}
 }
