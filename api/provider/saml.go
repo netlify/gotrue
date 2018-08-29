@@ -44,6 +44,10 @@ func getMetadata(url string) (*types.EntityDescriptor, error) {
 		return nil, err
 	}
 
+	if res.StatusCode >= 300 {
+		return nil, fmt.Errorf("Request failed with status %s", res.Status)
+	}
+
 	rawMetadata, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
@@ -72,7 +76,7 @@ func NewSamlProvider(ext conf.SamlProviderConfiguration, db *storage.Connection,
 
 	meta, err := getMetadata(ext.MetadataURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Fetching metadata failed: %+v", err)
 	}
 
 	baseURI, err := url.Parse(strings.Trim(ext.APIBase, "/"))

@@ -5,13 +5,12 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/api/provider"
-	"github.com/pkg/errors"
 )
 
 func (a *API) loadSAMLState(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	state := r.FormValue("RelayState")
 	if state == "" {
-		return nil, errors.New("SAML RelayState is missing")
+		return nil, badRequestError("SAML RelayState is missing")
 	}
 
 	ctx := r.Context()
