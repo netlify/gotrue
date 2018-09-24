@@ -1,5 +1,5 @@
-hash: 2e0460eb69793c4e97139af3ea73426f5bce39a1ed006deeefca553d1006d59d
-updated: 2018-03-23T13:55:27.470557-04:00
+hash: 05d2217d85659023cf588c253b283746102c7fc32211b1a8dc11fd6a66832c6d
+updated: 2018-08-21T18:55:10.665441904+02:00
 imports:
 - name: cloud.google.com/go
   version: 98f5696b1026056a47f114c4451dbc4703d67191
@@ -7,6 +7,8 @@ imports:
   - compute/metadata
 - name: github.com/badoux/checkmail
   version: d0a759655d62bcdc95c50a0676f3e9702ed59453
+- name: github.com/beevik/etree
+  version: 90dafc1e1f114dfb9576218bb43c03fb854d1b34
 - name: github.com/bugsnag/bugsnag-go
   version: 036f1af2a63f8133e596d1c127c86100b4642ba1
   subpackages:
@@ -74,6 +76,8 @@ imports:
   - reflectx
 - name: github.com/joho/godotenv
   version: a79fa1e548e2c689c241d10173efd51e5d689d5b
+- name: github.com/jonboulle/clockwork
+  version: e7c6d408fd5c44ee1e1d8b79ae32b426afae1f28
 - name: github.com/kardianos/osext
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/envconfig
@@ -182,6 +186,16 @@ imports:
   version: 8197a2e580736b78d704be0fc47b2324c0591a32
 - name: github.com/rs/cors
   version: 8dd4211afb5d08dbb39a533b9bb9e4b486351df6
+- name: github.com/russellhaering/gosaml2
+  version: 4f381189230874b6542a39d68f3f89dfd66f969d
+  subpackages:
+  - types
+  - uuid
+- name: github.com/russellhaering/goxmldsig
+  version: 7acd5e4a6ef74fe1b082c20f119556adf70c3944
+  subpackages:
+  - etreeutils
+  - types
 - name: github.com/satori/go.uuid
   version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/sebest/xff

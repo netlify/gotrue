@@ -22,6 +22,11 @@ type UserProvidedData struct {
 // Provider is an interface for interacting with external account providers
 type Provider interface {
 	AuthCodeURL(string, ...oauth2.AuthCodeOption) string
+}
+
+// OAuthProvider specifies additional methods needed for providers using OAuth
+type OAuthProvider interface {
+	AuthCodeURL(string, ...oauth2.AuthCodeOption) string
 	GetUserData(context.Context, *oauth2.Token) (*UserProvidedData, error)
 	GetOAuthToken(string) (*oauth2.Token, error)
 }
