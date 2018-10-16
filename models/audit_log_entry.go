@@ -8,7 +8,7 @@ import (
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 )
 
 type AuditAction string

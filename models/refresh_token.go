@@ -8,7 +8,7 @@ import (
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 )
 
 // RefreshToken is the database model for refresh tokens.

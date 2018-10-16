@@ -24,7 +24,7 @@ import (
 	saml2 "github.com/russellhaering/gosaml2"
 	"github.com/russellhaering/gosaml2/types"
 	dsig "github.com/russellhaering/goxmldsig"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 	"golang.org/x/oauth2"
 )
 

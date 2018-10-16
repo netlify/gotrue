@@ -9,7 +9,7 @@ import (
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 

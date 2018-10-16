@@ -88,7 +88,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 
 		if cookie != "" && config.Cookie.Duration > 0 {
 			if terr = a.setCookieToken(config, token.Token, cookie == useSessionCookie, w); terr != nil {
-				return internalServerError("Failed to set JWT cookie", terr)
+				return internalServerError("Failed to set JWT cookie. %s", terr)
 			}
 		}
 		return nil
@@ -145,7 +145,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 
 		if cookie != "" && config.Cookie.Duration > 0 {
 			if terr = a.setCookieToken(config, tokenString, cookie == useSessionCookie, w); terr != nil {
-				return internalServerError("Failed to set JWT cookie", terr)
+				return internalServerError("Failed to set JWT cookie. %s", terr)
 			}
 		}
 		return nil

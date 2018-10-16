@@ -15,7 +15,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/netlify/gotrue/conf"
@@ -103,7 +103,7 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 				// timed out - try again?
 				if i == w.Retries-1 {
 					closeBody(rsp)
-					return nil, httpError(http.StatusGatewayTimeout, "Failed to perform webhook in time frame (%d seconds)", timeout.Seconds())
+					return nil, httpError(http.StatusGatewayTimeout, "Failed to perform webhook in time frame (%v seconds)", timeout.Seconds())
 				}
 				hooklog.Info("Request timed out")
 				continue

@@ -39,7 +39,7 @@ func (e *OAuthError) WithInternalError(err error) *OAuthError {
 
 // WithInternalMessage adds internal message information to the error
 func (e *OAuthError) WithInternalMessage(fmtString string, args ...interface{}) *OAuthError {
-	e.InternalMessage = fmt.Sprintf(fmtString, args)
+	e.InternalMessage = fmt.Sprintf(fmtString, args...)
 	return e
 }
 
@@ -111,7 +111,7 @@ func (e *HTTPError) WithInternalError(err error) *HTTPError {
 
 // WithInternalMessage adds internal message information to the error
 func (e *HTTPError) WithInternalMessage(fmtString string, args ...interface{}) *HTTPError {
-	e.InternalMessage = fmt.Sprintf(fmtString, args)
+	e.InternalMessage = fmt.Sprintf(fmtString, args...)
 	return e
 }
 
