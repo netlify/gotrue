@@ -12,6 +12,7 @@ build: ## Build the binary.
 deps: ## Install dependencies.
 	@go get -u github.com/gobuffalo/pop/soda
 	@go get -u golang.org/x/lint/golint
+	@go mod download
 
 image: ## Build the Docker image.
 	docker build .
