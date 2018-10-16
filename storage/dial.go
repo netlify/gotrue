@@ -9,6 +9,7 @@ import (
 	"github.com/gobuffalo/pop"
 	"github.com/gobuffalo/pop/columns"
 	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -40,10 +41,7 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 	}
 
 	if config.DB.Namespace != "" {
-		pop.MapTableName("User", config.DB.Namespace+"_users")
-		pop.MapTableName("RefreshToken", config.DB.Namespace+"_refresh_tokens")
-		pop.MapTableName("Instance", config.DB.Namespace+"_instances")
-		pop.MapTableName("AuditLogEntry", config.DB.Namespace+"_audit_log_entries")
+		namespace.SetNamespace(config.DB.Namespace)
 	}
 
 	if logrus.StandardLogger().Level == logrus.DebugLevel {

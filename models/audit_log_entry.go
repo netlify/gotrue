@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/netlify/gotrue/storage"
+	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
@@ -52,6 +53,16 @@ type AuditLogEntry struct {
 	Payload JSONMap `json:"payload" db:"payload"`
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+func (a *AuditLogEntry) TableName() string {
+	tableName := "audit_log_entries"
+
+	if namespace.GetNamespace() != "" {
+		return namespace.GetNamespace() + "_" + tableName
+	}
+
+	return tableName
 }
 
 func NewAuditLogEntry(tx *storage.Connection, instanceID uuid.UUID, actor *User, action AuditAction, traits map[string]interface{}) error {

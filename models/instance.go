@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/netlify/gotrue/storage/namespace"
 	"database/sql"
 	"time"
 
@@ -22,6 +23,16 @@ type Instance struct {
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
+func (i *Instance) TableName() string {
+	tableName := "instances"
+
+	if namespace.GetNamespace() != "" {
+		return namespace.GetNamespace() + "_" + tableName
+	}
+	
+	return tableName
 }
 
 // Config loads the the base configuration values with defaults.

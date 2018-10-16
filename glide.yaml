@@ -24,6 +24,8 @@ import:
   subpackages:
   - bitbucket
   - github
+  - facebook	
+  - google
 - package: github.com/sirupsen/logrus
   version: v1.0.3
 - package: github.com/spf13/cobra
@@ -50,7 +52,7 @@ import:
 - package: github.com/joho/godotenv
   version: v1.2.0
 - package: github.com/gobuffalo/pop
-  version: 3.42.1
+  version: v4.8.4
 - package: github.com/russellhaering/gosaml2
   version: ~0.3.1
 - package: github.com/russellhaering/goxmldsig

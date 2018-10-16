@@ -1,5 +1,5 @@
-hash: 05d2217d85659023cf588c253b283746102c7fc32211b1a8dc11fd6a66832c6d
-updated: 2018-08-21T18:55:10.665441904+02:00
+hash: 051dbaa04c205b74acc1b486c22d8f12431465029106f6ee58d23dadb95d55c6
+updated: 2018-10-17T01:29:41.8356134+06:00
 imports:
 - name: cloud.google.com/go
   version: 98f5696b1026056a47f114c4451dbc4703d67191
@@ -15,12 +15,16 @@ imports:
   - errors
 - name: github.com/bugsnag/panicwrap
   version: dd8df9a3778aaebc569794383e5c4ce87d6fd89e
-- name: github.com/daviddengcn/go-colortext
-  version: 17e75f6184bc9e727756cd0d82e0af58b1fc7191
+- name: github.com/cockroachdb/cockroach-go
+  version: e0a95dfd547cc9c3ebaaba1a12c2afe4bf621ac5
+  subpackages:
+  - crdb
 - name: github.com/dgrijalva/jwt-go
   version: d2709f9f1f31ebcda9651b03077758c1f3a0018c
 - name: github.com/fatih/color
   version: 5df930a27be2502f99b292b7cc09ebad4d0891f4
+- name: github.com/fatih/structs
+  version: 878a968ab22548362a09bdb3322f98b00f470d46
 - name: github.com/fsnotify/fsnotify
   version: f12c6236fe7b5cf6bcf30e5935d08cb079d78334
 - name: github.com/go-chi/chi
@@ -31,12 +35,48 @@ imports:
   version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/gobuffalo/envy
   version: a1789093e51b497900a240e15b39d8a97bfbc5d0
+- name: github.com/gobuffalo/fizz
+  version: 2ee389a202a50a7ace33ad8f97b9f0b27932e264
+  subpackages:
+  - translators
+- name: github.com/gobuffalo/flect
+  version: ae7ed6bfe683063bab833454fa8a95a789139f3f
+  subpackages:
+  - name
+- name: github.com/gobuffalo/github_flavored_markdown
+  version: 99b77ecb08795b8b2cf87f687633f95e8f40c651
+  subpackages:
+  - internal/russross/blackfriday
+- name: github.com/gobuffalo/makr
+  version: bfe537384e6f4cf8a4d9d149bae4f519b186c9fe
 - name: github.com/gobuffalo/packr
   version: 7458c919b2ddc10bfb5588b6645b7aefd1c60418
-- name: github.com/gobuffalo/pop
-  version: 11447b06bdc024968c2c62c96d1de29b9b846b48
+- name: github.com/gobuffalo/plush
+  version: 1c2f6e358d7ed2cca00d3a43796c665a11151597
   subpackages:
+  - ast
+  - lexer
+  - parser
+  - token
+- name: github.com/gobuffalo/pop
+  version: 585d7fb894f4c14a7a0c90cc74b87188b4afc361
+  subpackages:
+  - associations
   - columns
+  - fix
+  - logging
+  - nulls
+- name: github.com/gobuffalo/tags
+  version: da5de2a6b4fdd40153789f7efff1330616e28de7
+  subpackages:
+  - form
+  - form/bootstrap
+- name: github.com/gobuffalo/uuid
+  version: 2a766f2b8b8299437782042f22bfe3e153ff945e
+- name: github.com/gobuffalo/validate
+  version: 35866c4badf3a9f3a87db5ade6159e6ecf148d2a
+  subpackages:
+  - validators
 - name: github.com/gogo/protobuf
   version: 616a82ed12d78d24d4839363e8f3c5d3f20627cf
   subpackages:
@@ -70,6 +110,14 @@ imports:
   version: 3e95a51e0639b4cf372f2ccf74c86749d747fbdc
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/jackc/pgx
+  version: 20eaa7963b9d714bfaf678dcb2448fbd1e3671b9
+  subpackages:
+  - chunkreader
+  - internal/sanitize
+  - pgio
+  - pgproto3
+  - pgtype
 - name: github.com/jmoiron/sqlx
   version: de8647470aafe4854c976707c431dbe1eb2822c6
   subpackages:
@@ -80,6 +128,8 @@ imports:
   version: e7c6d408fd5c44ee1e1d8b79ae32b426afae1f28
 - name: github.com/kardianos/osext
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
+- name: github.com/kballard/go-shellquote
+  version: 95032a82bc518f77982ea72343cc1ade730072f0
 - name: github.com/kelseyhightower/envconfig
   version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/kr/fs
@@ -97,48 +147,10 @@ imports:
   subpackages:
   - defaults
   - randx
-  - wait
 - name: github.com/markbates/inflect
   version: a12c3aec81a6a938bf584a4bac567afed9256586
-- name: github.com/markbates/pop
-  version: 11447b06bdc024968c2c62c96d1de29b9b846b48
-  subpackages:
-  - columns
-  - fizz
-  - fizz/translators
-- name: github.com/markbates/validate
-  version: cd8cc34c703420d6b084fbbfd5085e8e71c5b830
-- name: github.com/mattn/anko
-  version: 3b446c7d031bdd754fc0183f599af173cd996715
-  subpackages:
-  - ast
-  - builtins
-  - builtins/encoding/json
-  - builtins/errors
-  - builtins/flag
-  - builtins/fmt
-  - builtins/github.com/daviddengcn/go-colortext
-  - builtins/io
-  - builtins/io/ioutil
-  - builtins/math
-  - builtins/math/big
-  - builtins/math/rand
-  - builtins/net
-  - builtins/net/http
-  - builtins/net/url
-  - builtins/os
-  - builtins/os/exec
-  - builtins/os/signal
-  - builtins/path
-  - builtins/path/filepath
-  - builtins/regexp
-  - builtins/runtime
-  - builtins/sort
-  - builtins/strconv
-  - builtins/strings
-  - builtins/time
-  - parser
-  - vm
+- name: github.com/markbates/oncer
+  version: 05fccaae8fc423476d98fd4c3e4699ba0fbbde48
 - name: github.com/mattn/go-colorable
   version: 5411d3eea5978e6cdc258b30de592b60df6aba96
   repo: https://github.com/mattn/go-colorable
@@ -147,6 +159,8 @@ imports:
   repo: https://github.com/mattn/go-isatty
 - name: github.com/mattn/go-sqlite3
   version: 3b3f1d01b2696af5501697c35629048c227586ab
+- name: github.com/microcosm-cc/bluemonday
+  version: 82c7118e8ccf7403d4860175d97bb635e8e28239
 - name: github.com/mitchellh/go-homedir
   version: b8bc1bf767474819792c23f32d8286a45736f1c6
 - name: github.com/mitchellh/mapstructure
@@ -200,8 +214,22 @@ imports:
   version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/sebest/xff
   version: 6c115e0ffa35d6a2e3f7a9e797c9cf07f0da4b9f
+- name: github.com/serenize/snaker
+  version: a683aaf2d516deecd70cad0c72e3ca773ecfcef0
+- name: github.com/sergi/go-diff
+  version: da645544ed44df016359bd4c0e3dc60ee3a0da43
+  subpackages:
+  - diffmatchpatch
 - name: github.com/shopify/logrus-bugsnag
   version: 6dbc35f2c30d1e37549f9673dd07912452ab28a5
+- name: github.com/shurcooL/highlight_diff
+  version: 09bb4053de1b1d872a9f25dc21378fa71dca4e4e
+- name: github.com/shurcooL/highlight_go
+  version: 78fb10f4a5f89e812a5e26ab723b954a51226086
+- name: github.com/shurcooL/octicon
+  version: c42b0e3b24d96976ecac81ef691662777b39ef64
+- name: github.com/shurcooL/sanitized_anchor_name
+  version: 86672fcb3f950f35f2e675df2240550f2a50762f
 - name: github.com/signalfx/com_signalfx_metrics_protobuf
   version: 93e507b42f43f458a109ca278d1542a26a0b87fc
 - name: github.com/signalfx/gohistogram
@@ -218,6 +246,10 @@ imports:
   - timekeeper
 - name: github.com/sirupsen/logrus
   version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+- name: github.com/sourcegraph/annotate
+  version: f4cad6c6324d3f584e1743d8b3e0e017a5f3a636
+- name: github.com/sourcegraph/syntaxhighlight
+  version: bd320f5d308e1a3c4314c678d8227a0d72574ae7
 - name: github.com/spf13/afero
   version: 20500e2abd0d1f4564a499e83d11d6c73cd58c27
   subpackages:
@@ -258,6 +290,8 @@ imports:
   subpackages:
   - context
   - context/ctxhttp
+  - html
+  - html/atom
 - name: golang.org/x/oauth2
   version: 9a379c6b3e95a790ffc43293c2a78dee0d7b6e20
   subpackages:
