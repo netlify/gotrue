@@ -8,7 +8,6 @@ RUN apk add --no-cache make git
 WORKDIR /go/src/github.com/netlify/gotrue
 COPY . /go/src/github.com/netlify/gotrue
 
-RUN ls -al
 RUN make deps build
 RUN go build -a -installsuffix cgo -o gotrue
 
