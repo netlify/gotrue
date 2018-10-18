@@ -1,9 +1,10 @@
-package provider
+package oauth2provider
 
 import (
 	"context"
 	"errors"
 
+	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -23,7 +24,7 @@ type googleUser struct {
 }
 
 // NewGoogleProvider creates a Google account provider.
-func NewGoogleProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
+func NewGoogleProvider(ext conf.OAuth2ProviderConfiguration) (OAuth2Provider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}
@@ -46,13 +47,13 @@ func (g googleProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 	return g.Exchange(oauth2.NoContext, code)
 }
 
-func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
+func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*provider.UserProvidedData, error) {
 	var u googleUser
 	if err := makeRequest(ctx, tok, g.Config, googleBaseURL, &u); err != nil {
 		return nil, err
 	}
 
-	data := &UserProvidedData{
+	data := &provider.UserProvidedData{
 		Email:    u.Email,
 		Verified: u.EmailVerified,
 		Metadata: map[string]string{

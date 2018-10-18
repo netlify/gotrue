@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/api/provider"
+	"github.com/netlify/gotrue/api/provider/oauth2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,7 +34,7 @@ func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType s
 		return nil, badRequestError("Authorization code missing")
 	}
 
-	oAuthProvider, err := a.OAuthProvider(ctx, providerType)
+	oAuth2Provider, err := a.OAuth2Provider(ctx, providerType)
 	if err != nil {
 		return nil, badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
 	}
@@ -44,12 +45,12 @@ func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType s
 		"code":     oauthCode,
 	}).Debug("Exchanging oauth code")
 
-	tok, err := oAuthProvider.GetOAuthToken(oauthCode)
+	tok, err := oAuth2Provider.GetOAuthToken(oauthCode)
 	if err != nil {
 		return nil, internalServerError("Unable to exchange external code: %s", oauthCode).WithInternalError(err)
 	}
 
-	userData, err := oAuthProvider.GetUserData(ctx, tok)
+	userData, err := oAuth2Provider.GetUserData(ctx, tok)
 	if err != nil {
 		return nil, internalServerError("Error getting user email from external provider").WithInternalError(err)
 	}
@@ -57,14 +58,14 @@ func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType s
 	return userData, nil
 }
 
-func (a *API) OAuthProvider(ctx context.Context, name string) (provider.OAuthProvider, error) {
+func (a *API) OAuth2Provider(ctx context.Context, name string) (oauth2provider.OAuth2Provider, error) {
 	providerCandidate, err := a.Provider(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 
 	switch p := providerCandidate.(type) {
-	case provider.OAuthProvider:
+	case oauth2provider.OAuth2Provider:
 		return p, nil
 	default:
 		return nil, badRequestError("Provider can not be used for OAuth")

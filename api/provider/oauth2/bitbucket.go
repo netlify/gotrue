@@ -1,6 +1,7 @@
-package provider
+package oauth2provider
 
 import (
+	"github.com/netlify/gotrue/api/provider"
 	"context"
 	"errors"
 
@@ -38,7 +39,7 @@ type bitbucketEmails struct {
 }
 
 // NewBitbucketProvider creates a Bitbucket account provider.
-func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
+func NewBitbucketProvider(ext conf.OAuth2ProviderConfiguration) (OAuth2Provider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}
@@ -58,13 +59,13 @@ func (g bitbucketProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 	return g.Exchange(oauth2.NoContext, code)
 }
 
-func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
+func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*provider.UserProvidedData, error) {
 	var u bitbucketUser
 	if err := makeRequest(ctx, tok, g.Config, bitbucketBaseURL, &u); err != nil {
 		return nil, err
 	}
 
-	data := &UserProvidedData{
+	data := &provider.UserProvidedData{
 		Metadata: map[string]string{
 			nameKey:      u.Name,
 			avatarURLKey: u.Avatar.Href,

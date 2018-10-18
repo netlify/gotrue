@@ -1,6 +1,7 @@
-package provider
+package oauth2provider
 
 import (
+	"github.com/netlify/gotrue/api/provider"
 	"context"
 	"errors"
 
@@ -31,7 +32,7 @@ func chooseHost(base, defaultHost string) string {
 }
 
 // NewGitlabProvider creates a Gitlab account provider.
-func NewGitlabProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
+func NewGitlabProvider(ext conf.OAuth2ProviderConfiguration) (OAuth2Provider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}
@@ -56,14 +57,14 @@ func (g gitlabProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 	return g.Exchange(oauth2.NoContext, code)
 }
 
-func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
+func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*provider.UserProvidedData, error) {
 	var u githubUser
 
 	if err := makeRequest(ctx, tok, g.Config, g.Host+"/api/v4/user", &u); err != nil {
 		return nil, err
 	}
 
-	data := &UserProvidedData{
+	data := &provider.UserProvidedData{
 		Metadata: map[string]string{
 			nameKey:      u.Name,
 			avatarURLKey: u.AvatarURL,

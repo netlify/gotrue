@@ -12,8 +12,8 @@ import (
 	"github.com/netlify/netlify-commons/nconf"
 )
 
-// OAuthProviderConfiguration holds all config related to external account providers.
-type OAuthProviderConfiguration struct {
+// OAuth2ProviderConfiguration holds all config related to external account providers.
+type OAuth2ProviderConfiguration struct {
 	ClientID    string `json:"client_id" split_words:"true"`
 	Secret      string `json:"secret"`
 	RedirectURI string `json:"redirect_uri" split_words:"true"`
@@ -76,11 +76,11 @@ type EmailContentConfiguration struct {
 }
 
 type ProviderConfiguration struct {
-	Bitbucket   OAuthProviderConfiguration `json:"bitbucket"`
-	Github      OAuthProviderConfiguration `json:"github"`
-	Gitlab      OAuthProviderConfiguration `json:"gitlab"`
-	Google      OAuthProviderConfiguration `json:"google"`
-	Facebook    OAuthProviderConfiguration `json:"facebook"`
+	Bitbucket   OAuth2ProviderConfiguration `json:"bitbucket"`
+	Github      OAuth2ProviderConfiguration `json:"github"`
+	Gitlab      OAuth2ProviderConfiguration `json:"gitlab"`
+	Google      OAuth2ProviderConfiguration `json:"google"`
+	Facebook    OAuth2ProviderConfiguration `json:"facebook"`
 	Email       EmailProviderConfiguration `json:"email"`
 	Saml        SamlProviderConfiguration  `json:"saml"`
 	RedirectURL string                     `json:"redirect_url"`
@@ -242,7 +242,7 @@ func (config *Configuration) Scan(src interface{}) error {
 	return json.Unmarshal(source, &config)
 }
 
-func (o *OAuthProviderConfiguration) Validate() error {
+func (o *OAuth2ProviderConfiguration) Validate() error {
 	if !o.Enabled {
 		return errors.New("Provider is not enabled")
 	}

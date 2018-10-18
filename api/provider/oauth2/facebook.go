@@ -1,6 +1,7 @@
-package provider
+package oauth2provider
 
 import (
+	"github.com/netlify/gotrue/api/provider"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -32,7 +33,7 @@ type facebookUser struct {
 }
 
 // NewFacebookProvider creates a Facebook account provider.
-func NewFacebookProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
+func NewFacebookProvider(ext conf.OAuth2ProviderConfiguration) (OAuth2Provider, error) {
 	return &facebookProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
@@ -48,7 +49,7 @@ func (p facebookProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 	return p.Exchange(oauth2.NoContext, code)
 }
 
-func (p facebookProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
+func (p facebookProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*provider.UserProvidedData, error) {
 	hash := hmac.New(sha256.New, []byte(p.Config.ClientSecret))
 	hash.Write([]byte(tok.AccessToken))
 	appsecretProof := hex.EncodeToString(hash.Sum(nil))
@@ -63,7 +64,7 @@ func (p facebookProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*
 		return nil, errors.New("Unable to find email with Facebook provider")
 	}
 
-	return &UserProvidedData{
+	return &provider.UserProvidedData{
 		Metadata: map[string]string{
 			aliasKey:     u.Alias,
 			nameKey:      strings.TrimSpace(u.FirstName + " " + u.LastName),

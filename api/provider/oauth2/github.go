@@ -1,6 +1,7 @@
-package provider
+package oauth2provider
 
 import (
+	"github.com/netlify/gotrue/api/provider"
 	"context"
 	"errors"
 	"strings"
@@ -13,7 +14,7 @@ import (
 
 const (
 	defaultGitHubAuthBase = "github.com"
-	defaultGitHubApiBase  = "api.github.com"
+	defaultGitHubAPIBase  = "api.github.com"
 )
 
 type githubProvider struct {
@@ -34,14 +35,14 @@ type githubUserEmail struct {
 }
 
 // NewGithubProvider creates a Github account provider.
-func NewGithubProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
+func NewGithubProvider(ext conf.OAuth2ProviderConfiguration) (OAuth2Provider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}
 
 	authHost := chooseHost(ext.URL, defaultGitHubAuthBase)
-	apiHost := chooseHost(ext.URL, defaultGitHubApiBase)
-	if !strings.HasSuffix(apiHost, defaultGitHubApiBase) {
+	apiHost := chooseHost(ext.URL, defaultGitHubAPIBase)
+	if !strings.HasSuffix(apiHost, defaultGitHubAPIBase) {
 		apiHost += "/api/v3"
 	}
 
@@ -64,13 +65,13 @@ func (g githubProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 	return g.Exchange(oauth2.NoContext, code)
 }
 
-func (g githubProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
+func (g githubProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*provider.UserProvidedData, error) {
 	var u githubUser
 	if err := makeRequest(ctx, tok, g.Config, g.APIHost+"/user", &u); err != nil {
 		return nil, err
 	}
 
-	data := &UserProvidedData{
+	data := &provider.UserProvidedData{
 		Metadata: map[string]string{
 			nameKey:      u.Name,
 			avatarURLKey: u.AvatarURL,

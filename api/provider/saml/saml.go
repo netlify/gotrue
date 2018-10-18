@@ -1,4 +1,4 @@
-package provider
+package samlprovider
 
 import (
 	"crypto/rand"

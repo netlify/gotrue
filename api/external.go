@@ -10,6 +10,8 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/netlify/gotrue/api/provider/oauth2"
+	"github.com/netlify/gotrue/api/provider/saml"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -267,17 +269,17 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 
 	switch name {
 	case "bitbucket":
-		return provider.NewBitbucketProvider(config.External.Bitbucket)
+		return oauth2provider.NewBitbucketProvider(config.External.Bitbucket)
 	case "github":
-		return provider.NewGithubProvider(config.External.Github)
+		return oauth2provider.NewGithubProvider(config.External.Github)
 	case "gitlab":
-		return provider.NewGitlabProvider(config.External.Gitlab)
+		return oauth2provider.NewGitlabProvider(config.External.Gitlab)
 	case "google":
-		return provider.NewGoogleProvider(config.External.Google)
+		return oauth2provider.NewGoogleProvider(config.External.Google)
 	case "facebook":
-		return provider.NewFacebookProvider(config.External.Facebook)
+		return oauth2provider.NewFacebookProvider(config.External.Facebook)
 	case "saml":
-		return provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
+		return samlprovider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	default:
 		return nil, fmt.Errorf("Provider %s could not be found", name)
 	}
