@@ -12,6 +12,7 @@ import (
 	"github.com/netlify/gotrue/storage"
 )
 
+// GoTrueClaims is a struct thats used for JWT claims
 type GoTrueClaims struct {
 	jwt.StandardClaims
 	Email        string                 `json:"email"`

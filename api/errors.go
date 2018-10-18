@@ -8,7 +8,7 @@ import (
 	"runtime/debug"
 )
 
-var oauthErrorMap map[int]string = map[int]string{
+var oauthErrorMap = map[int]string{
 	http.StatusBadRequest:          "invalid_request",
 	http.StatusUnauthorized:        "unauthorized_client",
 	http.StatusForbidden:           "access_denied",
