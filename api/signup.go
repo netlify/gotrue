@@ -60,7 +60,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 			}
 		} else {
 			params.Provider = "email"
-			user, terr = a.signupNewUser(tx, ctx, params)
+			user, terr = a.signupNewUser(ctx, tx, params)
 			if terr != nil {
 				return terr
 			}
@@ -93,7 +93,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	return sendJSON(w, http.StatusOK, user)
 }
 
-func (a *API) signupNewUser(conn *storage.Connection, ctx context.Context, params *SignupParams) (*models.User, error) {
+func (a *API) signupNewUser(ctx context.Context, conn *storage.Connection, params *SignupParams) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 

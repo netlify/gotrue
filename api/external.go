@@ -13,7 +13,7 @@ import (
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -96,7 +96,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		}
 		userData = samlUserData
 	} else {
-		oAuthUserData, err := a.oAuthCallback(r, ctx, providerType)
+		oAuthUserData, err := a.oAuthCallback(ctx, r, providerType)
 		if err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					}
 				}
 
-				user, terr = a.signupNewUser(tx, ctx, params)
+				user, terr = a.signupNewUser(ctx, tx, params)
 				if terr != nil {
 					return terr
 				}

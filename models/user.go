@@ -7,8 +7,9 @@ import (
 
 	"github.com/gobuffalo/pop"
 	"github.com/netlify/gotrue/storage"
+	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -78,6 +79,16 @@ func NewSystemUser(instanceID uuid.UUID, aud string) *User {
 		Aud:          aud,
 		IsSuperAdmin: true,
 	}
+}
+
+func (u *User) TableName() string {
+	tableName := "users"
+
+	if namespace.GetNamespace() != "" {
+		return namespace.GetNamespace() + "_" + tableName
+	}
+	
+	return tableName
 }
 
 func (u *User) BeforeCreate(tx *pop.Connection) error {

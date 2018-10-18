@@ -20,7 +20,7 @@ func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Co
 	return a.loadExternalState(ctx, state)
 }
 
-func (a *API) oAuthCallback(r *http.Request, ctx context.Context, providerType string) (*provider.UserProvidedData, error) {
+func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType string) (*provider.UserProvidedData, error) {
 	rq := r.URL.Query()
 
 	extError := rq.Get("error")

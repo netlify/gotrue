@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
