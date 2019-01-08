@@ -1,4 +1,4 @@
-FROM golang:alpine as build
+FROM golang:1.11.4-alpine as build
 ENV GO111MODULE=on
 ENV CGO_ENABLED=0
 ENV GOOS=linux

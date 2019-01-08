@@ -2,7 +2,7 @@
 language: go
 
 go:
-  - 1.11.1
+  - 1.11.4
 
 env:
   - GO111MODULE=on
