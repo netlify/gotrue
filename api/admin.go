@@ -216,6 +216,7 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 			if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
 				return internalServerError("Error sending confirmation mail").WithInternalError(terr)
 			}
+			
 		}
 
 		return nil
