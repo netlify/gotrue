@@ -3,7 +3,7 @@ package storage
 import (
 	"testing"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 )
 

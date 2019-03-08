@@ -6,7 +6,7 @@ import (
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 )
 
 // UserUpdateParams parameters for updating a user

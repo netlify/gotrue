@@ -1,13 +1,14 @@
 package models
 
 import (
+	"github.com/netlify/gotrue/storage/namespace"
 	"time"
 
 	"github.com/gobuffalo/pop"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 )
 
 // RefreshToken is the database model for refresh tokens.
@@ -22,6 +23,17 @@ type RefreshToken struct {
 	Revoked   bool      `db:"revoked"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
+}
+
+
+func (rt *RefreshToken) TableName() string {
+	tableName := "refresh_tokens"
+
+	if namespace.GetNamespace() != "" {
+		return namespace.GetNamespace() + "_" + tableName
+	}
+	
+	return tableName
 }
 
 // GrantAuthenticatedUser creates a refresh token for the provided user.

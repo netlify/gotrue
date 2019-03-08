@@ -12,7 +12,7 @@ import (
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/netlify-commons/graceful"
 	"github.com/rs/cors"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 	"github.com/sebest/xff"
 	"github.com/sirupsen/logrus"
 )
@@ -120,6 +120,15 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 					r.Delete("/", api.adminUserDelete)
 				})
 			})
+		})
+
+		r.Route("/saml", func(r *router) {
+			r.Route("/acs", func(r *router) {
+				r.Use(api.loadSAMLState)
+				r.Post("/", api.ExternalProviderCallback)
+			})
+
+			r.Get("/metadata", api.SAMLMetadata)
 		})
 	})
 

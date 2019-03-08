@@ -2,8 +2,10 @@
 language: go
 
 go:
-  - 1.8
-  - 1.9
+  - 1.11.4
+
+env:
+  - GO111MODULE=on
 
 services:
   - docker

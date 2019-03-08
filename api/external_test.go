@@ -10,7 +10,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

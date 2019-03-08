@@ -10,7 +10,7 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/test"
-	"github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 )
 

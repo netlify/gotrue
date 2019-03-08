@@ -13,7 +13,7 @@ import (
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gobuffalo/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -86,43 +86,26 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 	ctx := r.Context()
 	config := a.getConfig(ctx)
 	instanceID := getInstanceID(ctx)
-	rq := r.URL.Query()
-
-	extError := rq.Get("error")
-	if extError != "" {
-		return oauthError(extError, rq.Get("error_description"))
-	}
-
-	oauthCode := rq.Get("code")
-	if oauthCode == "" {
-		return badRequestError("Authorization code missing")
-	}
 
 	providerType := getExternalProviderType(ctx)
-	provider, err := a.Provider(ctx, providerType)
-	if err != nil {
-		return badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
-	}
-
-	log := getLogEntry(r)
-	log.WithFields(logrus.Fields{
-		"provider": providerType,
-		"code":     oauthCode,
-	}).Debug("Exchanging oauth code")
-
-	tok, err := provider.GetOAuthToken(oauthCode)
-	if err != nil {
-		return internalServerError("Unable to exchange external code: %s", oauthCode).WithInternalError(err)
-	}
-
-	userData, err := provider.GetUserData(ctx, tok)
-	if err != nil {
-		return internalServerError("Error getting user email from external provider").WithInternalError(err)
+	var userData *provider.UserProvidedData
+	if providerType == "saml" {
+		samlUserData, err := a.samlCallback(r, ctx)
+		if err != nil {
+			return err
+		}
+		userData = samlUserData
+	} else {
+		oAuthUserData, err := a.oAuthCallback(ctx, r, providerType)
+		if err != nil {
+			return err
+		}
+		userData = oAuthUserData
 	}
 
 	var user *models.User
 	var token *AccessTokenResponse
-	err = a.db.Transaction(func(tx *storage.Connection) error {
+	err := a.db.Transaction(func(tx *storage.Connection) error {
 		var terr error
 		inviteToken := getInviteToken(ctx)
 		if inviteToken != "" {
@@ -152,7 +135,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					}
 				}
 
-				user, terr = a.signupNewUser(tx, ctx, params)
+				user, terr = a.signupNewUser(ctx, tx, params)
 				if terr != nil {
 					return terr
 				}
@@ -257,15 +240,7 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 	return user, nil
 }
 
-// loadOAuthState parses the `state` query parameter as a JWS payload,
-// extracting the provider requested
-func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Context, error) {
-	ctx := r.Context()
-	state := r.URL.Query().Get("state")
-	if state == "" {
-		return nil, badRequestError("OAuth state parameter missing")
-	}
-
+func (a *API) loadExternalState(ctx context.Context, state string) (context.Context, error) {
 	claims := ExternalProviderClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 	_, err := p.ParseWithClaims(state, &claims, func(token *jwt.Token) (interface{}, error) {
@@ -301,6 +276,8 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 		return provider.NewGoogleProvider(config.External.Google)
 	case "facebook":
 		return provider.NewFacebookProvider(config.External.Facebook)
+	case "saml":
+		return provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	default:
 		return nil, fmt.Errorf("Provider %s could not be found", name)
 	}
