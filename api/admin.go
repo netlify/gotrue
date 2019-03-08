@@ -213,7 +213,7 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 		} else {
 			mailer := a.Mailer(ctx)
 			referrer := a.getReferrer(r)
-			if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
+			if terr := sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
 				return internalServerError("Error sending confirmation mail").WithInternalError(terr)
 			}
 			
