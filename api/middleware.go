@@ -9,7 +9,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/netlify/gotrue/models"
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 )
 
 const (

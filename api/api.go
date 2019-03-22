@@ -12,7 +12,7 @@ import (
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/netlify-commons/graceful"
 	"github.com/rs/cors"
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/sebest/xff"
 	"github.com/sirupsen/logrus"
 )
