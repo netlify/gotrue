@@ -244,7 +244,7 @@ Default Content (if template is unavailable):
 ```html
 <h2>Confirm your signup</h2>
 
-<p>Follow this link to confirm your account:</p>
+<p>Follow this link to confirm your user:</p>
 <p><a href="{{ .ConfirmationURL }}">Confirm your mail</a></p>
 ```
 
@@ -258,7 +258,7 @@ Default Content (if template is unavailable):
 ```html
 <h2>Reset Password</h2>
 
-<p>Follow this link to reset the password for your account:</p>
+<p>Follow this link to reset the password for your user:</p>
 <p><a href="{{ .ConfirmationURL }}">Reset Password</a></p>
 ```
 
