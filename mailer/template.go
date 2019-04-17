@@ -21,12 +21,12 @@ const defaultInviteMail = `<h2>You have been invited</h2>
 
 const defaultConfirmationMail = `<h2>Confirm your signup</h2>
 
-<p>Follow this link to confirm your account:</p>
+<p>Follow this link to confirm your user:</p>
 <p><a href="{{ .ConfirmationURL }}">Confirm your email address</a></p>`
 
 const defaultRecoveryMail = `<h2>Reset password</h2>
 
-<p>Follow this link to reset the password for your account:</p>
+<p>Follow this link to reset the password for your user:</p>
 <p><a href="{{ .ConfirmationURL }}">Reset password</a></p>`
 
 const defaultEmailChangeMail = `<h2>Confirm email address change</h2>
