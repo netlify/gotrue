@@ -15,7 +15,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/netlify/gotrue/conf"

@@ -21,10 +21,9 @@ require (
 	github.com/go-sql-driver/mysql v1.4.0
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gobuffalo/genny v0.0.0-20190107165710-b6af81ece724 // indirect
-	github.com/gobuffalo/packr v1.21.0 // indirect
 	github.com/gobuffalo/pop v4.9.4+incompatible
-	github.com/gobuffalo/uuid v2.0.5+incompatible
 	github.com/gobuffalo/x v0.0.0-20181110221217-14085ca3e1a9 // indirect
+	github.com/gofrs/uuid v3.1.0+incompatible
 	github.com/gogo/protobuf v0.0.0-20171109181519-616a82ed12d7 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/hashicorp/go-immutable-radix v1.0.0 // indirect
@@ -39,7 +38,6 @@ require (
 	github.com/juju/testing v0.0.0-20180920084828-472a3e8b2073 // indirect
 	github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1 // indirect
 	github.com/kelseyhightower/envconfig v1.3.0
-	github.com/kr/fs v0.0.0-20131111012553-2788f0dbd169 // indirect
 	github.com/nats-io/gnatsd v1.3.0 // indirect
 	github.com/nats-io/go-nats v1.3.0 // indirect
 	github.com/nats-io/go-nats-streaming v0.3.4 // indirect
@@ -48,9 +46,7 @@ require (
 	github.com/netlify/mailme v0.0.0-20170821082834-c4a76ce443c1
 	github.com/netlify/netlify-commons v0.7.7
 	github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c // indirect
-	github.com/pelletier/go-buffruneio v0.1.0 // indirect
 	github.com/pkg/errors v0.8.0
-	github.com/pkg/sftp v0.0.0-20160908100035-8197a2e58073 // indirect
 	github.com/rs/cors v0.0.0-20170608165155-8dd4211afb5d
 	github.com/russellhaering/gosaml2 v0.3.1
 	github.com/russellhaering/goxmldsig v0.0.0-20180430223755-7acd5e4a6ef7
@@ -66,12 +62,9 @@ require (
 	github.com/streadway/amqp v0.0.0-20170707203015-2cbfe40c9341 // indirect
 	github.com/stretchr/testify v1.2.2
 	golang.org/x/crypto v0.0.0-20190103213133-ff983b9c42bc
-	golang.org/x/lint v0.0.0-20181217174547-8f45f776aaf1 // indirect
 	golang.org/x/oauth2 v0.0.0-20170807180024-9a379c6b3e95
 	google.golang.org/api v0.0.0-20170821230356-dd6bdadc5852 // indirect
-	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
-	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
 	gopkg.in/logfmt.v0 v0.3.0 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce // indirect

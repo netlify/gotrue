@@ -11,7 +11,7 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 )
 
 func addRequestID(globalConfig *conf.GlobalConfiguration) middlewareHandler {
