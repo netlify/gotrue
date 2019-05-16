@@ -3,6 +3,7 @@ package mailer
 import (
 	"net/url"
 	"regexp"
+
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/mailme"
@@ -68,6 +69,6 @@ func getSiteURL(referrerURL, siteURL, filepath, fragment string) (string, error)
 
 var urlRegexp = regexp.MustCompile(`^https?://[^/]+`)
 
-func enforceRelativeURL(url string, ) string {
+func enforceRelativeURL(url string) string {
 	return urlRegexp.ReplaceAllString(url, "")
 }
