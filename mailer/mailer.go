@@ -65,3 +65,8 @@ func getSiteURL(referrerURL, siteURL, filepath, fragment string) (string, error)
 	site.Fragment = fragment
 	return site.String(), nil
 }
+
+urlRegexp := regexp.MustCompile(`^https?://[^/]+`)
+func enforceRelativeUrl(url string, ) string {
+	return urlRegexp.ReplaceAllString(url, "")
+}

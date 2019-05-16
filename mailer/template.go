@@ -57,7 +57,7 @@ func (m *TemplateMailer) InviteMail(user *models.User, referrerURL string) error
 	return m.Mailer.Mail(
 		user.Email,
 		string(withDefault(m.Config.Mailer.Subjects.Invite, "You have been invited")),
-		m.Config.Mailer.Templates.Invite,
+		enforceRelativeUrl(m.Config.Mailer.Templates.Invite),
 		defaultInviteMail,
 		data,
 	)
@@ -80,7 +80,7 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User, referrerURL string)
 	return m.Mailer.Mail(
 		user.Email,
 		string(withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Signup")),
-		m.Config.Mailer.Templates.Confirmation,
+		enforceRelativeUrl(m.Config.Mailer.Templates.Confirmation),
 		defaultConfirmationMail,
 		data,
 	)
@@ -104,7 +104,7 @@ func (m *TemplateMailer) EmailChangeMail(user *models.User, referrerURL string) 
 	return m.Mailer.Mail(
 		user.EmailChange,
 		string(withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change")),
-		m.Config.Mailer.Templates.EmailChange,
+		enforceRelativeUrl(m.Config.Mailer.Templates.EmailChange),
 		defaultEmailChangeMail,
 		data,
 	)
@@ -127,7 +127,7 @@ func (m *TemplateMailer) RecoveryMail(user *models.User, referrerURL string) err
 	return m.Mailer.Mail(
 		user.Email,
 		string(withDefault(m.Config.Mailer.Subjects.Recovery, "Reset Your Password")),
-		m.Config.Mailer.Templates.Recovery,
+		enforceRelativeUrl(m.Config.Mailer.Templates.Recovery),
 		defaultRecoveryMail,
 		data,
 	)
