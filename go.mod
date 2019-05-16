@@ -18,11 +18,13 @@ require (
 	github.com/go-chi/chi v3.1.4+incompatible
 	github.com/go-kit/kit v0.8.0 // indirect
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
-	github.com/go-sql-driver/mysql v1.4.0
+	github.com/go-sql-driver/mysql v1.4.1
 	github.com/go-stack/stack v1.8.0 // indirect
-	github.com/gobuffalo/genny v0.0.0-20190107165710-b6af81ece724 // indirect
-	github.com/gobuffalo/packr v1.21.0 // indirect
-	github.com/gobuffalo/pop v4.9.4+incompatible
+	github.com/gobuffalo/buffalo-plugins v1.9.4 // indirect
+	github.com/gobuffalo/gogen v0.1.1 // indirect
+	github.com/gobuffalo/nulls v0.0.0-20190305142546-85f3c9250d87 // indirect
+	github.com/gobuffalo/plushgen v0.0.0-20190104222512-177cd2b872b3 // indirect
+	github.com/gobuffalo/pop v4.11.0+incompatible
 	github.com/gobuffalo/uuid v2.0.5+incompatible
 	github.com/gobuffalo/x v0.0.0-20181110221217-14085ca3e1a9 // indirect
 	github.com/gogo/protobuf v0.0.0-20171109181519-616a82ed12d7 // indirect
@@ -49,7 +51,7 @@ require (
 	github.com/netlify/netlify-commons v0.7.7
 	github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c // indirect
 	github.com/pelletier/go-buffruneio v0.1.0 // indirect
-	github.com/pkg/errors v0.8.0
+	github.com/pkg/errors v0.8.1
 	github.com/pkg/sftp v0.0.0-20160908100035-8197a2e58073 // indirect
 	github.com/rs/cors v0.0.0-20170608165155-8dd4211afb5d
 	github.com/russellhaering/gosaml2 v0.3.1
@@ -59,15 +61,19 @@ require (
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.0-20170330202426-93e507b42f43 // indirect
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
 	github.com/signalfx/golib v1.0.0 // indirect
-	github.com/sirupsen/logrus v1.2.0
+	github.com/sirupsen/logrus v1.4.1
 	github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d // indirect
 	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/streadway/amqp v0.0.0-20170707203015-2cbfe40c9341 // indirect
-	github.com/stretchr/testify v1.2.2
-	golang.org/x/crypto v0.0.0-20190103213133-ff983b9c42bc
-	golang.org/x/lint v0.0.0-20181217174547-8f45f776aaf1 // indirect
+	github.com/stretchr/testify v1.3.0
+	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
+	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
+	golang.org/x/net v0.0.0-20190514140710-3ec191127204 // indirect
 	golang.org/x/oauth2 v0.0.0-20170807180024-9a379c6b3e95
+	golang.org/x/sys v0.0.0-20190515190549-87c872767d25 // indirect
+	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/tools v0.0.0-20190515235946-4f9510c6a12d // indirect
 	google.golang.org/api v0.0.0-20170821230356-dd6bdadc5852 // indirect
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
