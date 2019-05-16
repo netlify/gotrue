@@ -29,3 +29,21 @@ func TestGetSiteURL(t *testing.T) {
 		assert.Equal(t, c.Expected, act)
 	}
 }
+
+func TestRelativeURL(t *testing.T) {
+	cases := []struct {
+		URL      string
+		Expected string
+	}{
+		{"https://test.example.com", ""},
+		{"http://test.example.com", ""},
+		{"test.example.com", "test.example.com"},
+		{"/some/path#fragment", "/some/path#fragment"},
+	}
+
+	for _, c := range cases {
+		res := enforceRelativeURL(c.URL)
+		assert.Equal(t, c.Expected, res, c.URL)
+	}
+}
+
