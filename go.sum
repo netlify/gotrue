@@ -485,6 +485,8 @@ github.com/nats-io/nuid v0.0.0-20170303150224-3cf34f9fca4e/go.mod h1:19wcPz3Ph3q
 github.com/nats-io/nuid v0.0.0-20180712044959-3024a71c3cbe/go.mod h1:19wcPz3Ph3q0Jbyiqsd0kePYG7A95tJPxeL+1OSON2c=
 github.com/netlify/mailme v0.0.0-20170821082834-c4a76ce443c1 h1:M2ZOTs3pghyh9s/FfCcp0FfsrVCgiDG76b4RAYTxBbE=
 github.com/netlify/mailme v0.0.0-20170821082834-c4a76ce443c1/go.mod h1:/rGcC/hqh7XMtEAf3TGo/ZDKgtZ52ece1va5F+86HvI=
+github.com/netlify/mailme v1.0.0 h1:5E26/gGSZMrSgqkvyHcRSMjLUk5Uin2hm5Y3d4K4MbA=
+github.com/netlify/mailme v1.0.0/go.mod h1:/rGcC/hqh7XMtEAf3TGo/ZDKgtZ52ece1va5F+86HvI=
 github.com/netlify/netlify-commons v0.7.7 h1:9U0abHrARBk7CiHTcSXV9cN262PAhzDLKP8LtlEDJzM=
 github.com/netlify/netlify-commons v0.7.7/go.mod h1:yaQkVHTO9MTOpvR+Y+Pae8VF3bWoFbk54xULGuY2z0o=
 github.com/netlify/netlify-commons v0.15.0 h1:PoPdyIePhksSeFRr4zZQH8wjbxNa2+9Y6xaBuKMVt/Y=
