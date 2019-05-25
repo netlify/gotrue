@@ -68,6 +68,17 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 
 	client := http.Client{
 		Timeout: timeout,
+		Transport: &http.Transport{
+			DialContext: SafeDialContext((&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext),
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
 	}
 
 	hooklog := logrus.WithFields(logrus.Fields{
