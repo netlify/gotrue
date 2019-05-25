@@ -14,13 +14,15 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
 	"github.com/gobuffalo/uuid"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
+
+	nfhttp "github.com/netlify/netlify-commons/http"
 )
 
 type HookEvent string
@@ -68,6 +70,17 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 
 	client := http.Client{
 		Timeout: timeout,
+		Transport: &http.Transport{
+			DialContext: nfhttp.SafeDialContext((&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext),
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
 	}
 
 	hooklog := logrus.WithFields(logrus.Fields{
