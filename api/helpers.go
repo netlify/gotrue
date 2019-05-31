@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 
 	"github.com/netlify/gotrue/conf"
@@ -13,6 +14,7 @@ import (
 	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
+	"github.com/sirupsen/logrus"
 )
 
 func addRequestID(globalConfig *conf.GlobalConfiguration) middlewareHandler {
@@ -138,18 +140,58 @@ func isPrivateIP(ip net.IP) bool {
 	return false
 }
 
-func isLocalAddress(addr string) bool {
-	ip := net.ParseIP(addr)
-	return isPrivateIP(ip)
+type noLocalTransport struct {
+	inner  http.RoundTripper
+	errlog logrus.FieldLogger
 }
 
-// SafeDialContext exchanges a DialContext for a SafeDialContext that will never dial a reserved IP range
-func SafeDialContext(dialContext func(ctx context.Context, network, addr string) (net.Conn, error)) func(ctx context.Context, network, addr string) (net.Conn, error) {
-	return func(ctx context.Context, network, addr string) (net.Conn, error) {
-		if isLocalAddress(addr) {
-			return nil, errors.New("Connection to local network address denied")
-		}
+func (no noLocalTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	ctx, cancel := context.WithCancel(req.Context())
 
-		return dialContext(ctx, network, addr)
+	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+		DNSDone: func(info httptrace.DNSDoneInfo) {
+			if endpoint := isLocal(info); endpoint != "" {
+				cancel()
+				if no.errlog != nil {
+					no.errlog.WithFields(logrus.Fields{
+						"original_url":     req.URL.String(),
+						"blocked_endpoint": endpoint,
+					})
+				}
+			}
+		},
+	})
+
+	req = req.WithContext(ctx)
+	return no.inner.RoundTrip(req)
+}
+
+func isLocal(info httptrace.DNSDoneInfo) string {
+	fmt.Printf("Got dns info: %v\n", info)
+	for _, addr := range info.Addrs {
+		fmt.Printf("Checking addr: %v\n", addr)
+		if isPrivateIP(addr.IP) {
+			return fmt.Sprintf("%v", addr.IP)
+		}
 	}
+	return ""
+}
+
+func SafeRountripper(trans http.RoundTripper, log logrus.FieldLogger) http.RoundTripper {
+	if trans == nil {
+		trans = http.DefaultTransport
+	}
+
+	ret := &noLocalTransport{
+		inner:  trans,
+		errlog: log.WithField("transport", "local_blocker"),
+	}
+
+	return ret
+}
+
+func SafeHTTPClient(client *http.Client, log logrus.FieldLogger) *http.Client {
+	client.Transport = SafeRountripper(client.Transport, log)
+
+	return client
 }
