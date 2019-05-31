@@ -487,12 +487,16 @@ github.com/netlify/mailme v0.0.0-20170821082834-c4a76ce443c1 h1:M2ZOTs3pghyh9s/F
 github.com/netlify/mailme v0.0.0-20170821082834-c4a76ce443c1/go.mod h1:/rGcC/hqh7XMtEAf3TGo/ZDKgtZ52ece1va5F+86HvI=
 github.com/netlify/mailme v1.0.0 h1:5E26/gGSZMrSgqkvyHcRSMjLUk5Uin2hm5Y3d4K4MbA=
 github.com/netlify/mailme v1.0.0/go.mod h1:/rGcC/hqh7XMtEAf3TGo/ZDKgtZ52ece1va5F+86HvI=
+github.com/netlify/mailme v1.0.1 h1:FHYiupIycTOgFRVWXx2LyfltVbkKhTyxvPvOB2SZVAs=
+github.com/netlify/mailme v1.0.1/go.mod h1:/rGcC/hqh7XMtEAf3TGo/ZDKgtZ52ece1va5F+86HvI=
 github.com/netlify/netlify-commons v0.7.7 h1:9U0abHrARBk7CiHTcSXV9cN262PAhzDLKP8LtlEDJzM=
 github.com/netlify/netlify-commons v0.7.7/go.mod h1:yaQkVHTO9MTOpvR+Y+Pae8VF3bWoFbk54xULGuY2z0o=
 github.com/netlify/netlify-commons v0.15.0 h1:PoPdyIePhksSeFRr4zZQH8wjbxNa2+9Y6xaBuKMVt/Y=
 github.com/netlify/netlify-commons v0.15.0/go.mod h1:5v547Bbgy/9eOPrzF85YsWcTJFVTcc5C1XewAEr9N9w=
 github.com/netlify/netlify-commons v0.15.1 h1:oibvfGrbP7Y4dBue2NpGc/SjhcBlXQ3Oqpvq8x8BLx8=
 github.com/netlify/netlify-commons v0.15.1/go.mod h1:5v547Bbgy/9eOPrzF85YsWcTJFVTcc5C1XewAEr9N9w=
+github.com/netlify/netlify-commons v0.16.0 h1:ZxpHcat7nEjOao6AZ3hxyRruQlvvRDUBjEtm3XbKOrY=
+github.com/netlify/netlify-commons v0.16.0/go.mod h1:5v547Bbgy/9eOPrzF85YsWcTJFVTcc5C1XewAEr9N9w=
 github.com/nicksnyder/go-i18n v1.10.0/go.mod h1:HrK7VCrbOvQoUAQ7Vpy7i87N7JZZZ7R2xBGjv0j365Q=
 github.com/onsi/ginkgo v1.6.0 h1:Ix8l273rp3QzYgXSR+c8d1fTG7UPgYkOSELPhiY/YGw=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=

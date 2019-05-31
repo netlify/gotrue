@@ -31,8 +31,8 @@ require (
 	github.com/juju/testing v0.0.0-20180920084828-472a3e8b2073 // indirect
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/kr/fs v0.0.0-20131111012553-2788f0dbd169 // indirect
-	github.com/netlify/mailme v1.0.0
-	github.com/netlify/netlify-commons v0.15.1
+	github.com/netlify/mailme v1.0.1
+	github.com/netlify/netlify-commons v0.16.0
 	github.com/pelletier/go-buffruneio v0.1.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/pkg/sftp v0.0.0-20160908100035-8197a2e58073 // indirect
