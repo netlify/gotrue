@@ -159,17 +159,15 @@ imports:
 - name: github.com/nats-io/nuid
   version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
 - name: github.com/netlify/mailme
-  version: c4a76ce443c1122ead2518b28cc7ffaf1091cc9a
+  version: 1ca788bed8bc0fceda9bc33611905d9865cc43f8
 - name: github.com/netlify/netlify-commons
-  version: b08431ec3d35114c2ad8bbfc5f4d872dc265bd52
+  version: 555ac538b49205d105f266c64b8f15eeaed44788
   subpackages:
   - discovery
   - graceful
   - messaging
-  - metrics
-  - metrics/transport
   - nconf
-  - tls
+  - http
 - name: github.com/pborman/uuid
   version: a97ce2ca70fa5a848076093f05e639a89ca34d06
 - name: github.com/pelletier/go-buffruneio
