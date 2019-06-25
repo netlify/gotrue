@@ -66,27 +66,14 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 		w.Retries = defaultHookRetries
 	}
 
-	client := http.Client{
-		Timeout: timeout,
-		Transport: &http.Transport{
-			DialContext: SafeDialContext((&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-				DualStack: true,
-			}).DialContext),
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
-	}
-
 	hooklog := logrus.WithFields(logrus.Fields{
 		"component":   "webhook",
 		"url":         w.URL,
 		"signed":      w.jwtSecret != "",
 		"instance_id": w.instanceID,
 	})
+	client := http.Client{}
+	client.Transport = SafeRountripper(client.Transport, hooklog)
 
 	for i := 0; i < w.Retries; i++ {
 		hooklog = hooklog.WithField("attempt", i+1)
