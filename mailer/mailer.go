@@ -6,7 +6,6 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/mailme"
 )
 
 // Mailer defines the interface a mailer must implement.
@@ -28,7 +27,7 @@ func NewMailer(instanceConfig *conf.Configuration) Mailer {
 	return &TemplateMailer{
 		SiteURL: instanceConfig.SiteURL,
 		Config:  instanceConfig,
-		Mailer: &mailme.Mailer{
+		Mailer: &MailmeMailer{
 			Host:    instanceConfig.SMTP.Host,
 			Port:    instanceConfig.SMTP.Port,
 			User:    instanceConfig.SMTP.User,
