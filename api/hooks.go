@@ -72,7 +72,9 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 		"signed":      w.jwtSecret != "",
 		"instance_id": w.instanceID,
 	})
-	client := http.Client{}
+	client := http.Client{
+		Timeout: timeout,
+	}
 	client.Transport = SafeRountripper(client.Transport, hooklog)
 
 	for i := 0; i < w.Retries; i++ {
