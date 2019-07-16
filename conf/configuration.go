@@ -85,6 +85,8 @@ type ProviderConfiguration struct {
 	Email       EmailProviderConfiguration `json:"email"`
 	Saml        SamlProviderConfiguration  `json:"saml"`
 	RedirectURL string                     `json:"redirect_url"`
+
+	TokenEncryptionKey string `json:"token_encryption_key" split_words:"true"`
 }
 
 type SMTPConfiguration struct {

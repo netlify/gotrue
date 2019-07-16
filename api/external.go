@@ -173,10 +173,15 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			}
 		}
 
+		if userData.AppMetadata != nil {
+			user.UpdateAppMetaData(tx, userData.AppMetadata)
+		}
+
 		token, terr = a.issueRefreshToken(ctx, tx, user)
 		if terr != nil {
 			return oauthError("server_error", terr.Error())
 		}
+
 		return nil
 	})
 	if err != nil {
