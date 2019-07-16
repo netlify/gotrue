@@ -14,9 +14,10 @@ const (
 )
 
 type UserProvidedData struct {
-	Email    string
-	Verified bool
-	Metadata map[string]string
+	Email       string
+	Verified    bool
+	Metadata    map[string]string
+	AppMetadata map[string]interface{}
 }
 
 // Provider is an interface for interacting with external account providers

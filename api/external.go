@@ -10,10 +10,10 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -173,10 +173,15 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			}
 		}
 
+		if userData.AppMetadata != nil {
+			user.UpdateAppMetaData(tx, userData.AppMetadata)
+		}
+
 		token, terr = a.issueRefreshToken(ctx, tx, user)
 		if terr != nil {
 			return oauthError("server_error", terr.Error())
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -276,6 +281,8 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 		return provider.NewGoogleProvider(config.External.Google)
 	case "facebook":
 		return provider.NewFacebookProvider(config.External.Facebook)
+	case "netlify":
+		return provider.NewNetlifyProvider(config.External.Netlify)
 	case "saml":
 		return provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	default:
