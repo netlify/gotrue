@@ -223,32 +223,32 @@ func (no noLocalTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	ctx, cancel := context.WithCancel(req.Context())
 
 	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
-		DNSDone: func(info httptrace.DNSDoneInfo) {
-			if endpoint := isLocal(info); endpoint != "" {
+		ConnectStart: func(network, addr string) {
+			fmt.Printf("Checking network %v\n", addr)
+			host, _, err := net.SplitHostPort(addr)
+			if err != nil {
 				cancel()
-				if no.errlog != nil {
-					no.errlog.WithFields(logrus.Fields{
-						"original_url":     req.URL.String(),
-						"blocked_endpoint": endpoint,
-					})
-				}
+				fmt.Printf("Canceleing dur to error in addr parsing %v", err)
+				return
 			}
+			ip := net.ParseIP(host)
+			if ip == nil {
+				cancel()
+				fmt.Printf("Canceleing dur to error in ip parsing %v", host)
+				return
+			}
+
+			if isPrivateIP(ip) {
+				cancel()
+				fmt.Println("Canceleing dur to private ip range")
+				return
+			}
+
 		},
 	})
 
 	req = req.WithContext(ctx)
 	return no.inner.RoundTrip(req)
-}
-
-func isLocal(info httptrace.DNSDoneInfo) string {
-	fmt.Printf("Got dns info: %v\n", info)
-	for _, addr := range info.Addrs {
-		fmt.Printf("Checking addr: %v\n", addr)
-		if isPrivateIP(addr.IP) {
-			return fmt.Sprintf("%v", addr.IP)
-		}
-	}
-	return ""
 }
 
 func SafeRountripper(trans http.RoundTripper, log logrus.FieldLogger) http.RoundTripper {
