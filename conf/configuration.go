@@ -9,7 +9,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/netlify/netlify-commons/nconf"
 )
 
 // OAuthProviderConfiguration holds all config related to external account providers.
@@ -61,8 +60,8 @@ type GlobalConfiguration struct {
 	}
 	DB                DBConfiguration
 	External          ProviderConfiguration
-	Logging           nconf.LoggingConfig `envconfig:"LOG"`
-	OperatorToken     string              `split_words:"true" required:"true"`
+	Logging           LoggingConfig `envconfig:"LOG"`
+	OperatorToken     string        `split_words:"true" required:"true"`
 	MultiInstanceMode bool
 	SMTP              SMTPConfiguration
 }
@@ -157,7 +156,7 @@ func LoadGlobal(filename string) (*GlobalConfiguration, error) {
 		return nil, err
 	}
 
-	if _, err := nconf.ConfigureLogging(&config.Logging); err != nil {
+	if _, err := ConfigureLogging(&config.Logging); err != nil {
 		return nil, err
 	}
 
