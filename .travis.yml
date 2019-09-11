@@ -2,7 +2,7 @@
 language: go
 
 go:
-  - 1.11.4
+  - 1.13
 
 env:
   - GO111MODULE=on
@@ -17,4 +17,4 @@ install: make deps
 script: make migrate_test all
 
 notifications:
-    email: false
+  email: false
