@@ -20,7 +20,6 @@ require (
 	github.com/jonboulle/clockwork v0.0.0-20180716110948-e7c6d408fd5c // indirect
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
-	github.com/netlify/mailme v0.0.0-20170821082834-c4a76ce443c1
 	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.4.3 // indirect
 	github.com/pkg/errors v0.8.1
@@ -38,7 +37,8 @@ require (
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20190515235946-4f9510c6a12d // indirect
 	google.golang.org/api v0.0.0-20170821230356-dd6bdadc5852 // indirect
-	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
