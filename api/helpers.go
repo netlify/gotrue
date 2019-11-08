@@ -140,6 +140,17 @@ func isPrivateIP(ip net.IP) bool {
 	return false
 }
 
+func removeLocalhostFromPrivateIPBlock() *net.IPNet {
+	var localhost *net.IPNet
+	localhost, privateIPBlocks = privateIPBlocks[0], privateIPBlocks[1:]
+
+	return localhost
+}
+
+func unshiftPrivateIPBlock(address *net.IPNet) {
+	privateIPBlocks = append([]*net.IPNet{address}, privateIPBlocks...)
+}
+
 type noLocalTransport struct {
 	inner  http.RoundTripper
 	errlog logrus.FieldLogger

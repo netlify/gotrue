@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -128,6 +129,11 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		assert.EqualValues(1, usermeta["a"])
 	}))
 	defer svr.Close()
+
+	// Allowing connection to localhost for the tests only
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
+
 	ts.Config.Webhook = conf.WebhookConfig{
 		URL:        svr.URL,
 		Retries:    1,
@@ -150,6 +156,8 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(http.StatusOK, w.Code)
 	assert.Equal(1, callCount)
+
+	privateIPBlocks = append([]*net.IPNet{localhost}, privateIPBlocks...)
 }
 
 func (ts *SignupTestSuite) TestFailingWebhook() {

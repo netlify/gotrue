@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage/test"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,6 +43,10 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer svr.Close()
+
+	// Allowing connection to localhost for the tests only
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
 
 	config := &conf.Configuration{
 		Webhook: conf.WebhookConfig{
@@ -83,6 +87,10 @@ func TestSignupHookFromClaims(t *testing.T) {
 	}))
 	defer svr.Close()
 
+	// Allowing connection to localhost for the tests only
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
+
 	config := &conf.Configuration{
 		Webhook: conf.WebhookConfig{
 			Events: []string{"signup"},
@@ -111,6 +119,9 @@ func TestHookRetry(t *testing.T) {
 		}
 	}))
 	defer svr.Close()
+	// Allowing connection to localhost for the tests only
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
 
 	config := &conf.WebhookConfig{
 		URL:     svr.URL,
@@ -137,6 +148,10 @@ func TestHookTimeout(t *testing.T) {
 		<-time.After(2 * time.Second)
 	}))
 	defer svr.Close()
+
+	// Allowing connection to localhost for the tests only
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
 
 	config := &conf.WebhookConfig{
 		URL:        svr.URL,
