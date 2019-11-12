@@ -14,8 +14,8 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
 	"github.com/gobuffalo/uuid"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/netlify/gotrue/conf"
@@ -75,7 +75,7 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 	client := http.Client{
 		Timeout: timeout,
 	}
-	client.Transport = SafeRountripper(client.Transport, hooklog)
+	client.Transport = SafeRoundtripper(client.Transport, hooklog)
 
 	for i := 0; i < w.Retries; i++ {
 		hooklog = hooklog.WithField("attempt", i+1)

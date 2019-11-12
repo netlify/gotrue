@@ -115,7 +115,7 @@ func (t *TemplateCache) Set(key, value string, expirationTime time.Duration) (*t
 
 func (t *TemplateCache) fetchTemplate(url string, triesLeft int) (string, error) {
 	client := &http.Client{}
-	client.Transport = SafeRountripper(client.Transport, logrus.New())
+	client.Transport = SafeRoundtripper(client.Transport, logrus.New())
 
 	resp, err := client.Get(url)
 	if err != nil && triesLeft > 0 {
@@ -251,7 +251,7 @@ func (no noLocalTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	return no.inner.RoundTrip(req)
 }
 
-func SafeRountripper(trans http.RoundTripper, log logrus.FieldLogger) http.RoundTripper {
+func SafeRoundtripper(trans http.RoundTripper, log logrus.FieldLogger) http.RoundTripper {
 	if trans == nil {
 		trans = http.DefaultTransport
 	}
@@ -265,7 +265,7 @@ func SafeRountripper(trans http.RoundTripper, log logrus.FieldLogger) http.Round
 }
 
 func SafeHTTPClient(client *http.Client, log logrus.FieldLogger) *http.Client {
-	client.Transport = SafeRountripper(client.Transport, log)
+	client.Transport = SafeRoundtripper(client.Transport, log)
 
 	return client
 }
