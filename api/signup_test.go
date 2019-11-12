@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -156,8 +155,6 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(http.StatusOK, w.Code)
 	assert.Equal(1, callCount)
-
-	privateIPBlocks = append([]*net.IPNet{localhost}, privateIPBlocks...)
 }
 
 func (ts *SignupTestSuite) TestFailingWebhook() {
