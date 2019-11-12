@@ -9,7 +9,6 @@ WORKDIR /go/src/github.com/netlify/gotrue
 COPY . /go/src/github.com/netlify/gotrue
 
 RUN make deps build
-RUN go build -a -installsuffix cgo -o gotrue
 
 
 FROM alpine:3.7
