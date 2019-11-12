@@ -14,8 +14,8 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
 	"github.com/gobuffalo/uuid"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/netlify/gotrue/conf"
@@ -66,16 +66,16 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 		w.Retries = defaultHookRetries
 	}
 
-	client := http.Client{
-		Timeout: timeout,
-	}
-
 	hooklog := logrus.WithFields(logrus.Fields{
 		"component":   "webhook",
 		"url":         w.URL,
 		"signed":      w.jwtSecret != "",
 		"instance_id": w.instanceID,
 	})
+	client := http.Client{
+		Timeout: timeout,
+	}
+	client.Transport = SafeRoundtripper(client.Transport, hooklog)
 
 	for i := 0; i < w.Retries; i++ {
 		hooklog = hooklog.WithField("attempt", i+1)

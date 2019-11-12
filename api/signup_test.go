@@ -10,9 +10,9 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -128,6 +128,11 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		assert.EqualValues(1, usermeta["a"])
 	}))
 	defer svr.Close()
+
+	// Allowing connection to localhost for the tests only
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
+
 	ts.Config.Webhook = conf.WebhookConfig{
 		URL:        svr.URL,
 		Retries:    1,
