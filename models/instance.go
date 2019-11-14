@@ -80,8 +80,8 @@ func GetInstanceByUUID(tx *storage.Connection, uuid uuid.UUID) (*Instance, error
 func DeleteInstance(conn *storage.Connection, instance *Instance) error {
 	return conn.Transaction(func(tx *storage.Connection) error {
 		delModels := map[string]*pop.Model{
-			"user":          &pop.Model{Value: User{}},
-			"refresh token": &pop.Model{Value: RefreshToken{}},
+			"user":          &pop.Model{Value: &User{}},
+			"refresh token": &pop.Model{Value: &RefreshToken{}},
 		}
 
 		for name, dm := range delModels {
