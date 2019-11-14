@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
-	"github.com/gobuffalo/uuid"
 )
 
 type AuditAction string
@@ -55,7 +55,7 @@ type AuditLogEntry struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
-func (a *AuditLogEntry) TableName() string {
+func (AuditLogEntry) TableName() string {
 	tableName := "audit_log_entries"
 
 	if namespace.GetNamespace() != "" {
