@@ -7,24 +7,20 @@ require (
 	github.com/beevik/etree v0.0.0-20180609182452-90dafc1e1f11
 	github.com/cockroachdb/cockroach-go v0.0.0-20190925194419-606b3d062051 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/fatih/color v1.7.0 // indirect
 	github.com/go-chi/chi v3.1.4+incompatible
 	github.com/go-sql-driver/mysql v1.4.1
-	github.com/gobuffalo/depgen v0.0.0-20190329151759-d478694a28d3 // indirect
 	github.com/gobuffalo/fizz v1.9.5 // indirect
 	github.com/gobuffalo/genny v0.4.1 // indirect
-	github.com/gobuffalo/gitgen v0.0.0-20190315122116-cc086187d211 // indirect
 	github.com/gobuffalo/nulls v0.1.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.7.1 // indirect
 	github.com/gobuffalo/pop v4.12.2+incompatible
 	github.com/gobuffalo/tags v2.1.6+incompatible // indirect
 	github.com/gobuffalo/uuid v2.0.5+incompatible
-	github.com/gobuffalo/x v0.0.0-20181110221217-14085ca3e1a9 // indirect
 	github.com/imdario/mergo v0.0.0-20160216103600-3e95a51e0639
 	github.com/jackc/pgconn v1.1.0 // indirect
-	github.com/jackc/pgx v3.6.0+incompatible // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/jonboulle/clockwork v0.0.0-20180716110948-e7c6d408fd5c // indirect
-	github.com/karrick/godirwalk v1.13.0 // indirect
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
@@ -40,14 +36,13 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20191107222254-f4817d981bb6
-	golang.org/x/lint v0.0.0-20190930215403-16217165b5de // indirect
 	golang.org/x/net v0.0.0-20191108063844-7e6e90b9ea88 // indirect
 	golang.org/x/oauth2 v0.0.0-20170807180024-9a379c6b3e95
 	golang.org/x/sys v0.0.0-20191105231009-c1f44814a5cd // indirect
-	golang.org/x/tools v0.0.0-20191107235519-f7ea15e60b12 // indirect
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
 	google.golang.org/api v0.0.0-20170821230356-dd6bdadc5852 // indirect
 	google.golang.org/appengine v1.6.5 // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect
 	gopkg.in/yaml.v2 v2.2.5 // indirect
