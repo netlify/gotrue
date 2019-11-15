@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage/test"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -169,6 +169,49 @@ func TestHookNoServer(t *testing.T) {
 	herr, ok := err.(*HTTPError)
 	require.True(t, ok)
 	assert.Equal(t, http.StatusBadGateway, herr.Code)
+}
+
+func TestHookErrorParsing(t *testing.T) {
+	globalConfig, err := conf.LoadGlobal(apiTestConfig)
+	require.NoError(t, err)
+
+	conn, err := test.SetupDBConnection(globalConfig)
+	require.NoError(t, err)
+
+	iid := uuid.Must(uuid.NewV4())
+	user, err := models.NewUser(iid, "test@truth.com", "thisisapassword", "", nil)
+	require.NoError(t, err)
+
+	var callCount int
+	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		defer squash(r.Body.Close)
+		raw, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+		// create custom error in webhook
+		var data map[string]string
+		data["WebhookError"] = "Test Error"
+		require.NoError(t, json.Unmarshal(raw, &data))
+
+		assert.Equal(t, "Test Error", data["WebhookError"])
+		// generate error
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer svr.Close()
+
+	config := &conf.Configuration{
+		Webhook: conf.WebhookConfig{
+			Events: []string{"signup"},
+		},
+	}
+
+	ctx := context.Background()
+	ctx = withFunctionHooks(ctx, map[string]string{
+		"signup": svr.URL,
+	})
+	err = triggerHook(ctx, conn, SignupEvent, user, iid, config)
+	// check if error message was parsed correctly
+	assert.Equal(t, "Test Error", err.Error())
 }
 
 func squash(f func() error) { _ = f }

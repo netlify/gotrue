@@ -14,8 +14,8 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
 	"github.com/gobuffalo/uuid"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/netlify/gotrue/conf"
@@ -54,6 +54,7 @@ type Webhook struct {
 type WebhookResponse struct {
 	AppMetaData  map[string]interface{} `json:"app_metadata,omitempty"`
 	UserMetaData map[string]interface{} `json:"user_metadata,omitempty"`
+	WebhookError string                 `json:"webhook_error,omitempty"`
 }
 
 func (w *Webhook) trigger() (io.ReadCloser, error) {
@@ -76,7 +77,8 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 		"signed":      w.jwtSecret != "",
 		"instance_id": w.instanceID,
 	})
-
+	// will return body even if there is error so may as well initiate at top
+	var body io.ReadCloser
 	for i := 0; i < w.Retries; i++ {
 		hooklog = hooklog.WithField("attempt", i+1)
 		hooklog.Info("Starting to perform signup hook request")
@@ -120,21 +122,28 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 			"status_code": rsp.StatusCode,
 			"dur":         dur.Nanoseconds(),
 		})
+
 		switch rsp.StatusCode {
 		case http.StatusOK, http.StatusNoContent, http.StatusAccepted:
 			rspLog.Infof("Finished processing webhook in %s", dur)
-			var body io.ReadCloser
 			if rsp.ContentLength > 0 {
 				body = rsp.Body
 			}
 			return body, nil
 		default:
 			rspLog.Infof("Bad response for webhook %d in %s", rsp.StatusCode, dur)
+			// if there is body let's return it so triggerHook can handle error parsing
+			if rsp.ContentLength > 0 {
+				body = rsp.Body
+			}
+			hooklog.Infof("Failed to process webhook for %s after %d attempts", w.URL, w.Retries)
+			// return body and non nil error which will be handled in triggerHook
+			return body, unprocessableEntityError("Failed to handle signup webhook")
 		}
 	}
 
 	hooklog.Infof("Failed to process webhook for %s after %d attempts", w.URL, w.Retries)
-	return nil, unprocessableEntityError("Failed to handle signup webhook")
+	return body, unprocessableEntityError("Failed to handle signup webhook")
 }
 
 func (w *Webhook) generateSignature() (string, error) {
@@ -260,6 +269,17 @@ func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent,
 			}
 			return nil
 		})
+	} else if err != nil && body != nil {
+		// parse error message from body
+		webhookRsp := &WebhookResponse{}
+		decoder := json.NewDecoder(body)
+		if err = decoder.Decode(webhookRsp); err != nil {
+			return internalServerError("Webhook returned malformed JSON: %v", err).WithInternalError(err)
+		}
+		// if there is error message in format we expect replace default error message with the one specified by webhook
+		if webhookRsp.WebhookError != "" {
+			return unprocessableEntityError(webhookRsp.WebhookError)
+		}
 	}
 	return err
 }
