@@ -1,15 +1,15 @@
 package models
 
 import (
-	"github.com/netlify/gotrue/storage/namespace"
 	"database/sql"
 	"time"
 
 	"github.com/gobuffalo/pop"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage"
+	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
-	"github.com/gobuffalo/uuid"
 )
 
 const baseConfigKey = ""
@@ -25,13 +25,13 @@ type Instance struct {
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
-func (i *Instance) TableName() string {
+func (Instance) TableName() string {
 	tableName := "instances"
 
 	if namespace.GetNamespace() != "" {
 		return namespace.GetNamespace() + "_" + tableName
 	}
-	
+
 	return tableName
 }
 

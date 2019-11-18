@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/gobuffalo/pop"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
-	"github.com/gobuffalo/uuid"
 )
 
 // RefreshToken is the database model for refresh tokens.
@@ -25,14 +25,13 @@ type RefreshToken struct {
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
-
-func (rt *RefreshToken) TableName() string {
+func (RefreshToken) TableName() string {
 	tableName := "refresh_tokens"
 
 	if namespace.GetNamespace() != "" {
 		return namespace.GetNamespace() + "_" + tableName
 	}
-	
+
 	return tableName
 }
 
