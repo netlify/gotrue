@@ -5,15 +5,10 @@ import (
 
 	"github.com/gobuffalo/pop"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTableNameNamespacing(t *testing.T) {
-	ns := namespace.GetNamespace()
-	namespace.SetNamespace("test")
-	defer namespace.SetNamespace(ns)
-
 	cases := []struct {
 		expected string
 		value    interface{}
