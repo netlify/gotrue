@@ -66,7 +66,11 @@ Chooses what dialect of database you want. Must be `mysql`.
 
 `DATABASE_URL` (no prefix) / `DB_DATABASE_URL` - `string` **required**
 
-Connection string for the database.
+Connection string for the database. 
+
+The connection string requires the following two parameters: `?parseTime=true&multiStatements=true`
+
+Eg: `mysql://user:pass@tcp(127.0.0.1:3306)/database?parseTime=true&multiStatements=true`
 
 `DB_NAMESPACE` - `string`
 
