@@ -1,7 +1,6 @@
 module github.com/netlify/gotrue
 
 require (
-	cloud.google.com/go v0.0.0-20170822200954-98f5696b1026 // indirect
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20170623214735-571947b0f240
 	github.com/badoux/checkmail v0.0.0-20170203135005-d0a759655d62
 	github.com/beevik/etree v0.0.0-20180609182452-90dafc1e1f11
@@ -41,7 +40,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20191107222254-f4817d981bb6
 	golang.org/x/net v0.0.0-20191108063844-7e6e90b9ea88 // indirect
-	golang.org/x/oauth2 v0.0.0-20170807180024-9a379c6b3e95
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20191105231009-c1f44814a5cd // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
