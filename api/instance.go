@@ -112,7 +112,11 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 		if err := i.UpdateConfig(a.db, params.BaseConfig); err != nil {
 			return internalServerError("Database error updating instance").WithInternalError(err)
 		}
-		i.BaseConfig.SMTP.Pass = "" // hide from response
+	}
+
+	// Hide SMTP credential from response
+	if i.BaseConfig != nil {
+		i.BaseConfig.SMTP.Pass = ""
 	}
 	return sendJSON(w, http.StatusOK, i)
 }
