@@ -90,7 +90,7 @@ type SMTPConfiguration struct {
 	Host         string        `json:"host"`
 	Port         int           `json:"port" default:"587"`
 	User         string        `json:"user"`
-	Pass         string        `json:"pass"`
+	Pass         string        `json:"pass,omitempty"`
 	AdminEmail   string        `json:"admin_email" split_words:"true"`
 }
 
