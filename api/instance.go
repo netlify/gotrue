@@ -79,6 +79,11 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error creating instance").WithInternalError(err)
 	}
 
+	// hide pass in response
+	if i.BaseConfig != nil {
+		i.BaseConfig.SMTP.Pass = ""
+	}
+
 	resp := InstanceResponse{
 		Instance: i,
 		Endpoint: a.config.API.Endpoint,
@@ -107,6 +112,7 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 		if err := i.UpdateConfig(a.db, params.BaseConfig); err != nil {
 			return internalServerError("Database error updating instance").WithInternalError(err)
 		}
+		i.BaseConfig.SMTP.Pass = "" // hide from response
 	}
 	return sendJSON(w, http.StatusOK, i)
 }
