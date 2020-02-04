@@ -89,7 +89,9 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 
 func (a *API) GetInstance(w http.ResponseWriter, r *http.Request) error {
 	i := getInstance(r.Context())
-	i.BaseConfig.SMTP.Pass = ""
+	if i.BaseConfig != nil {
+		i.BaseConfig.SMTP.Pass = ""
+	}
 	return sendJSON(w, http.StatusOK, i)
 }
 
