@@ -6,10 +6,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/pkg/errors"
-	"github.com/gobuffalo/uuid"
 )
 
 func (a *API) loadInstance(w http.ResponseWriter, r *http.Request) (context.Context, error) {
@@ -89,6 +89,7 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 
 func (a *API) GetInstance(w http.ResponseWriter, r *http.Request) error {
 	i := getInstance(r.Context())
+	i.BaseConfig.SMTP.Pass = ""
 	return sendJSON(w, http.StatusOK, i)
 }
 
