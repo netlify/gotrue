@@ -75,7 +75,8 @@ Adds a prefix to all table names.
 ### Logging
 
 ```
-LOG_LEVEL=debug
+GOTRUE_LOG_LEVEL=debug
+GOTRUE_LOG_FILE=/var/log/go/gotrue.log
 ```
 
 `LOG_LEVEL` - `string`
