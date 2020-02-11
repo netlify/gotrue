@@ -1,7 +1,8 @@
 [build]
-  base = "www"
-  command = "npm run build"
-  publish = "www/dist"
+  publish = "www"
 
-[context.deploy-preview]
-  command = "npm run build-preview"
+[[redirects]]
+from = "/*"
+to = "https://github.com/netlify/gotrue"
+status = 307
+force = true
