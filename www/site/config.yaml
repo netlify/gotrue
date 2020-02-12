@@ -1,6 +1,0 @@
-baseurl: "/"
-languageCode: "en-us"
-title: "GoTrue API"
-disable404: true
-pluralizeListTitles: false
-metaDataFormat: "yaml"
