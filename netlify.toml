@@ -5,5 +5,5 @@
 [[redirects]]
 from = "/*"
 to = "https://github.com/netlify/gotrue"
-status = 307
+status = 302
 force = true
