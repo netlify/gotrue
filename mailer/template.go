@@ -4,13 +4,14 @@ import (
 	"github.com/badoux/checkmail"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/mailme"
 )
 
 // TemplateMailer will send mail and use templates from the site for easy mail styling
 type TemplateMailer struct {
 	SiteURL string
 	Config  *conf.Configuration
-	Mailer  *MailmeMailer
+	Mailer  *mailme.Mailer
 }
 
 const defaultInviteMail = `<h2>You have been invited</h2>

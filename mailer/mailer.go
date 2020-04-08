@@ -6,6 +6,8 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/mailme"
+	"github.com/sirupsen/logrus"
 )
 
 // Mailer defines the interface a mailer must implement.
@@ -27,13 +29,14 @@ func NewMailer(instanceConfig *conf.Configuration) Mailer {
 	return &TemplateMailer{
 		SiteURL: instanceConfig.SiteURL,
 		Config:  instanceConfig,
-		Mailer: &MailmeMailer{
+		Mailer: &mailme.Mailer{
 			Host:    instanceConfig.SMTP.Host,
 			Port:    instanceConfig.SMTP.Port,
 			User:    instanceConfig.SMTP.User,
 			Pass:    instanceConfig.SMTP.Pass,
 			From:    instanceConfig.SMTP.AdminEmail,
 			BaseURL: instanceConfig.SiteURL,
+			Logger:  logrus.New(),
 		},
 	}
 }
