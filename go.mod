@@ -8,7 +8,7 @@ require (
 	github.com/cockroachdb/cockroach-go v0.0.0-20190925194419-606b3d062051 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fatih/color v1.7.0 // indirect
-	github.com/go-chi/chi v3.1.4+incompatible
+	github.com/go-chi/chi v4.0.2+incompatible
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/gobuffalo/fizz v1.9.5 // indirect
 	github.com/gobuffalo/genny v0.4.1 // indirect
@@ -21,13 +21,14 @@ require (
 	github.com/jackc/pgconn v1.1.0 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/jonboulle/clockwork v0.0.0-20180716110948-e7c6d408fd5c // indirect
-	github.com/kelseyhightower/envconfig v1.3.0
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0 // indirect
+	github.com/netlify/mailme v1.1.1
 	github.com/pkg/errors v0.8.1
 	github.com/rogpeppe/go-internal v1.5.0 // indirect
-	github.com/rs/cors v0.0.0-20170608165155-8dd4211afb5d
+	github.com/rs/cors v1.6.0
 	github.com/russellhaering/gosaml2 v0.3.1
 	github.com/russellhaering/goxmldsig v0.0.0-20180430223755-7acd5e4a6ef7
 	github.com/sebest/xff v0.0.0-20160910043805-6c115e0ffa35
