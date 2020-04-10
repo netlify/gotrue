@@ -145,3 +145,28 @@ func (ts *ExternalTestSuite) TestSignupExternalUnsupported() {
 	ts.API.handler.ServeHTTP(w, req)
 	ts.Equal(w.Code, http.StatusBadRequest)
 }
+
+// TestSignupExternalMicrosoft tests API /authorize for microsoft
+func (ts *ExternalTestSuite) TestSignupExternalMicrosoft() {
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=microsoft", nil)
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusFound, w.Code)
+	u, err := url.Parse(w.Header().Get("Location"))
+	ts.Require().NoError(err, "redirect url parse failed")
+	q := u.Query()
+	ts.Equal(ts.Config.External.Google.RedirectURI, q.Get("redirect_uri"))
+	ts.Equal(ts.Config.External.Google.ClientID, q.Get("client_id"))
+	ts.Equal("code", q.Get("response_type"))
+	ts.Equal("User.Read", q.Get("scope"))
+
+	claims := ExternalProviderClaims{}
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	_, err = p.ParseWithClaims(q.Get("state"), &claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(ts.API.config.OperatorToken), nil
+	})
+	ts.Require().NoError(err)
+
+	ts.Equal("microsoft", claims.Provider)
+	ts.Equal(ts.Config.SiteURL, claims.SiteURL)
+}
