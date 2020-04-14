@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"errors"
-	"strings"
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
@@ -16,7 +15,7 @@ const (
 
 type bitbucketProvider struct {
 	*oauth2.Config
-	APIHost string
+	APIPath string
 }
 
 type bitbucketUser struct {
@@ -45,10 +44,7 @@ func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, e
 	}
 
 	authHost := chooseHost(ext.URL, defaultBitbucketAuthBase)
-	apiHost := chooseHost(ext.URL, defaultBitbucketAPIBase)
-	if !strings.HasSuffix(apiHost, defaultBitbucketAPIBase) {
-		apiHost += "/2.0"
-	}
+	apiPath := chooseHost(ext.URL, defaultBitbucketAPIBase) + "/2.0"
 
 	return &bitbucketProvider{
 		Config: &oauth2.Config{
@@ -61,7 +57,7 @@ func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, e
 			RedirectURL: ext.RedirectURI,
 			Scopes:      []string{"account", "email"},
 		},
-		APIHost: apiHost,
+		APIPath: apiPath,
 	}, nil
 }
 
@@ -71,7 +67,7 @@ func (g bitbucketProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 
 func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
 	var u bitbucketUser
-	if err := makeRequest(ctx, tok, g.Config, g.APIHost+"/user", &u); err != nil {
+	if err := makeRequest(ctx, tok, g.Config, g.APIPath+"/user", &u); err != nil {
 		return nil, err
 	}
 
@@ -83,7 +79,7 @@ func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (
 	}
 
 	var emails bitbucketEmails
-	if err := makeRequest(ctx, tok, g.Config, g.APIHost+"/user/emails", &emails); err != nil {
+	if err := makeRequest(ctx, tok, g.Config, g.APIPath+"/user/emails", &emails); err != nil {
 		return nil, err
 	}
 
