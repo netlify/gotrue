@@ -69,7 +69,9 @@ func (p facebookProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*
 			nameKey:      strings.TrimSpace(u.FirstName + " " + u.LastName),
 			avatarURLKey: u.Avatar.Data.URL,
 		},
-		Email:    u.Email,
-		Verified: true,
+		Emails: []Email{{
+			Email:    u.Email,
+			Verified: true,
+		}},
 	}, nil
 }

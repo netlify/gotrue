@@ -53,15 +53,20 @@ func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 	}
 
 	data := &UserProvidedData{
-		Email:    u.Email,
-		Verified: u.EmailVerified,
 		Metadata: map[string]string{
 			nameKey:      u.Name,
 			avatarURLKey: u.AvatarURL,
 		},
 	}
 
-	if data.Email == "" {
+	if u.Email != "" {
+		data.Emails = append(data.Emails, Email{
+			Email:    u.Email,
+			Verified: u.EmailVerified,
+		})
+	}
+
+	if len(data.Emails) <= 0 {
 		return nil, errors.New("Unable to find email with Google provider")
 	}
 

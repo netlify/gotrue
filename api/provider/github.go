@@ -83,14 +83,10 @@ func (g githubProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 	}
 
 	for _, e := range emails {
-		if e.Primary {
-			data.Email = e.Email
-			data.Verified = e.Verified
-			break
-		}
+		data.Emails = append(data.Emails, Email{Email: e.Email, Verified: e.Verified})
 	}
 
-	if data.Email == "" {
+	if len(data.Emails) <= 0 {
 		return nil, errors.New("Unable to find email with GitHub provider")
 	}
 

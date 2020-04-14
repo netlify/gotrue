@@ -13,9 +13,13 @@ const (
 	aliasKey     = "slug"
 )
 
-type UserProvidedData struct {
+type Email struct {
 	Email    string
 	Verified bool
+}
+
+type UserProvidedData struct {
+	Emails   []Email
 	Metadata map[string]string
 }
 

@@ -78,14 +78,14 @@ func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (
 
 	if len(emails.Values) > 0 {
 		for _, e := range emails.Values {
-			if e.Primary {
-				data.Email = e.Email
-				data.Verified = e.Verified
-			}
+			data.Emails = append(data.Emails, Email{
+				Email:    e.Email,
+				Verified: e.Verified,
+			})
 		}
 	}
 
-	if data.Email == "" {
+	if len(data.Emails) <= 0 {
 		return nil, errors.New("Unable to find email with Bitbucket provider")
 	}
 
