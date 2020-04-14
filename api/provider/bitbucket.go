@@ -3,21 +3,20 @@ package provider
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/bitbucket"
 )
 
-// Bitbucket
-
 const (
-	bitbucketBaseURL   = "https://api.bitbucket.org/2.0/user"
-	bitbucketEmailsURL = bitbucketBaseURL + "/emails"
+	defaultBitbucketAuthBase = "bitbucket.org"
+	defaultBitbucketAPIBase  = "api.bitbucket.org"
 )
 
 type bitbucketProvider struct {
 	*oauth2.Config
+	APIHost string
 }
 
 type bitbucketUser struct {
@@ -37,20 +36,32 @@ type bitbucketEmails struct {
 	Values []bitbucketEmail `json:"values"`
 }
 
+const defaultBitbucketHost = "bitbucket.org"
+
 // NewBitbucketProvider creates a Bitbucket account provider.
 func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}
 
+	authHost := chooseHost(ext.URL, defaultBitbucketAuthBase)
+	apiHost := chooseHost(ext.URL, defaultBitbucketAPIBase)
+	if !strings.HasSuffix(apiHost, defaultBitbucketAPIBase) {
+		apiHost += "/2.0"
+	}
+
 	return &bitbucketProvider{
-		&oauth2.Config{
+		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
-			Endpoint:     bitbucket.Endpoint,
-			RedirectURL:  ext.RedirectURI,
-			Scopes:       []string{"account", "email"},
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  authHost + "/site/oauth2/authorize",
+				TokenURL: authHost + "/site/oauth2/access_token",
+			},
+			RedirectURL: ext.RedirectURI,
+			Scopes:      []string{"account", "email"},
 		},
+		APIHost: apiHost,
 	}, nil
 }
 
@@ -60,7 +71,7 @@ func (g bitbucketProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 
 func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
 	var u bitbucketUser
-	if err := makeRequest(ctx, tok, g.Config, bitbucketBaseURL, &u); err != nil {
+	if err := makeRequest(ctx, tok, g.Config, g.APIHost+"/user", &u); err != nil {
 		return nil, err
 	}
 
@@ -72,7 +83,7 @@ func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (
 	}
 
 	var emails bitbucketEmails
-	if err := makeRequest(ctx, tok, g.Config, bitbucketEmailsURL, &emails); err != nil {
+	if err := makeRequest(ctx, tok, g.Config, g.APIHost+"/user/emails", &emails); err != nil {
 		return nil, err
 	}
 
