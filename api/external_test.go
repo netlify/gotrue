@@ -38,6 +38,7 @@ func TestExternal(t *testing.T) {
 
 func (ts *ExternalTestSuite) SetupTest() {
 	ts.Config.DisableSignup = false
+	ts.Config.Mailer.Autoconfirm = false
 
 	models.TruncateAll(ts.API.db)
 }
@@ -405,7 +406,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 	tokenCount, userCount := 0, 0
 	code := "authcode"
 	gitlabUser := `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
-	emails := `[{"email":"gitlab@example.com"}]`
+	emails := `[{"id":1,"email":"gitlab@example.com"}]`
 	server, u := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
@@ -431,13 +432,14 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenNoUser() {
+	// additional emails from GitLab don't return confirm status
 	ts.Config.Mailer.Autoconfirm = true
 	ts.Config.DisableSignup = true
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
 	gitlabUser := `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
-	emails := `[{"email":"gitlab@example.com"}]`
+	emails := `[{"id":1,"email":"gitlab@example.com"}]`
 	server, u := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
@@ -465,7 +467,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithPri
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"email":"gitlab@example.com","name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
+	gitlabUser := `{"email":"gitlab@example.com","name":"Gitlab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
 	emails := "[]"
 	server, u := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
@@ -492,6 +494,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithPri
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithSecondaryEmail() {
+	// additional emails from GitLab don't return confirm status
+	ts.Config.Mailer.Autoconfirm = true
 	ts.Config.DisableSignup = true
 
 	ts.createUser("secondary@example.com", "GitLab Test", "http://example.com/avatar")
@@ -499,7 +503,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithSec
 	tokenCount, userCount := 0, 0
 	code := "authcode"
 	gitlabUser := `{"email":"primary@example.com","name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
-	emails := `[{"email":"secondary@example.com", "Verified": true}]`
+	emails := `[{"id":1,"email":"secondary@example.com"}]`
 	server, u := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 

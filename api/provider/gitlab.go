@@ -24,6 +24,14 @@ type gitlabUser struct {
 	ConfirmedAt string `json:"confirmed_at"`
 }
 
+<<<<<<< HEAD
+=======
+type gitlabUserEmail struct {
+	ID    int    `json:"id"`
+	Email string `json:"email"`
+}
+
+>>>>>>> fix: add gitlab types and handle primary email confirmation
 func chooseHost(base, defaultHost string) string {
 	if base == "" {
 		return "https://" + defaultHost
@@ -77,21 +85,19 @@ func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 		},
 	}
 
-	if u.Email != "" {
-		data.Email = u.Email
-		data.Verified = u.ConfirmedAt != ""
-	} else {
-	var emails []*githubUserEmail
+	var emails []*gitlabUserEmail
 	if err := makeRequest(ctx, tok, g.Config, g.Host+"/api/v4/user/emails", &emails); err != nil {
 		return nil, err
 	}
 
 	for _, e := range emails {
-		data.Emails = append(data.Emails, Email{Email: e.Email, Verified: e.Verified, Primary: false})
+		// additional emails from GitLab don't return confirm status
+		data.Emails = append(data.Emails, Email{Email: e.Email, Verified: false, Primary: false})
 	}
 
 	if u.Email != "" {
-		data.Emails = append(data.Emails, Email{Email: u.Email, Verified: true, Primary: true})
+		verified := u.ConfirmedAt != ""
+		data.Emails = append(data.Emails, Email{Email: u.Email, Verified: verified, Primary: true})
 	}
 
 	if len(data.Emails) <= 0 {
