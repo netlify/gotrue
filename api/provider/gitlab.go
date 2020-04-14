@@ -87,11 +87,11 @@ func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 	}
 
 	for _, e := range emails {
-		data.Emails = append(data.Emails, Email{Email: e.Email, Verified: e.Verified})
+		data.Emails = append(data.Emails, Email{Email: e.Email, Verified: e.Verified, Primary: false})
 	}
 
 	if u.Email != "" {
-		data.Emails = append(data.Emails, Email{Email: u.Email, Verified: true})
+		data.Emails = append(data.Emails, Email{Email: u.Email, Verified: true, Primary: true})
 	}
 
 	if len(data.Emails) <= 0 {

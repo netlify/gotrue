@@ -16,6 +16,7 @@ const (
 type Email struct {
 	Email    string
 	Verified bool
+	Primary  bool
 }
 
 type UserProvidedData struct {

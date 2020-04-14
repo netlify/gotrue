@@ -63,6 +63,7 @@ func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 		data.Emails = append(data.Emails, Email{
 			Email:    u.Email,
 			Verified: u.EmailVerified,
+			Primary:  true,
 		})
 	}
 

@@ -83,7 +83,7 @@ func (g githubProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 	}
 
 	for _, e := range emails {
-		data.Emails = append(data.Emails, Email{Email: e.Email, Verified: e.Verified})
+		data.Emails = append(data.Emails, Email{Email: e.Email, Verified: e.Verified, Primary: e.Primary})
 	}
 
 	if len(data.Emails) <= 0 {

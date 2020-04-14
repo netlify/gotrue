@@ -72,6 +72,7 @@ func (p facebookProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*
 		Emails: []Email{{
 			Email:    u.Email,
 			Verified: true,
+			Primary:  true,
 		}},
 	}, nil
 }
