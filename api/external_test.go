@@ -43,21 +43,86 @@ func (ts *ExternalTestSuite) SetupTest() {
 	models.TruncateAll(ts.API.db)
 }
 
-func (ts *ExternalTestSuite) createUser(email string, name string, avatar string, confirmationToken string) (*models.User, error) {
+func (ts *ExternalTestSuite) createUser(email string, name string, avatar string) (*models.User, error) {
 	// Cleanup existing user, if they already exist
 	if u, _ := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, email, ts.Config.JWT.Aud); u != nil {
 		require.NoError(ts.T(), ts.API.db.Destroy(u), "Error deleting user")
 	}
 
 	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": name, "avatar_url": avatar})
-
-	if confirmationToken != "" {
-		u.ConfirmationToken = confirmationToken
-	}
 	ts.Require().NoError(err, "Error making new user")
 	ts.Require().NoError(ts.API.db.Create(u), "Error creating user")
 
 	return u, err
+}
+
+func performAuthorization(ts *ExternalTestSuite, provider string, code string) *url.URL {
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider="+provider, nil)
+	req.Header.Set("Referer", "https://example.netlify.com/admin")
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusFound, w.Code)
+	u, err := url.Parse(w.Header().Get("Location"))
+	ts.Require().NoError(err, "redirect url parse failed")
+	q := u.Query()
+	state := q.Get("state")
+
+	// auth server callback
+	testURL, err := url.Parse("http://localhost/callback")
+	ts.Require().NoError(err)
+	v := testURL.Query()
+	v.Set("code", code)
+	v.Set("state", state)
+	testURL.RawQuery = v.Encode()
+	req = httptest.NewRequest(http.MethodGet, testURL.String(), nil)
+	w = httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusFound, w.Code)
+	u, err = url.Parse(w.Header().Get("Location"))
+	ts.Require().NoError(err, "redirect url parse failed")
+	ts.Require().Equal("/admin", u.Path)
+
+	return u
+}
+
+func assertAuthorizationSuccess(ts *ExternalTestSuite, u *url.URL, tokenCount int, userCount int, email string, name string, avatar string) {
+	// ensure redirect has #access_token=...
+	v, err := url.ParseQuery(u.Fragment)
+	ts.Require().NoError(err)
+	ts.Require().Empty(v.Get("error_description"))
+	ts.Require().Empty(v.Get("error"))
+
+	ts.NotEmpty(v.Get("access_token"))
+	ts.NotEmpty(v.Get("refresh_token"))
+	ts.NotEmpty(v.Get("expires_in"))
+	ts.Equal("bearer", v.Get("token_type"))
+
+	ts.Equal(1, tokenCount)
+	ts.Equal(1, userCount)
+
+	// ensure user has been created with metadata
+	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, email, ts.Config.JWT.Aud)
+	ts.Require().NoError(err)
+	ts.Equal(name, user.UserMetaData["full_name"])
+	ts.Equal(avatar, user.UserMetaData["avatar_url"])
+}
+
+func assertAuthorizationFailure(ts *ExternalTestSuite, u *url.URL, errorDescription string, errorType string, email string) {
+	// ensure new sign ups error
+	v, err := url.ParseQuery(u.Fragment)
+	ts.Require().NoError(err)
+	ts.Require().Equal(errorDescription, v.Get("error_description"))
+	ts.Require().Equal(errorType, v.Get("error"))
+
+	ts.Empty(v.Get("access_token"))
+	ts.Empty(v.Get("refresh_token"))
+	ts.Empty(v.Get("expires_in"))
+	ts.Empty(v.Get("token_type"))
+
+	// ensure user is nil
+	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, email, ts.Config.JWT.Aud)
+	ts.Require().Error(err, "User not found")
+	ts.Require().Nil(user)
 }
 
 // TestSignupExternalUnsupported tests API /authorize for an unsupported external provider
@@ -93,6 +158,105 @@ func (ts *ExternalTestSuite) TestSignupExternalGithub() {
 	ts.Equal(ts.Config.SiteURL, claims.SiteURL)
 }
 
+func GitHubTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, emails string) *httptest.Server {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login/oauth/access_token":
+			*tokenCount++
+			ts.Equal(code, r.FormValue("code"))
+			ts.Equal("authorization_code", r.FormValue("grant_type"))
+			ts.Equal(ts.Config.External.Github.RedirectURI, r.FormValue("redirect_uri"))
+
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `{"access_token":"github_token","expires_in":100000}`)
+		case "/api/v3/user":
+			*userCount++
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `{"name":"GitHub Test","avatar_url":"http://example.com/avatar"}`)
+		case "/api/v3/user/emails":
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, emails)
+		default:
+			w.WriteHeader(500)
+			ts.Fail("unknown github oauth call %s", r.URL.Path)
+		}
+	}))
+
+	ts.Config.External.Github.URL = server.URL
+
+	return server
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalGitHub_AuthorizationCode() {
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	emails := `[{"email":"github@example.com", "primary": true, "verified": true}]`
+	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "github", code)
+
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenNoUser() {
+	ts.Config.DisableSignup = true
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	emails := `[{"email":"github@example.com", "primary": true, "verified": true}]`
+	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "github", code)
+
+	assertAuthorizationFailure(ts, u, "Signups not allowed for this instance", "access_denied", "github@example.com")
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenEmptyEmail() {
+	ts.Config.DisableSignup = true
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	emails := `[{"primary": true, "verified": true}]`
+	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "github", code)
+
+	assertAuthorizationFailure(ts, u, "Error getting user email from external provider", "server_error", "github@example.com")
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithPrimaryEmail() {
+	ts.Config.DisableSignup = true
+
+	ts.createUser("github@example.com", "GitHub Test", "http://example.com/avatar")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	emails := `[{"email":"github@example.com", "primary": true, "verified": true}]`
+	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "github", code)
+
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithNonPrimaryEmail() {
+	ts.Config.DisableSignup = true
+
+	ts.createUser("secondary@example.com", "GitHub Test", "http://example.com/avatar")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	emails := `[{"email":"primary@example.com", "primary": true, "verified": true},{"email":"secondary@example.com", "primary": false, "verified": true}]`
+	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "github", code)
+
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "GitHub Test", "http://example.com/avatar")
+}
+
 // TestSignupExternalBitbucket tests API /authorize for bitbucket
 func (ts *ExternalTestSuite) TestSignupExternalBitbucket() {
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=bitbucket", nil)
@@ -118,7 +282,7 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucket() {
 	ts.Equal(ts.Config.SiteURL, claims.SiteURL)
 }
 
-func BitbucketTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, user string, emails string) (*httptest.Server, *url.URL) {
+func BitbucketTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, user string, emails string) *httptest.Server {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/site/oauth2/access_token":
@@ -144,33 +308,7 @@ func BitbucketTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount 
 
 	ts.Config.External.Bitbucket.URL = server.URL
 
-	// get redirect url w/ state
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=bitbucket", nil)
-	req.Header.Set("Referer", "https://example.netlify.com/admin")
-	w := httptest.NewRecorder()
-	ts.API.handler.ServeHTTP(w, req)
-	ts.Require().Equal(http.StatusFound, w.Code)
-	u, err := url.Parse(w.Header().Get("Location"))
-	ts.Require().NoError(err, "redirect url parse failed")
-	q := u.Query()
-	state := q.Get("state")
-
-	// auth server callback
-	testURL, err := url.Parse("http://localhost/callback")
-	ts.Require().NoError(err)
-	v := testURL.Query()
-	v.Set("code", code)
-	v.Set("state", state)
-	testURL.RawQuery = v.Encode()
-	req = httptest.NewRequest(http.MethodGet, testURL.String(), nil)
-	w = httptest.NewRecorder()
-	ts.API.handler.ServeHTTP(w, req)
-	ts.Require().Equal(http.StatusFound, w.Code)
-	u, err = url.Parse(w.Header().Get("Location"))
-	ts.Require().NoError(err, "redirect url parse failed")
-	ts.Require().Equal("/admin", u.Path)
-
-	return server, u
+	return server
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalBitbucket_AuthorizationCode() {
@@ -179,28 +317,12 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucket_AuthorizationCode() {
 	code := "authcode"
 	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{"email":"bitbucket@example.com","is_primary":true,"is_confirmed":true}]}`
-	server, u := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
+	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
-	// ensure redirect has #access_token=...
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Empty(v.Get("error_description"))
-	ts.Require().Empty(v.Get("error"))
+	u := performAuthorization(ts, "bitbucket", code)
 
-	ts.NotEmpty(v.Get("access_token"))
-	ts.NotEmpty(v.Get("refresh_token"))
-	ts.NotEmpty(v.Get("expires_in"))
-	ts.Equal("bearer", v.Get("token_type"))
-
-	ts.Equal(1, tokenCount)
-	ts.Equal(1, userCount)
-
-	// ensure user has been created with metadata
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "bitbucket@example.com", ts.Config.JWT.Aud)
-	ts.Require().NoError(err)
-	ts.Equal("Bitbucket Test", user.UserMetaData["full_name"])
-	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNoUser() {
@@ -209,24 +331,12 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNo
 	code := "authcode"
 	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{"email":"bitbucket@example.com","is_primary":true,"is_confirmed":true}]}`
-	server, u := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
+	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
-	// ensure new sign ups error
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Equal(v.Get("error_description"), "Signups not allowed for this instance")
-	ts.Require().Equal(v.Get("error"), "access_denied")
+	u := performAuthorization(ts, "bitbucket", code)
 
-	ts.Empty(v.Get("access_token"))
-	ts.Empty(v.Get("refresh_token"))
-	ts.Empty(v.Get("expires_in"))
-	ts.Empty(v.Get("token_type"))
-
-	// ensure user is nil
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
-	ts.Require().Error(err, "User not found")
-	ts.Require().Nil(user)
+	assertAuthorizationFailure(ts, u, "Signups not allowed for this instance", "access_denied", "bitbucket@example.com")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNoEmail() {
@@ -235,24 +345,13 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNo
 	code := "authcode"
 	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{}]}`
-	server, u := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
+	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
-	// ensure new sign ups error
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Equal(v.Get("error_description"), "Error getting user email from external provider")
-	ts.Require().Equal(v.Get("error"), "server_error")
+	u := performAuthorization(ts, "bitbucket", code)
 
-	ts.Empty(v.Get("access_token"))
-	ts.Empty(v.Get("refresh_token"))
-	ts.Empty(v.Get("expires_in"))
-	ts.Empty(v.Get("token_type"))
+	assertAuthorizationFailure(ts, u, "Error getting user email from external provider", "server_error", "bitbucket@example.com")
 
-	// ensure user is nil
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
-	ts.Require().Error(err, "User not found")
-	ts.Require().Nil(user)
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWithPrimaryEmail() {
@@ -264,28 +363,12 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWith
 	code := "authcode"
 	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{"email":"bitbucket@example.com","is_primary":true,"is_confirmed":true}]}`
-	server, u := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
+	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
-	// ensure redirect has #access_token=...
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Empty(v.Get("error_description"))
-	ts.Require().Empty(v.Get("error"))
+	u := performAuthorization(ts, "bitbucket", code)
 
-	ts.NotEmpty(v.Get("access_token"))
-	ts.NotEmpty(v.Get("refresh_token"))
-	ts.NotEmpty(v.Get("expires_in"))
-	ts.Equal("bearer", v.Get("token_type"))
-
-	ts.Equal(1, tokenCount)
-	ts.Equal(1, userCount)
-
-	// ensure user has been created with metadata
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "bitbucket@example.com", ts.Config.JWT.Aud)
-	ts.Require().NoError(err)
-	ts.Equal("Bitbucket Test", user.UserMetaData["full_name"])
-	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWithSecondaryEmail() {
@@ -297,28 +380,12 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWith
 	code := "authcode"
 	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{"email":"primary@example.com","is_primary":true,"is_confirmed":true},{"email":"secondary@example.com","is_primary":false,"is_confirmed":true}]}`
-	server, u := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
+	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
-	// ensure redirect has #access_token=...
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Empty(v.Get("error_description"))
-	ts.Require().Empty(v.Get("error"))
+	u := performAuthorization(ts, "bitbucket", code)
 
-	ts.NotEmpty(v.Get("access_token"))
-	ts.NotEmpty(v.Get("refresh_token"))
-	ts.NotEmpty(v.Get("expires_in"))
-	ts.Equal("bearer", v.Get("token_type"))
-
-	ts.Equal(1, tokenCount)
-	ts.Equal(1, userCount)
-
-	// ensure user has been created with metadata
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "secondary@example.com", ts.Config.JWT.Aud)
-	ts.Require().NoError(err)
-	ts.Equal("Bitbucket Test", user.UserMetaData["full_name"])
-	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "Bitbucket Test", "http://example.com/avatar")
 }
 
 // TestSignupExternalGitlab tests API /authorize for gitlab
@@ -346,32 +413,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab() {
 	ts.Equal(ts.Config.SiteURL, claims.SiteURL)
 }
 
-// TestSignupExternalGoogle tests API /authorize for google
-func (ts *ExternalTestSuite) TestSignupExternalGoogle() {
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=google", nil)
-	w := httptest.NewRecorder()
-	ts.API.handler.ServeHTTP(w, req)
-	ts.Require().Equal(http.StatusFound, w.Code)
-	u, err := url.Parse(w.Header().Get("Location"))
-	ts.Require().NoError(err, "redirect url parse failed")
-	q := u.Query()
-	ts.Equal(ts.Config.External.Google.RedirectURI, q.Get("redirect_uri"))
-	ts.Equal(ts.Config.External.Google.ClientID, q.Get("client_id"))
-	ts.Equal("code", q.Get("response_type"))
-	ts.Equal("email profile", q.Get("scope"))
-
-	claims := ExternalProviderClaims{}
-	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
-	_, err = p.ParseWithClaims(q.Get("state"), &claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(ts.API.config.OperatorToken), nil
-	})
-	ts.Require().NoError(err)
-
-	ts.Equal("google", claims.Provider)
-	ts.Equal(ts.Config.SiteURL, claims.SiteURL)
-}
-
-func GitlabTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, user string, emails string) (*httptest.Server, *url.URL) {
+func GitlabTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, user string, emails string) *httptest.Server {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/oauth/token":
@@ -397,122 +439,53 @@ func GitlabTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *in
 
 	ts.Config.External.Gitlab.URL = server.URL
 
-	// get redirect url w/ state
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=gitlab", nil)
-	req.Header.Set("Referer", "https://example.netlify.com/admin")
-	w := httptest.NewRecorder()
-	ts.API.handler.ServeHTTP(w, req)
-	ts.Require().Equal(http.StatusFound, w.Code)
-	u, err := url.Parse(w.Header().Get("Location"))
-	ts.Require().NoError(err, "redirect url parse failed")
-	q := u.Query()
-	state := q.Get("state")
-
-	// auth server callback
-	testURL, err := url.Parse("http://localhost/callback")
-	ts.Require().NoError(err)
-	v := testURL.Query()
-	v.Set("code", code)
-	v.Set("state", state)
-	testURL.RawQuery = v.Encode()
-	req = httptest.NewRequest(http.MethodGet, testURL.String(), nil)
-	w = httptest.NewRecorder()
-	ts.API.handler.ServeHTTP(w, req)
-	ts.Require().Equal(http.StatusFound, w.Code)
-	u, err = url.Parse(w.Header().Get("Location"))
-	ts.Require().NoError(err, "redirect url parse failed")
-	ts.Require().Equal("/admin", u.Path)
-
-	return server, u
+	return server
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
+	// additional emails from GitLab don't return confirm status
 	ts.Config.Mailer.Autoconfirm = true
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
+	gitlabUser := `{"name":"GitLab Test","avatar_url":"http://example.com/avatar"}`
 	emails := `[{"id":1,"email":"gitlab@example.com"}]`
-	server, u := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
-	// ensure redirect has #access_token=...
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Empty(v.Get("error_description"))
-	ts.Require().Empty(v.Get("error"))
+	u := performAuthorization(ts, "gitlab", code)
 
-	ts.NotEmpty(v.Get("access_token"))
-	ts.NotEmpty(v.Get("refresh_token"))
-	ts.NotEmpty(v.Get("expires_in"))
-	ts.Equal("bearer", v.Get("token_type"))
-
-	ts.Equal(1, tokenCount)
-	ts.Equal(1, userCount)
-
-	// ensure user has been created with metadata
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
-	ts.Require().NoError(err)
-	ts.Equal("Gitlab Test", user.UserMetaData["full_name"])
-	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenNoUser() {
-	// additional emails from GitLab don't return confirm status
-	ts.Config.Mailer.Autoconfirm = true
 	ts.Config.DisableSignup = true
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
 	gitlabUser := `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
 	emails := `[{"id":1,"email":"gitlab@example.com"}]`
-	server, u := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
-	// ensure new sign ups error
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Equal(v.Get("error_description"), "Signups not allowed for this instance")
-	ts.Require().Equal(v.Get("error"), "access_denied")
+	u := performAuthorization(ts, "gitlab", code)
 
-	ts.Empty(v.Get("access_token"))
-	ts.Empty(v.Get("refresh_token"))
-	ts.Empty(v.Get("expires_in"))
-	ts.Empty(v.Get("token_type"))
-
-	// ensure user is nil
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
-	ts.Require().Error(err, "User not found")
-	ts.Require().Nil(user)
+	assertAuthorizationFailure(ts, u, "Signups not allowed for this instance", "access_denied", "github@example.com")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenEmptyEmail() {
-	// additional emails from GitLab don't return confirm status
-	ts.Config.Mailer.Autoconfirm = true
 	ts.Config.DisableSignup = true
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
 	gitlabUser := `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
 	emails := `[]`
-	server, u := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
-	// ensure new sign ups error
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Equal(v.Get("error_description"), "Error getting user email from external provider")
-	ts.Require().Equal(v.Get("error"), "server_error")
+	u := performAuthorization(ts, "gitlab", code)
 
-	ts.Empty(v.Get("access_token"))
-	ts.Empty(v.Get("refresh_token"))
-	ts.Empty(v.Get("expires_in"))
-	ts.Empty(v.Get("token_type"))
-
-	// ensure user is nil
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
-	ts.Require().Error(err, "User not found")
-	ts.Require().Nil(user)
+	assertAuthorizationFailure(ts, u, "Error getting user email from external provider", "server_error", "github@example.com")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithPrimaryEmail() {
@@ -522,30 +495,14 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithPri
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"email":"gitlab@example.com","name":"Gitlab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
+	gitlabUser := `{"email":"gitlab@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
 	emails := "[]"
-	server, u := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
-	// ensure redirect has #access_token=...
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Empty(v.Get("error_description"))
-	ts.Require().Empty(v.Get("error"))
+	u := performAuthorization(ts, "gitlab", code)
 
-	ts.NotEmpty(v.Get("access_token"))
-	ts.NotEmpty(v.Get("refresh_token"))
-	ts.NotEmpty(v.Get("expires_in"))
-	ts.Equal("bearer", v.Get("token_type"))
-
-	ts.Equal(1, tokenCount)
-	ts.Equal(1, userCount)
-
-	// ensure user has been created with metadata
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
-	ts.Require().NoError(err)
-	ts.Equal("GitLab Test", user.UserMetaData["full_name"])
-	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithSecondaryEmail() {
@@ -557,236 +514,225 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithSec
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"email":"primary@example.com","name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
+	gitlabUser := `{"email":"primary@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar"}`
 	emails := `[{"id":1,"email":"secondary@example.com"}]`
-	server, u := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
-	// ensure redirect has #access_token=...
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Empty(v.Get("error_description"))
-	ts.Require().Empty(v.Get("error"))
+	u := performAuthorization(ts, "gitlab", code)
 
-	ts.NotEmpty(v.Get("access_token"))
-	ts.NotEmpty(v.Get("refresh_token"))
-	ts.NotEmpty(v.Get("expires_in"))
-	ts.Equal("bearer", v.Get("token_type"))
-
-	ts.Equal(1, tokenCount)
-	ts.Equal(1, userCount)
-
-	// ensure user has been created with metadata
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "secondary@example.com", ts.Config.JWT.Aud)
-	ts.Require().NoError(err)
-	ts.Equal("GitLab Test", user.UserMetaData["full_name"])
-	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "GitLab Test", "http://example.com/avatar")
 }
 
-func GitHubTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, emails string) (*httptest.Server, *url.URL) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/login/oauth/access_token":
-			*tokenCount++
-			ts.Equal(code, r.FormValue("code"))
-			ts.Equal("authorization_code", r.FormValue("grant_type"))
-			ts.Equal(ts.Config.External.Github.RedirectURI, r.FormValue("redirect_uri"))
-
-			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, `{"access_token":"github_token","expires_in":100000}`)
-		case "/api/v3/user":
-			*userCount++
-			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, `{"name":"GitHub Test","avatar_url":"http://example.com/avatar"}`)
-		case "/api/v3/user/emails":
-			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, emails)
-		default:
-			w.WriteHeader(500)
-			ts.Fail("unknown github oauth call %s", r.URL.Path)
-		}
-	}))
-
-	ts.Config.External.Github.URL = server.URL
-
-	// get redirect url w/ state
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=github", nil)
+// TestSignupExternalGoogle tests API /authorize for google
+func (ts *ExternalTestSuite) TestSignupExternalGoogle() {
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=google", nil)
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
 	ts.Require().Equal(http.StatusFound, w.Code)
 	u, err := url.Parse(w.Header().Get("Location"))
 	ts.Require().NoError(err, "redirect url parse failed")
 	q := u.Query()
-	state := q.Get("state")
+	ts.Equal(ts.Config.External.Google.RedirectURI, q.Get("redirect_uri"))
+	ts.Equal(ts.Config.External.Google.ClientID, q.Get("client_id"))
+	ts.Equal("code", q.Get("response_type"))
+	ts.Equal("email profile", q.Get("scope"))
 
-	// auth server callback
-	testURL, err := url.Parse("http://localhost/callback")
+	claims := ExternalProviderClaims{}
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	_, err = p.ParseWithClaims(q.Get("state"), &claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(ts.API.config.OperatorToken), nil
+	})
 	ts.Require().NoError(err)
-	v := testURL.Query()
-	v.Set("code", code)
-	v.Set("state", state)
-	testURL.RawQuery = v.Encode()
-	req = httptest.NewRequest(http.MethodGet, testURL.String(), nil)
-	w = httptest.NewRecorder()
+
+	ts.Equal("google", claims.Provider)
+	ts.Equal(ts.Config.SiteURL, claims.SiteURL)
+}
+
+func GoogleTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, user string) *httptest.Server {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/o/oauth2/token":
+			*tokenCount++
+			ts.Equal(code, r.FormValue("code"))
+			ts.Equal("authorization_code", r.FormValue("grant_type"))
+			ts.Equal(ts.Config.External.Google.RedirectURI, r.FormValue("redirect_uri"))
+
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `{"access_token":"google_token","expires_in":100000}`)
+		case "/userinfo/v2/me":
+			*userCount++
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, user)
+		default:
+			w.WriteHeader(500)
+			ts.Fail("unknown google oauth call %s", r.URL.Path)
+		}
+	}))
+
+	ts.Config.External.Google.URL = server.URL
+
+	return server
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalGoogle_AuthorizationCode() {
+	ts.Config.DisableSignup = false
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
+	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
+	defer server.Close()
+
+	u := performAuthorization(ts, "google", code)
+
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupErrorWhenNoUser() {
+	ts.Config.DisableSignup = true
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
+	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
+	defer server.Close()
+
+	u := performAuthorization(ts, "google", code)
+
+	assertAuthorizationFailure(ts, u, "Signups not allowed for this instance", "access_denied", "google@example.com")
+}
+func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupErrorWhenEmptyEmail() {
+	ts.Config.DisableSignup = true
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","verified_email":true}}`
+	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
+	defer server.Close()
+
+	u := performAuthorization(ts, "google", code)
+
+	assertAuthorizationFailure(ts, u, "Error getting user email from external provider", "server_error", "google@example.com")
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupSuccessWithPrimaryEmail() {
+	ts.Config.DisableSignup = true
+
+	ts.createUser("google@example.com", "Google Test", "http://example.com/avatar")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
+	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
+	defer server.Close()
+
+	u := performAuthorization(ts, "google", code)
+
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalFacebook() {
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=facebook", nil)
+	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
 	ts.Require().Equal(http.StatusFound, w.Code)
-	u, err = url.Parse(w.Header().Get("Location"))
+	u, err := url.Parse(w.Header().Get("Location"))
 	ts.Require().NoError(err, "redirect url parse failed")
+	q := u.Query()
+	ts.Equal(ts.Config.External.Facebook.RedirectURI, q.Get("redirect_uri"))
+	ts.Equal(ts.Config.External.Facebook.ClientID, q.Get("client_id"))
+	ts.Equal("code", q.Get("response_type"))
+	ts.Equal("email", q.Get("scope"))
 
-	return server, u
+	claims := ExternalProviderClaims{}
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	_, err = p.ParseWithClaims(q.Get("state"), &claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(ts.API.config.OperatorToken), nil
+	})
+	ts.Require().NoError(err)
+
+	ts.Equal("facebook", claims.Provider)
+	ts.Equal(ts.Config.SiteURL, claims.SiteURL)
 }
 
-func (ts *ExternalTestSuite) TestSignupExternalGitHub_AuthorizationCode() {
+func FacebookTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, user string) *httptest.Server {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/oauth/access_token":
+			*tokenCount++
+			ts.Equal(code, r.FormValue("code"))
+			ts.Equal("authorization_code", r.FormValue("grant_type"))
+			ts.Equal(ts.Config.External.Facebook.RedirectURI, r.FormValue("redirect_uri"))
+
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `{"access_token":"facebook_token","expires_in":100000}`)
+		case "/me":
+			*userCount++
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, user)
+		default:
+			w.WriteHeader(500)
+			ts.Fail("unknown facebook oauth call %s", r.URL.Path)
+		}
+	}))
+
+	ts.Config.External.Facebook.URL = server.URL
+
+	return server
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalFacebook_AuthorizationCode() {
+	ts.Config.DisableSignup = false
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	emails := `[{"email":"github@example.com", "primary": true, "verified": true}]`
-	server, u := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
-	// ensure redirect has #access_token=...
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Empty(v.Get("error_description"))
-	ts.Require().Empty(v.Get("error"))
+	u := performAuthorization(ts, "facebook", code)
 
-	ts.NotEmpty(v.Get("access_token"))
-	ts.NotEmpty(v.Get("refresh_token"))
-	ts.NotEmpty(v.Get("expires_in"))
-	ts.Equal("bearer", v.Get("token_type"))
-
-	ts.Equal(1, tokenCount)
-	ts.Equal(1, userCount)
-
-	// ensure user has been created with metadata
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
-	ts.Require().NoError(err)
-	ts.Equal("GitHub Test", user.UserMetaData["full_name"])
-	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "http://example.com/avatar")
 }
 
-func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenNoUser() {
-	ts.Config.DisableSignup = true
-	tokenCount, userCount := 0, 0
-	code := "authcode"
-	emails := `[{"email":"github@example.com", "primary": true, "verified": true}]`
-	server, u := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
-	defer server.Close()
-
-	// ensure new sign ups error
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Equal(v.Get("error_description"), "Signups not allowed for this instance")
-	ts.Require().Equal(v.Get("error"), "access_denied")
-
-	ts.Empty(v.Get("access_token"))
-	ts.Empty(v.Get("refresh_token"))
-	ts.Empty(v.Get("expires_in"))
-	ts.Empty(v.Get("token_type"))
-
-	// ensure user is nil
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
-	ts.Require().Error(err, "User not found")
-	ts.Require().Nil(user)
-}
-
-func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenEmptyEmail() {
-	ts.Config.DisableSignup = true
-	tokenCount, userCount := 0, 0
-	code := "authcode"
-	emails := `[{"primary": true, "verified": true}]`
-	server, u := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
-	defer server.Close()
-
-	// ensure new sign ups error
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Equal(v.Get("error_description"), "Error getting user email from external provider")
-	ts.Require().Equal(v.Get("error"), "server_error")
-
-	ts.Empty(v.Get("access_token"))
-	ts.Empty(v.Get("refresh_token"))
-	ts.Empty(v.Get("expires_in"))
-	ts.Empty(v.Get("token_type"))
-
-	// ensure user is nil
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
-	ts.Require().Error(err, "User not found")
-	ts.Require().Nil(user)
-}
-
-func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithPrimaryEmail() {
+func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupErrorWhenNoUser() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("github@example.com", "GitHub Test", "http://example.com/avatar")
-
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	emails := `[{"email":"github@example.com", "primary": true, "verified": true}]`
-	server, u := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
-	// ensure redirect has #access_token=...
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Empty(v.Get("error_description"))
-	ts.Require().Empty(v.Get("error"))
+	u := performAuthorization(ts, "facebook", code)
 
-	ts.NotEmpty(v.Get("access_token"))
-	ts.NotEmpty(v.Get("refresh_token"))
-	ts.NotEmpty(v.Get("expires_in"))
-	ts.Equal("bearer", v.Get("token_type"))
-
-	ts.Equal(1, tokenCount)
-	ts.Equal(1, userCount)
-
-	// ensure user has been created with metadata
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
-	ts.Require().NoError(err)
-	ts.Equal("GitHub Test", user.UserMetaData["full_name"])
-	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
+	assertAuthorizationFailure(ts, u, "Signups not allowed for this instance", "access_denied", "facebook@example.com")
 }
-
-func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithNonPrimaryEmail() {
+func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupErrorWhenEmptyEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("secondary@example.com", "GitHub Test", "http://example.com/avatar")
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
+	defer server.Close()
+
+	u := performAuthorization(ts, "facebook", code)
+
+	assertAuthorizationFailure(ts, u, "Error getting user email from external provider", "server_error", "facebook@example.com")
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupSuccessWithPrimaryEmail() {
+	ts.Config.DisableSignup = true
+
+	ts.createUser("facebook@example.com", "Facebook Test", "http://example.com/avatar")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	emails := `[{"email":"primary@example.com", "primary": true, "verified": true},{"email":"secondary@example.com", "primary": false, "verified": true}]`
-	server, u := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
-	// ensure redirect has #access_token=...
-	v, err := url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err)
-	ts.Require().Empty(v.Get("error_description"))
-	ts.Require().Empty(v.Get("error"))
+	u := performAuthorization(ts, "facebook", code)
 
-	ts.NotEmpty(v.Get("access_token"))
-	ts.NotEmpty(v.Get("refresh_token"))
-	ts.NotEmpty(v.Get("expires_in"))
-	ts.Equal("bearer", v.Get("token_type"))
-
-	ts.Equal(1, tokenCount)
-	ts.Equal(1, userCount)
-
-	// ensure user has been created with metadata
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "secondary@example.com", ts.Config.JWT.Aud)
-	ts.Require().NoError(err)
-	ts.Equal("GitHub Test", user.UserMetaData["full_name"])
-	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
-}
-
-func (ts *ExternalTestSuite) createUser(email string, name string, avatar string) (*models.User, error) {
-	// Cleanup existing user, if they already exist
-	if u, _ := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, email, ts.Config.JWT.Aud); u != nil {
-		require.NoError(ts.T(), ts.API.db.Destroy(u), "Error deleting user")
-	}
-
-	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": name, "avatar_url": avatar})
-	ts.Require().NoError(err, "Error making new user")
-	ts.Require().NoError(ts.API.db.Create(u), "Error creating user")
-
-	return u, err
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "http://example.com/avatar")
 }

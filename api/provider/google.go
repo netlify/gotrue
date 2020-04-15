@@ -6,13 +6,16 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 )
 
-const googleBaseURL = "https://www.googleapis.com/userinfo/v2/me"
+const (
+	defaultGoogleAuthBase = "accounts.google.com"
+	defaultGoogleAPIBase  = "www.googleapis.com"
+)
 
 type googleProvider struct {
 	*oauth2.Config
+	APIPath string
 }
 
 type googleUser struct {
@@ -28,17 +31,24 @@ func NewGoogleProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, erro
 		return nil, err
 	}
 
+	authHost := chooseHost(ext.URL, defaultGoogleAuthBase)
+	apiPath := chooseHost(ext.URL, defaultGoogleAPIBase) + "/userinfo/v2/me"
+
 	return &googleProvider{
-		&oauth2.Config{
+		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
-			Endpoint:     google.Endpoint,
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  authHost + "/o/oauth2/auth",
+				TokenURL: authHost + "/o/oauth2/token",
+			},
 			Scopes: []string{
 				"email",
 				"profile",
 			},
 			RedirectURL: ext.RedirectURI,
 		},
+		APIPath: apiPath,
 	}, nil
 }
 
@@ -48,7 +58,7 @@ func (g googleProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 
 func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
 	var u googleUser
-	if err := makeRequest(ctx, tok, g.Config, googleBaseURL, &u); err != nil {
+	if err := makeRequest(ctx, tok, g.Config, g.APIPath, &u); err != nil {
 		return nil, err
 	}
 

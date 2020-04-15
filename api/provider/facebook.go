@@ -10,13 +10,17 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/facebook"
 )
 
-const profileURL = "https://graph.facebook.com/me?fields=email,first_name,last_name,name,picture"
+const (
+	defaultFacebookAuthBase  = "www.facebook.com"
+	defaultFacebookTokenBase = "graph.facebook.com"
+	defaultFacebookAPIBase   = "graph.facebook.com"
+)
 
 type facebookProvider struct {
 	*oauth2.Config
+	ProfileURL string
 }
 
 type facebookUser struct {
@@ -33,14 +37,22 @@ type facebookUser struct {
 
 // NewFacebookProvider creates a Facebook account provider.
 func NewFacebookProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
+	authHost := chooseHost(ext.URL, defaultFacebookAuthBase)
+	tokenHost := chooseHost(ext.URL, defaultFacebookTokenBase)
+	profileURL := chooseHost(ext.URL, defaultFacebookAPIBase) + "/me?fields=email,first_name,last_name,name,picture"
+
 	return &facebookProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			RedirectURL:  ext.RedirectURI,
-			Endpoint:     facebook.Endpoint,
-			Scopes:       []string{"email"},
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  authHost + "/dialog/oauth",
+				TokenURL: tokenHost + "/oauth/access_token",
+			},
+			Scopes: []string{"email"},
 		},
+		ProfileURL: profileURL,
 	}, nil
 }
 
@@ -54,7 +66,7 @@ func (p facebookProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*
 	appsecretProof := hex.EncodeToString(hash.Sum(nil))
 
 	var u facebookUser
-	url := profileURL + "&appsecret_proof=" + appsecretProof
+	url := p.ProfileURL + "&appsecret_proof=" + appsecretProof
 	if err := makeRequest(ctx, tok, p.Config, url, &u); err != nil {
 		return nil, err
 	}
