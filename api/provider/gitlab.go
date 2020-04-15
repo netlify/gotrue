@@ -92,7 +92,9 @@ func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 
 	for _, e := range emails {
 		// additional emails from GitLab don't return confirm status
-		data.Emails = append(data.Emails, Email{Email: e.Email, Verified: false, Primary: false})
+		if e.Email != "" {
+			data.Emails = append(data.Emails, Email{Email: e.Email, Verified: false, Primary: false})
+		}
 	}
 
 	if u.Email != "" {

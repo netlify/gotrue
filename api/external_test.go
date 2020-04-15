@@ -229,6 +229,32 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNo
 	ts.Require().Nil(user)
 }
 
+func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNoEmail() {
+	ts.Config.DisableSignup = true
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
+	emails := `{"values":[{}]}`
+	server, u := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
+	defer server.Close()
+
+	// ensure new sign ups error
+	v, err := url.ParseQuery(u.Fragment)
+	ts.Require().NoError(err)
+	ts.Require().Equal(v.Get("error_description"), "Error getting user email from external provider")
+	ts.Require().Equal(v.Get("error"), "server_error")
+
+	ts.Empty(v.Get("access_token"))
+	ts.Empty(v.Get("refresh_token"))
+	ts.Empty(v.Get("expires_in"))
+	ts.Empty(v.Get("token_type"))
+
+	// ensure user is nil
+	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
+	ts.Require().Error(err, "User not found")
+	ts.Require().Nil(user)
+}
+
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
@@ -460,6 +486,35 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenNoUse
 	ts.Require().Nil(user)
 }
 
+func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenEmptyEmail() {
+	// additional emails from GitLab don't return confirm status
+	ts.Config.Mailer.Autoconfirm = true
+	ts.Config.DisableSignup = true
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	gitlabUser := `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
+	emails := `[]`
+	server, u := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	defer server.Close()
+
+	// ensure new sign ups error
+	v, err := url.ParseQuery(u.Fragment)
+	ts.Require().NoError(err)
+	ts.Require().Equal(v.Get("error_description"), "Error getting user email from external provider")
+	ts.Require().Equal(v.Get("error"), "server_error")
+
+	ts.Empty(v.Get("access_token"))
+	ts.Empty(v.Get("refresh_token"))
+	ts.Empty(v.Get("expires_in"))
+	ts.Empty(v.Get("token_type"))
+
+	// ensure user is nil
+	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
+	ts.Require().Error(err, "User not found")
+	ts.Require().Nil(user)
+}
+
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
@@ -622,6 +677,31 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenNoUse
 	ts.Require().NoError(err)
 	ts.Require().Equal(v.Get("error_description"), "Signups not allowed for this instance")
 	ts.Require().Equal(v.Get("error"), "access_denied")
+
+	ts.Empty(v.Get("access_token"))
+	ts.Empty(v.Get("refresh_token"))
+	ts.Empty(v.Get("expires_in"))
+	ts.Empty(v.Get("token_type"))
+
+	// ensure user is nil
+	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "github@example.com", ts.Config.JWT.Aud)
+	ts.Require().Error(err, "User not found")
+	ts.Require().Nil(user)
+}
+
+func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenEmptyEmail() {
+	ts.Config.DisableSignup = true
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	emails := `[{"primary": true, "verified": true}]`
+	server, u := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	defer server.Close()
+
+	// ensure new sign ups error
+	v, err := url.ParseQuery(u.Fragment)
+	ts.Require().NoError(err)
+	ts.Require().Equal(v.Get("error_description"), "Error getting user email from external provider")
+	ts.Require().Equal(v.Get("error"), "server_error")
 
 	ts.Empty(v.Get("access_token"))
 	ts.Empty(v.Get("refresh_token"))

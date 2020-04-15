@@ -85,11 +85,13 @@ func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (
 
 	if len(emails.Values) > 0 {
 		for _, e := range emails.Values {
-			data.Emails = append(data.Emails, Email{
-				Email:    e.Email,
-				Verified: e.Verified,
-				Primary:  e.Primary,
-			})
+			if e.Email != "" {
+				data.Emails = append(data.Emails, Email{
+					Email:    e.Email,
+					Verified: e.Verified,
+					Primary:  e.Primary,
+				})
+			}
 		}
 	}
 
