@@ -43,24 +43,39 @@ func (ts *ExternalTestSuite) SetupTest() {
 	models.TruncateAll(ts.API.db)
 }
 
-func (ts *ExternalTestSuite) createUser(email string, name string, avatar string) (*models.User, error) {
+func (ts *ExternalTestSuite) createUser(email string, name string, avatar string, confirmationToken string) (*models.User, error) {
 	// Cleanup existing user, if they already exist
 	if u, _ := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, email, ts.Config.JWT.Aud); u != nil {
 		require.NoError(ts.T(), ts.API.db.Destroy(u), "Error deleting user")
 	}
 
 	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": name, "avatar_url": avatar})
+
+	if confirmationToken != "" {
+		u.ConfirmationToken = confirmationToken
+	}
 	ts.Require().NoError(err, "Error making new user")
 	ts.Require().NoError(ts.API.db.Create(u), "Error creating user")
 
 	return u, err
 }
 
-func performAuthorization(ts *ExternalTestSuite, provider string, code string) *url.URL {
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider="+provider, nil)
+func performAuthorizationRequest(ts *ExternalTestSuite, provider string, inviteToken string) *httptest.ResponseRecorder {
+	authorizeURL := "http://localhost/authorize?provider=" + provider
+	if inviteToken != "" {
+		authorizeURL = authorizeURL + "&invite_token=" + inviteToken
+	}
+
+	req := httptest.NewRequest(http.MethodGet, authorizeURL, nil)
 	req.Header.Set("Referer", "https://example.netlify.com/admin")
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
+
+	return w
+}
+
+func performAuthorization(ts *ExternalTestSuite, provider string, code string, inviteToken string) *url.URL {
+	w := performAuthorizationRequest(ts, provider, inviteToken)
 	ts.Require().Equal(http.StatusFound, w.Code)
 	u, err := url.Parse(w.Header().Get("Location"))
 	ts.Require().NoError(err, "redirect url parse failed")
@@ -74,7 +89,7 @@ func performAuthorization(ts *ExternalTestSuite, provider string, code string) *
 	v.Set("code", code)
 	v.Set("state", state)
 	testURL.RawQuery = v.Encode()
-	req = httptest.NewRequest(http.MethodGet, testURL.String(), nil)
+	req := httptest.NewRequest(http.MethodGet, testURL.String(), nil)
 	w = httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
 	ts.Require().Equal(http.StatusFound, w.Code)
@@ -194,7 +209,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHub_AuthorizationCode() {
 	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "github", code)
+	u := performAuthorization(ts, "github", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "http://example.com/avatar")
 }
@@ -207,7 +222,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenNoUse
 	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "github", code)
+	u := performAuthorization(ts, "github", code, "")
 
 	assertAuthorizationFailure(ts, u, "Signups not allowed for this instance", "access_denied", "github@example.com")
 }
@@ -220,7 +235,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenEmpty
 	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "github", code)
+	u := performAuthorization(ts, "github", code, "")
 
 	assertAuthorizationFailure(ts, u, "Error getting user email from external provider", "server_error", "github@example.com")
 }
@@ -228,7 +243,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenEmpty
 func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("github@example.com", "GitHub Test", "http://example.com/avatar")
+	ts.createUser("github@example.com", "GitHub Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -236,7 +251,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithPri
 	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "github", code)
+	u := performAuthorization(ts, "github", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "http://example.com/avatar")
 }
@@ -244,7 +259,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithPri
 func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithNonPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("secondary@example.com", "GitHub Test", "http://example.com/avatar")
+	ts.createUser("secondary@example.com", "GitHub Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -252,9 +267,62 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithNon
 	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "github", code)
+	u := performAuthorization(ts, "github", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "GitHub Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubSuccessWhenMatchingToken() {
+	// name and avatar should be populated from GitHub API
+	ts.createUser("github@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	emails := `[{"email":"github@example.com", "primary": true, "verified": true}]`
+	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "github", code, "invite_token")
+
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenNoMatchingToken() {
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	emails := `[{"email":"github@example.com", "primary": true, "verified": true}]`
+	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	defer server.Close()
+
+	w := performAuthorizationRequest(ts, "github", "invite_token")
+	ts.Require().Equal(http.StatusNotFound, w.Code)
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenWrongToken() {
+	ts.createUser("github@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	emails := `[{"email":"github@example.com", "primary": true, "verified": true}]`
+	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	defer server.Close()
+
+	w := performAuthorizationRequest(ts, "github", "wrong_token")
+	ts.Require().Equal(http.StatusNotFound, w.Code)
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenEmailDoesntMatch() {
+	ts.createUser("github@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	emails := `[{"email":"other@example.com", "primary": true, "verified": true}]`
+	server := GitHubTestSignupSetup(ts, &tokenCount, &userCount, code, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "github", code, "invite_token")
+
+	assertAuthorizationFailure(ts, u, "Invited email does not match emails from external provider", "invalid_request", "")
 }
 
 // TestSignupExternalBitbucket tests API /authorize for bitbucket
@@ -320,7 +388,7 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucket_AuthorizationCode() {
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "bitbucket", code)
+	u := performAuthorization(ts, "bitbucket", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar")
 }
@@ -334,7 +402,7 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNo
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "bitbucket", code)
+	u := performAuthorization(ts, "bitbucket", code, "")
 
 	assertAuthorizationFailure(ts, u, "Signups not allowed for this instance", "access_denied", "bitbucket@example.com")
 }
@@ -348,7 +416,7 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNo
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "bitbucket", code)
+	u := performAuthorization(ts, "bitbucket", code, "")
 
 	assertAuthorizationFailure(ts, u, "Error getting user email from external provider", "server_error", "bitbucket@example.com")
 
@@ -357,7 +425,7 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNo
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar")
+	ts.createUser("bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -366,7 +434,7 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWith
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "bitbucket", code)
+	u := performAuthorization(ts, "bitbucket", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar")
 }
@@ -374,7 +442,7 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWith
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWithSecondaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("secondary@example.com", "Bitbucket Test", "http://example.com/avatar")
+	ts.createUser("secondary@example.com", "Bitbucket Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -383,9 +451,66 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWith
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "bitbucket", code)
+	u := performAuthorization(ts, "bitbucket", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "Bitbucket Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketSuccessWhenMatchingToken() {
+	// name and avatar should be populated from Bitbucket API
+	ts.createUser("bitbucket@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
+	emails := `{"values":[{"email":"bitbucket@example.com","is_primary":true,"is_confirmed":true}]}`
+	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "bitbucket", code, "invite_token")
+
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenNoMatchingToken() {
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
+	emails := `{"values":[{"email":"bitbucket@example.com","is_primary":true,"is_confirmed":true}]}`
+	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
+	defer server.Close()
+
+	w := performAuthorizationRequest(ts, "bitbucket", "invite_token")
+	ts.Require().Equal(http.StatusNotFound, w.Code)
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenWrongToken() {
+	ts.createUser("bitbucket@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
+	emails := `{"values":[{"email":"bitbucket@example.com","is_primary":true,"is_confirmed":true}]}`
+	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
+	defer server.Close()
+
+	w := performAuthorizationRequest(ts, "bitbucket", "wrong_token")
+	ts.Require().Equal(http.StatusNotFound, w.Code)
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenEmailDoesntMatch() {
+	ts.createUser("bitbucket@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
+	emails := `{"values":[{"email":"other@example.com","is_primary":true,"is_confirmed":true}]}`
+	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "bitbucket", code, "invite_token")
+
+	assertAuthorizationFailure(ts, u, "Invited email does not match emails from external provider", "invalid_request", "")
 }
 
 // TestSignupExternalGitlab tests API /authorize for gitlab
@@ -453,7 +578,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "gitlab", code)
+	u := performAuthorization(ts, "gitlab", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "http://example.com/avatar")
 }
@@ -468,7 +593,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenNoUse
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "gitlab", code)
+	u := performAuthorization(ts, "gitlab", code, "")
 
 	assertAuthorizationFailure(ts, u, "Signups not allowed for this instance", "access_denied", "github@example.com")
 }
@@ -483,7 +608,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenEmpty
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "gitlab", code)
+	u := performAuthorization(ts, "gitlab", code, "")
 
 	assertAuthorizationFailure(ts, u, "Error getting user email from external provider", "server_error", "github@example.com")
 }
@@ -491,7 +616,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenEmpty
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("gitlab@example.com", "GitLab Test", "http://example.com/avatar")
+	ts.createUser("gitlab@example.com", "GitLab Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -500,7 +625,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithPri
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "gitlab", code)
+	u := performAuthorization(ts, "gitlab", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "http://example.com/avatar")
 }
@@ -510,7 +635,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithSec
 	ts.Config.Mailer.Autoconfirm = true
 	ts.Config.DisableSignup = true
 
-	ts.createUser("secondary@example.com", "GitLab Test", "http://example.com/avatar")
+	ts.createUser("secondary@example.com", "GitLab Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -519,9 +644,66 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithSec
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
-	u := performAuthorization(ts, "gitlab", code)
+	u := performAuthorization(ts, "gitlab", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "GitLab Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabSuccessWhenMatchingToken() {
+	// name and avatar should be populated from GitLab API
+	ts.createUser("gitlab@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	gitlabUser := `{"email":"gitlab@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
+	emails := "[]"
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "gitlab", code, "invite_token")
+
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenNoMatchingToken() {
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	gitlabUser := `{"email":"gitlab@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
+	emails := "[]"
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	defer server.Close()
+
+	w := performAuthorizationRequest(ts, "gitlab", "invite_token")
+	ts.Require().Equal(http.StatusNotFound, w.Code)
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenWrongToken() {
+	ts.createUser("gitlab@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	gitlabUser := `{"email":"gitlab@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
+	emails := "[]"
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	defer server.Close()
+
+	w := performAuthorizationRequest(ts, "gitlab", "wrong_token")
+	ts.Require().Equal(http.StatusNotFound, w.Code)
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenEmailDoesntMatch() {
+	ts.createUser("gitlab@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	gitlabUser := `{"email":"other@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
+	emails := "[]"
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	defer server.Close()
+
+	u := performAuthorization(ts, "gitlab", code, "invite_token")
+
+	assertAuthorizationFailure(ts, u, "Invited email does not match emails from external provider", "invalid_request", "")
 }
 
 // TestSignupExternalGoogle tests API /authorize for google
@@ -583,7 +765,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogle_AuthorizationCode() {
 	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
 	defer server.Close()
 
-	u := performAuthorization(ts, "google", code)
+	u := performAuthorization(ts, "google", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "http://example.com/avatar")
 }
@@ -597,7 +779,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupErrorWhenNoUse
 	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
 	defer server.Close()
 
-	u := performAuthorization(ts, "google", code)
+	u := performAuthorization(ts, "google", code, "")
 
 	assertAuthorizationFailure(ts, u, "Signups not allowed for this instance", "access_denied", "google@example.com")
 }
@@ -610,7 +792,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupErrorWhenEmpty
 	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
 	defer server.Close()
 
-	u := performAuthorization(ts, "google", code)
+	u := performAuthorization(ts, "google", code, "")
 
 	assertAuthorizationFailure(ts, u, "Error getting user email from external provider", "server_error", "google@example.com")
 }
@@ -618,7 +800,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupErrorWhenEmpty
 func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("google@example.com", "Google Test", "http://example.com/avatar")
+	ts.createUser("google@example.com", "Google Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -626,9 +808,62 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupSuccessWithPri
 	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
 	defer server.Close()
 
-	u := performAuthorization(ts, "google", code)
+	u := performAuthorization(ts, "google", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGoogleSuccessWhenMatchingToken() {
+	// name and avatar should be populated from Google API
+	ts.createUser("google@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
+	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
+	defer server.Close()
+
+	u := performAuthorization(ts, "google", code, "invite_token")
+
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGoogleErrorWhenNoMatchingToken() {
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
+	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
+	defer server.Close()
+
+	w := performAuthorizationRequest(ts, "google", "invite_token")
+	ts.Require().Equal(http.StatusNotFound, w.Code)
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGoogleErrorWhenWrongToken() {
+	ts.createUser("google@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
+	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
+	defer server.Close()
+
+	w := performAuthorizationRequest(ts, "google", "wrong_token")
+	ts.Require().Equal(http.StatusNotFound, w.Code)
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalGoogleErrorWhenEmailDoesntMatch() {
+	ts.createUser("google@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"other@example.com","verified_email":true}}`
+	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
+	defer server.Close()
+
+	u := performAuthorization(ts, "google", code, "invite_token")
+
+	assertAuthorizationFailure(ts, u, "Invited email does not match emails from external provider", "invalid_request", "")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalFacebook() {
@@ -689,7 +924,7 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebook_AuthorizationCode() {
 	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
-	u := performAuthorization(ts, "facebook", code)
+	u := performAuthorization(ts, "facebook", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "http://example.com/avatar")
 }
@@ -703,7 +938,7 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupErrorWhenNoU
 	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
-	u := performAuthorization(ts, "facebook", code)
+	u := performAuthorization(ts, "facebook", code, "")
 
 	assertAuthorizationFailure(ts, u, "Signups not allowed for this instance", "access_denied", "facebook@example.com")
 }
@@ -716,7 +951,7 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupErrorWhenEmp
 	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
-	u := performAuthorization(ts, "facebook", code)
+	u := performAuthorization(ts, "facebook", code, "")
 
 	assertAuthorizationFailure(ts, u, "Error getting user email from external provider", "server_error", "facebook@example.com")
 }
@@ -724,7 +959,7 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupErrorWhenEmp
 func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("facebook@example.com", "Facebook Test", "http://example.com/avatar")
+	ts.createUser("facebook@example.com", "Facebook Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -732,7 +967,60 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupSuccessWithP
 	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
-	u := performAuthorization(ts, "facebook", code)
+	u := performAuthorization(ts, "facebook", code, "")
 
 	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookSuccessWhenMatchingToken() {
+	// name and avatar should be populated from Facebook API
+	ts.createUser("facebook@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
+	defer server.Close()
+
+	u := performAuthorization(ts, "facebook", code, "invite_token")
+
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "http://example.com/avatar")
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenNoMatchingToken() {
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
+	defer server.Close()
+
+	w := performAuthorizationRequest(ts, "facebook", "invite_token")
+	ts.Require().Equal(http.StatusNotFound, w.Code)
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenWrongToken() {
+	ts.createUser("facebook@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
+	defer server.Close()
+
+	w := performAuthorizationRequest(ts, "facebook", "wrong_token")
+	ts.Require().Equal(http.StatusNotFound, w.Code)
+}
+
+func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenEmailDoesntMatch() {
+	ts.createUser("facebook@example.com", "", "", "invite_token")
+
+	tokenCount, userCount := 0, 0
+	code := "authcode"
+	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"other@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
+	defer server.Close()
+
+	u := performAuthorization(ts, "facebook", code, "invite_token")
+
+	assertAuthorizationFailure(ts, u, "Invited email does not match emails from external provider", "invalid_request", "")
 }
