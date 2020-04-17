@@ -72,6 +72,14 @@ Connection string for the database.
 
 Adds a prefix to all table names.
 
+**Migrations Note**
+
+Migrations are not applied automatically, so you will need to run them after
+you've built gotrue.
+
+* If built locally: `./gotrue migrate`
+* Using Docker: `docker run --rm gotrue gotrue migrate`
+
 ### Logging
 
 ```
