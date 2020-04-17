@@ -360,9 +360,12 @@ GoTrue exposes the following endpoints:
   ```json
   {
     "type": "signup",
-    "token": "confirmation-code-delivered-in-email"
+    "token": "confirmation-code-delivered-in-email",
+    "password": "12345abcdef"
   }
   ```
+  
+  `password` is required for signup verification if no existing password exists.
 
   Returns:
 
