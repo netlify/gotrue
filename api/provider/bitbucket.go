@@ -35,8 +35,6 @@ type bitbucketEmails struct {
 	Values []bitbucketEmail `json:"values"`
 }
 
-const defaultBitbucketHost = "bitbucket.org"
-
 // NewBitbucketProvider creates a Bitbucket account provider.
 func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
 	if err := ext.Validate(); err != nil {
