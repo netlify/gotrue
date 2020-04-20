@@ -36,6 +36,19 @@ type OAuthProvider interface {
 	GetOAuthToken(string) (*oauth2.Token, error)
 }
 
+func chooseHost(base, defaultHost string) string {
+	if base == "" {
+		return "https://" + defaultHost
+	}
+
+	baseLen := len(base)
+	if base[baseLen-1] == '/' {
+		return base[:baseLen-1]
+	}
+
+	return base
+}
+
 func makeRequest(ctx context.Context, tok *oauth2.Token, g *oauth2.Config, url string, dst interface{}) error {
 	client := g.Client(ctx, tok)
 	res, err := client.Get(url)

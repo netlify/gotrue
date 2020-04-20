@@ -24,25 +24,9 @@ type gitlabUser struct {
 	ConfirmedAt string `json:"confirmed_at"`
 }
 
-<<<<<<< HEAD
-=======
 type gitlabUserEmail struct {
 	ID    int    `json:"id"`
 	Email string `json:"email"`
-}
-
->>>>>>> fix: add gitlab types and handle primary email confirmation
-func chooseHost(base, defaultHost string) string {
-	if base == "" {
-		return "https://" + defaultHost
-	}
-
-	baseLen := len(base)
-	if base[baseLen-1] == '/' {
-		return base[:baseLen-1]
-	}
-
-	return base
 }
 
 // NewGitlabProvider creates a Gitlab account provider.
