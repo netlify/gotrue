@@ -8,8 +8,10 @@ import (
 	"net/http"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/netlify/gotrue/models"
+	"github.com/didip/tollbooth"
+	"github.com/didip/tollbooth/limiter"
 	"github.com/gobuffalo/uuid"
+	"github.com/netlify/gotrue/models"
 )
 
 const (
@@ -107,6 +109,12 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 	}
 
 	return ctx, nil
+}
+
+func (a *API) limitHandler(lmt *limiter.Limiter) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return tollbooth.LimitHandler(lmt, next)
+	}
 }
 
 func (a *API) verifyOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {
