@@ -116,11 +116,12 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 		r.With(api.requireEmailProvider).Post("/signup", api.Signup)
 		r.With(api.requireEmailProvider).Post("/recover", api.Recover)
-		// Allow 30 requests per 10 minutes.
-		lmt := tollbooth.NewLimiter(30.0/(10*60), &limiter.ExpirableOptions{
-			DefaultExpirationTTL: time.Hour,
-		}).SetBurst(30)
-		r.With(api.requireEmailProvider).WithBypass(api.limitHandler(lmt)).Post("/token", api.Token)
+		r.With(api.requireEmailProvider).WithBypass(api.limitHandler(
+			// Allow 30 requests per 10 minutes.
+			tollbooth.NewLimiter(30.0/(10*60), &limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Hour,
+			}).SetBurst(30),
+		)).Post("/token", api.Token)
 		r.Post("/verify", api.Verify)
 
 		r.With(api.requireAuthentication).Post("/logout", api.Logout)

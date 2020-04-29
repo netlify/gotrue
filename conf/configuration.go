@@ -58,12 +58,13 @@ type GlobalConfiguration struct {
 		Endpoint        string
 		RequestIDHeader string `envconfig:"REQUEST_ID_HEADER"`
 	}
-	DB                DBConfiguration
-	External          ProviderConfiguration
-	Logging           LoggingConfig `envconfig:"LOG"`
-	OperatorToken     string        `split_words:"true" required:"true"`
-	MultiInstanceMode bool
-	SMTP              SMTPConfiguration
+	DB                 DBConfiguration
+	External           ProviderConfiguration
+	Logging            LoggingConfig `envconfig:"LOG"`
+	OperatorToken      string        `split_words:"true" required:"true"`
+	MultiInstanceMode  bool
+	SMTP               SMTPConfiguration
+	RateLimitIPLookups []string `split_words:"true"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.

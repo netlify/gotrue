@@ -2,9 +2,9 @@ package api
 
 import (
 	"bytes"
-	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gobuffalo/uuid"
@@ -25,7 +25,7 @@ type TokenTestSuite struct {
 }
 
 func TestToken(t *testing.T) {
-	log.Println("RUNNING")
+	os.Setenv("GOTRUE_RATE_LIMIT_IP_LOOKUPS", "X-Forwarded-For")
 	api, config, instanceID, err := setupAPIForTestForInstance()
 	require.NoError(t, err)
 
@@ -44,20 +44,16 @@ func (ts *TokenTestSuite) SetupTest() {
 }
 
 func (ts *TokenTestSuite) TestRateLimitToken() {
-	for i := 0; i < 30; i++ {
-		var buffer bytes.Buffer
-		req := httptest.NewRequest(http.MethodPost, "http://localhost/token", &buffer)
-		req.Header.Set("Content-Type", "application/json")
+	var buffer bytes.Buffer
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/token", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Forwarded-For", "1.2.3.4")
 
+	for i := 0; i < 30; i++ {
 		w := httptest.NewRecorder()
 		ts.API.handler.ServeHTTP(w, req)
 		assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
 	}
-
-	var buffer bytes.Buffer
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/token", &buffer)
-	req.Header.Set("Content-Type", "application/json")
-
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(ts.T(), http.StatusTooManyRequests, w.Code)
