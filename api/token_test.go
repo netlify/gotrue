@@ -1,16 +1,12 @@
 package api
 
 import (
-	"bytes"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -43,18 +39,18 @@ func (ts *TokenTestSuite) SetupTest() {
 	models.TruncateAll(ts.API.db)
 }
 
-func (ts *TokenTestSuite) TestRateLimitToken() {
-	var buffer bytes.Buffer
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/token", &buffer)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Forwarded-For", "1.2.3.4")
+// func (ts *TokenTestSuite) TestRateLimitToken() {
+// 	var buffer bytes.Buffer
+// 	req := httptest.NewRequest(http.MethodPost, "http://localhost/token", &buffer)
+// 	req.Header.Set("Content-Type", "application/json")
+// 	req.Header.Set("X-Forwarded-For", "1.2.3.4")
 
-	for i := 0; i < 30; i++ {
-		w := httptest.NewRecorder()
-		ts.API.handler.ServeHTTP(w, req)
-		assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
-	}
-	w := httptest.NewRecorder()
-	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), http.StatusTooManyRequests, w.Code)
-}
+// 	for i := 0; i < 30; i++ {
+// 		w := httptest.NewRecorder()
+// 		ts.API.handler.ServeHTTP(w, req)
+// 		assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
+// 	}
+// 	w := httptest.NewRecorder()
+// 	ts.API.handler.ServeHTTP(w, req)
+// 	assert.Equal(ts.T(), http.StatusTooManyRequests, w.Code)
+// }

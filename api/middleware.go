@@ -116,7 +116,7 @@ func (a *API) limitHandler(lmt *limiter.Limiter) func(http.Handler) http.Handler
 		if len(a.config.RateLimitIPLookups) == 0 {
 			return next
 		}
-		lmt.SetIPLookups(a.config.RateLimitIPLookups)
+		lmt.SetIPLookups([]string{"X_NF_CLIENT_CONNECTION_IP"})
 		return tollbooth.LimitHandler(lmt, next)
 	}
 }
