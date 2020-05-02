@@ -111,13 +111,15 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 	return ctx, nil
 }
 
-func (a *API) limitHandler(lmt *limiter.Limiter) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		if len(a.config.RateLimitIPLookups) == 0 {
-			return next
+func (a *API) limitHandler(lmt *limiter.Limiter) middlewareHandler {
+	return func(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+		c := req.Context()
+		key := req.Header.Get("X-BB-IP")
+		err := tollbooth.LimitByKeys(lmt, []string{key})
+		if err != nil {
+			return c, httpError(http.StatusTooManyRequests, "Rate limit exceeded")
 		}
-		lmt.SetIPLookups(a.config.RateLimitIPLookups)
-		return tollbooth.LimitHandler(lmt, next)
+		return c, nil
 	}
 }
 
