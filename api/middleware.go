@@ -113,9 +113,9 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 
 func (a *API) limitHandler(lmt *limiter.Limiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		if len(a.config.RateLimitIPLookups) == 0 {
-			return next
-		}
+		// if len(a.config.RateLimitIPLookups) == 0 {
+		// 	return next
+		// }
 		lmt.SetIPLookups([]string{"X-NF-Client-Connection-Ip"})
 		return tollbooth.LimitHandler(lmt, next)
 	}
