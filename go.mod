@@ -8,6 +8,7 @@ require (
 	github.com/cockroachdb/cockroach-go v0.0.0-20190925194419-606b3d062051 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/didip/tollbooth v4.0.2+incompatible
+	github.com/didip/tollbooth/v5 v5.1.1
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/go-chi/chi v4.0.2+incompatible
 	github.com/go-sql-driver/mysql v1.4.1

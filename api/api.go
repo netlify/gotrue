@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/didip/tollbooth"
-	"github.com/didip/tollbooth/limiter"
+	"github.com/didip/tollbooth/v5"
+	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/go-chi/chi"
 	"github.com/gobuffalo/uuid"
 	"github.com/imdario/mergo"

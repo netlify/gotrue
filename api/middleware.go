@@ -8,8 +8,8 @@ import (
 	"net/http"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/didip/tollbooth"
-	"github.com/didip/tollbooth/limiter"
+	"github.com/didip/tollbooth/v5"
+	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/models"
 )
