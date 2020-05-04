@@ -25,7 +25,7 @@ type TokenTestSuite struct {
 }
 
 func TestToken(t *testing.T) {
-	os.Setenv("GOTRUE_RATE_LIMIT_IP_LOOKUPS", "X-BB-IP")
+	os.Setenv("GOTRUE_RATE_LIMIT_HEADER", "My-Custom-Header")
 	api, config, instanceID, err := setupAPIForTestForInstance()
 	require.NoError(t, err)
 
@@ -47,7 +47,7 @@ func (ts *TokenTestSuite) TestRateLimitToken() {
 	var buffer bytes.Buffer
 	req := httptest.NewRequest(http.MethodPost, "http://localhost/token", &buffer)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-BB-IP", "1.2.3.4")
+	req.Header.Set("My-Custom-Header", "1.2.3.4")
 
 	// It rate limits after 30 requests
 	for i := 0; i < 30; i++ {
@@ -68,7 +68,7 @@ func (ts *TokenTestSuite) TestRateLimitToken() {
 	// It doesn't rate limit a new value for the limited header
 	req = httptest.NewRequest(http.MethodPost, "http://localhost/token", &buffer)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-BB-IP", "5.6.7.8")
+	req.Header.Set("My-Custom-Header", "5.6.7.8")
 	w = httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(ts.T(), http.StatusBadRequest, w.Code)

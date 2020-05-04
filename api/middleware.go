@@ -114,7 +114,7 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 func (a *API) limitHandler(lmt *limiter.Limiter) middlewareHandler {
 	return func(w http.ResponseWriter, req *http.Request) (context.Context, error) {
 		c := req.Context()
-		key := req.Header.Get("X-BB-IP")
+		key := req.Header.Get(a.config.RateLimitHeader)
 		err := tollbooth.LimitByKeys(lmt, []string{key})
 		if err != nil {
 			return c, httpError(http.StatusTooManyRequests, "Rate limit exceeded")
