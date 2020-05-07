@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/didip/tollbooth/v5"
+	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/go-chi/chi"
 	"github.com/gobuffalo/uuid"
 	"github.com/imdario/mergo"
@@ -114,7 +116,12 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 		r.With(api.requireEmailProvider).Post("/signup", api.Signup)
 		r.With(api.requireEmailProvider).Post("/recover", api.Recover)
-		r.With(api.requireEmailProvider).Post("/token", api.Token)
+		r.With(api.requireEmailProvider).With(api.limitHandler(
+			// Allow requests at a rate of 30 per 5 minutes.
+			tollbooth.NewLimiter(30.0/(60*5), &limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Hour,
+			}).SetBurst(30),
+		)).Post("/token", api.Token)
 		r.Post("/verify", api.Verify)
 
 		r.With(api.requireAuthentication).Post("/logout", api.Logout)

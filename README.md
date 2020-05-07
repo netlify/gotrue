@@ -30,6 +30,10 @@ the payload values can be trusted.
 
 When signup is disabled the only way to create new users is through invites. Defaults to `false`, all signups enabled.
 
+`GOTRUE_RATE_LIMIT_HEADER` - `string`
+
+Header on which to rate limit the `/token` endpoint.
+
 ### API
 
 ```

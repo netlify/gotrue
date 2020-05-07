@@ -8,8 +8,10 @@ import (
 	"net/http"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/netlify/gotrue/models"
+	"github.com/didip/tollbooth/v5"
+	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/gobuffalo/uuid"
+	"github.com/netlify/gotrue/models"
 )
 
 const (
@@ -107,6 +109,20 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 	}
 
 	return ctx, nil
+}
+
+func (a *API) limitHandler(lmt *limiter.Limiter) middlewareHandler {
+	return func(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+		c := req.Context()
+		if limitHeader := a.config.RateLimitHeader; limitHeader != "" {
+			key := req.Header.Get(a.config.RateLimitHeader)
+			err := tollbooth.LimitByKeys(lmt, []string{key})
+			if err != nil {
+				return c, httpError(http.StatusTooManyRequests, "Rate limit exceeded")
+			}
+		}
+		return c, nil
+	}
 }
 
 func (a *API) verifyOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {

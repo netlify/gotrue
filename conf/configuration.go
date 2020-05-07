@@ -64,6 +64,7 @@ type GlobalConfiguration struct {
 	OperatorToken     string        `split_words:"true" required:"true"`
 	MultiInstanceMode bool
 	SMTP              SMTPConfiguration
+	RateLimitHeader   string `split_words:"true"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.
