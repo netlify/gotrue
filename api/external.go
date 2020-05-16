@@ -10,10 +10,10 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -114,7 +114,9 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			}
 		} else {
 			aud := a.requestAud(ctx, r)
-			user, terr = models.FindUserByEmailAndAudience(tx, instanceID, userData.Email, aud)
+			if userData.Verified || config.Mailer.Autoconfirm {
+				user, terr = models.FindUserByEmailAndAudience(tx, instanceID, userData.Email, aud)
+			}
 			if terr != nil && !models.IsNotFoundError(terr) {
 				return internalServerError("Error checking for duplicate users").WithInternalError(terr)
 			}

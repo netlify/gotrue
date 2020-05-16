@@ -17,6 +17,13 @@ type gitlabProvider struct {
 	Host string
 }
 
+type gitlabUser struct {
+	Email       string `json:"email"`
+	Name        string `json:"name"`
+	AvatarURL   string `json:"avatar_url"`
+	ConfirmedAt string `json:"confirmed_at"`
+}
+
 func chooseHost(base, defaultHost string) string {
 	if base == "" {
 		return "https://" + defaultHost
@@ -57,7 +64,7 @@ func (g gitlabProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 }
 
 func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
-	var u githubUser
+	var u gitlabUser
 
 	if err := makeRequest(ctx, tok, g.Config, g.Host+"/api/v4/user", &u); err != nil {
 		return nil, err
@@ -70,21 +77,11 @@ func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 		},
 	}
 
-	var emails []*githubUserEmail
-	if err := makeRequest(ctx, tok, g.Config, g.Host+"/api/v4/user/emails", &emails); err != nil {
-		return nil, err
-	}
-
-	if len(emails) > 0 {
-		data.Email = emails[0].Email
-	}
-
-	if data.Email == "" {
-		if u.Email != "" {
-			data.Email = u.Email
-		} else {
-			return nil, errors.New("Unable to find email with GitLab provider")
-		}
+	if u.Email != "" {
+		data.Email = u.Email
+		data.Verified = u.ConfirmedAt != ""
+	} else {
+		return nil, errors.New("Unable to find email with GitLab provider")
 	}
 
 	return data, nil
