@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -166,10 +166,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 		case "/api/v4/user":
 			userCount++
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`)
-		case "/api/v4/user/emails":
-			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, `[{"email":"gitlab@example.com"}]`)
+			fmt.Fprint(w, `{"name":"Gitlab Test","email":"gitlab@example.com","avatar_url":"http://example.com/avatar","confirmed_at": "2020-01-01T00:00:00.000Z"}`)
 		default:
 			w.WriteHeader(500)
 			ts.Fail("unknown gitlab oauth call %s", r.URL.Path)
