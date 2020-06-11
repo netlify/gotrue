@@ -198,6 +198,9 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab() {
 			userCount++
 			w.Header().Add("Content-Type", "application/json")
 			fmt.Fprint(w, `{"name":"Gitlab Test","email":"gitlab@example.com","avatar_url":"http://example.com/avatar","confirmed_at": "2020-01-01T00:00:00.000Z"}`)
+		case "/api/v4/user/emails":
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `[]`)
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
 			ts.Fail("unknown gitlab oauth call %s", r.URL.Path)
@@ -286,6 +289,9 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab_MismatchedEmails() {
 			userCount++
 			w.Header().Add("Content-Type", "application/json")
 			fmt.Fprint(w, `{"name":"Gitlab Test","email":"gitlab+mismatch@example.com","avatar_url":"http://example.com/avatar","confirmed_at": "2020-01-01T00:00:00.000Z"}`)
+		case "/api/v4/user/emails":
+			w.Header().Add("Content-Type", "application/json")
+			fmt.Fprint(w, `[]`)
 		default:
 			w.WriteHeader(500)
 			ts.Fail("unknown gitlab oauth call %s", r.URL.Path)

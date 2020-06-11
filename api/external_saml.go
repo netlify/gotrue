@@ -48,8 +48,10 @@ func (a *API) samlCallback(r *http.Request, ctx context.Context) (*provider.User
 		return nil, internalServerError("SAML Assertion is missing")
 	}
 	userData := &provider.UserProvidedData{
-		Email:    assertionInfo.NameID,
-		Verified: true,
+		Emails: []provider.Email{{
+			Email:    assertionInfo.NameID,
+			Verified: true,
+		}},
 	}
 	return userData, nil
 }

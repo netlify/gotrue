@@ -114,20 +114,40 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			}
 		} else {
 			aud := a.requestAud(ctx, r)
-			if userData.Verified || config.Mailer.Autoconfirm {
-				user, terr = models.FindUserByEmailAndAudience(tx, instanceID, userData.Email, aud)
+
+			// search user using all available emails
+			var emailData provider.Email
+			for _, e := range userData.Emails {
+				if e.Verified || config.Mailer.Autoconfirm {
+					user, terr = models.FindUserByEmailAndAudience(tx, instanceID, e.Email, aud)
+					if terr != nil && !models.IsNotFoundError(terr) {
+						return internalServerError("Error checking for duplicate users").WithInternalError(terr)
+					}
+
+					if user != nil {
+						emailData = e
+						break
+					}
+				}
 			}
-			if terr != nil && !models.IsNotFoundError(terr) {
-				return internalServerError("Error checking for duplicate users").WithInternalError(terr)
-			}
+
 			if user == nil {
 				if config.DisableSignup {
 					return forbiddenError("Signups not allowed for this instance")
 				}
 
+				// prefer primary email for new signups
+				emailData = userData.Emails[0]
+				for _, e := range userData.Emails {
+					if e.Primary {
+						emailData = e
+						break
+					}
+				}
+
 				params := &SignupParams{
 					Provider: providerType,
-					Email:    userData.Email,
+					Email:    emailData.Email,
 					Aud:      aud,
 					Data:     make(map[string]interface{}),
 				}
@@ -144,7 +164,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			}
 
 			if !user.IsConfirmed() {
-				if !userData.Verified && !config.Mailer.Autoconfirm {
+				if !emailData.Verified && !config.Mailer.Autoconfirm {
 					mailer := a.Mailer(ctx)
 					referrer := a.getReferrer(r)
 					if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
@@ -208,8 +228,18 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	if user.Email != userData.Email {
-		return nil, badRequestError("Invited email does not match email from external provider").WithInternalMessage("invited=%s external=%s", user.Email, userData.Email)
+	var emailData *provider.Email
+	var emails []string
+	for _, e := range userData.Emails {
+		emails = append(emails, e.Email)
+		if user.Email == e.Email {
+			emailData = &e
+			break
+		}
+	}
+
+	if emailData == nil {
+		return nil, badRequestError("Invited email does not match emails from external provider").WithInternalMessage("invited=%s external=%s", user.Email, strings.Join(emails, ", "))
 	}
 
 	if err := user.UpdateAppMetaData(tx, map[string]interface{}{

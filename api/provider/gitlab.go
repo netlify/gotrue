@@ -24,17 +24,9 @@ type gitlabUser struct {
 	ConfirmedAt string `json:"confirmed_at"`
 }
 
-func chooseHost(base, defaultHost string) string {
-	if base == "" {
-		return "https://" + defaultHost
-	}
-
-	baseLen := len(base)
-	if base[baseLen-1] == '/' {
-		return base[:baseLen-1]
-	}
-
-	return base
+type gitlabUserEmail struct {
+	ID    int    `json:"id"`
+	Email string `json:"email"`
 }
 
 // NewGitlabProvider creates a Gitlab account provider.
@@ -77,10 +69,24 @@ func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 		},
 	}
 
+	var emails []*gitlabUserEmail
+	if err := makeRequest(ctx, tok, g.Config, g.Host+"/api/v4/user/emails", &emails); err != nil {
+		return nil, err
+	}
+
+	for _, e := range emails {
+		// additional emails from GitLab don't return confirm status
+		if e.Email != "" {
+			data.Emails = append(data.Emails, Email{Email: e.Email, Verified: false, Primary: false})
+		}
+	}
+
 	if u.Email != "" {
-		data.Email = u.Email
-		data.Verified = u.ConfirmedAt != ""
-	} else {
+		verified := u.ConfirmedAt != ""
+		data.Emails = append(data.Emails, Email{Email: u.Email, Verified: verified, Primary: true})
+	}
+
+	if len(data.Emails) <= 0 {
 		return nil, errors.New("Unable to find email with GitLab provider")
 	}
 
