@@ -28,9 +28,20 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 
 	params := &VerifyParams{}
 	cookie := r.Header.Get(useCookieHeader)
-	jsonDecoder := json.NewDecoder(r.Body)
-	if err := jsonDecoder.Decode(params); err != nil {
-		return badRequestError("Could not read verification params: %v", err)
+
+	switch r.Method {
+	// GET only supports signup type
+	case "GET":
+		params.Token = r.FormValue("confirmation_token")
+		params.Password = ""
+		params.Type = signupVerification
+	case "POST":
+		jsonDecoder := json.NewDecoder(r.Body)
+		if err := jsonDecoder.Decode(params); err != nil {
+			return badRequestError("Could not read verification params: %v", err)
+		}
+	default:
+		unprocessableEntityError("Sorry, only GET and POST methods are supported.")
 	}
 
 	if params.Token == "" {
@@ -74,7 +85,15 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	return sendJSON(w, http.StatusOK, token)
+	// GET requests should return to the app site after confirmation
+	switch r.Method {
+	case "GET":
+		http.Redirect(w, r, config.SiteURL, http.StatusSeeOther)
+	case "POST":
+		return sendJSON(w, http.StatusOK, token)
+	}
+
+	return nil
 }
 
 func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {

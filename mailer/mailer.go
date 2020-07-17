@@ -65,7 +65,7 @@ func getSiteURL(referrerURL, siteURL, filepath, fragment string) (string, error)
 		}
 		site = site.ResolveReference(path)
 	}
-	site.Fragment = fragment
+	site.RawQuery = fragment
 	return site.String(), nil
 }
 

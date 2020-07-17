@@ -122,7 +122,11 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 				DefaultExpirationTTL: time.Hour,
 			}).SetBurst(30),
 		)).Post("/token", api.Token)
-		r.Post("/verify", api.Verify)
+
+		r.Route("/verify", func(r *router) {
+			r.Get("/", api.Verify)
+			r.Post("/", api.Verify)
+		})
 
 		r.With(api.requireAuthentication).Post("/logout", api.Logout)
 
