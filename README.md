@@ -402,16 +402,33 @@ GoTrue exposes the following endpoints:
 * **POST /token**
 
   This is an OAuth2 endpoint that currently implements
-  the password, refresh_token, and authorization_code grant types
+  the password and refresh_token grant types
 
+  query params:
   ```
-  grant_type=password&username=email@example.com&password=secret
+  ?grant_type=password
+  ```
+
+  body:
+  ```json
+  {
+    "email": "name@domain.com",
+    "password": "somepassword",
+  }
   ```
 
   or
 
+  query params:
   ```
-  grant_type=refresh_token&refresh_token=my-refresh-token
+  grant_type=refresh_token
+  ```
+
+  body:
+  ```json
+  {
+    "refresh_token": "a-refresh-token"
+  }
   ```
 
   Once you have an access token, you can access the methods requiring authentication

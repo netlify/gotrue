@@ -14,6 +14,8 @@ type TemplateMailer struct {
 	Mailer  *mailme.Mailer
 }
 
+var configFile = ""
+
 const defaultInviteMail = `<h2>You have been invited</h2>
 
 <p>You have been invited to create a user on {{ .SiteURL }}. Follow this link to accept the invite:</p>
@@ -65,7 +67,9 @@ func (m *TemplateMailer) InviteMail(user *models.User, referrerURL string) error
 
 // ConfirmationMail sends a signup confirmation mail to a new user
 func (m *TemplateMailer) ConfirmationMail(user *models.User, referrerURL string) error {
-	url, err := getSiteURL(referrerURL, m.Config.SiteURL, m.Config.Mailer.URLPaths.Confirmation, "confirmation_token="+user.ConfirmationToken)
+	globalConfig, err := conf.LoadGlobal(configFile)
+
+	url, err := getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Confirmation, "confirmation_token="+user.ConfirmationToken)
 	if err != nil {
 		return err
 	}

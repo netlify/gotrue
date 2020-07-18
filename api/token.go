@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -28,6 +29,17 @@ type AccessTokenResponse struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+// PasswordGrantParams are the parameters the ResourceOwnerPasswordGrant method accepts
+type PasswordGrantParams struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// RefreshTokenGrantParams are the parameters the RefreshTokenGrant method accepts
+type RefreshTokenGrantParams struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
 const useCookieHeader = "x-use-cookie"
 const useSessionCookie = "session"
 
@@ -48,15 +60,20 @@ func (a *API) Token(w http.ResponseWriter, r *http.Request) error {
 
 // ResourceOwnerPasswordGrant implements the password grant type flow
 func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	username := r.FormValue("username")
-	password := r.FormValue("password")
+	params := &PasswordGrantParams{}
+
+	jsonDecoder := json.NewDecoder(r.Body)
+	if err := jsonDecoder.Decode(params); err != nil {
+		return badRequestError("Could not read password grant params: %v", err)
+	}
+
 	cookie := r.Header.Get(useCookieHeader)
 
 	aud := a.requestAud(ctx, r)
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 
-	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, username, aud)
+	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", "No user found with this email")
@@ -68,7 +85,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return oauthError("invalid_grant", "Email not confirmed")
 	}
 
-	if !user.Authenticate(password) {
+	if !user.Authenticate(params.Password) {
 		return oauthError("invalid_grant", "Invalid Password")
 	}
 
@@ -105,14 +122,21 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	config := a.getConfig(ctx)
 	instanceID := getInstanceID(ctx)
-	tokenStr := r.FormValue("refresh_token")
+
+	params := &RefreshTokenGrantParams{}
+
+	jsonDecoder := json.NewDecoder(r.Body)
+	if err := jsonDecoder.Decode(params); err != nil {
+		return badRequestError("Could not read password grant params: %v", err)
+	}
+
 	cookie := r.Header.Get(useCookieHeader)
 
-	if tokenStr == "" {
+	if params.RefreshToken == "" {
 		return oauthError("invalid_request", "refresh_token required")
 	}
 
-	user, token, err := models.FindUserWithRefreshToken(a.db, tokenStr)
+	user, token, err := models.FindUserWithRefreshToken(a.db, params.RefreshToken)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", "Invalid Refresh Token")
