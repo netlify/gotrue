@@ -57,7 +57,7 @@ type GlobalConfiguration struct {
 		Port            int `envconfig:"PORT" default:"8081"`
 		Endpoint        string
 		RequestIDHeader string `envconfig:"REQUEST_ID_HEADER"`
-		ExternalURL     string `json:"external_url" envconfig:"API_EXTERNAL_URL" default:"localhost:9999"`
+		ExternalURL     string `json:"external_url" envconfig:"API_EXTERNAL_URL"`
 	}
 	DB                DBConfiguration
 	External          ProviderConfiguration
