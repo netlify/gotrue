@@ -19,6 +19,7 @@ type GoTrueClaims struct {
 	Email        string                 `json:"email"`
 	AppMetaData  map[string]interface{} `json:"app_metadata"`
 	UserMetaData map[string]interface{} `json:"user_metadata"`
+	Role         string                 `json:"role"`
 }
 
 // AccessTokenResponse represents an OAuth2 success response
@@ -197,6 +198,7 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, secret stri
 		Email:        user.Email,
 		AppMetaData:  user.AppMetaData,
 		UserMetaData: user.UserMetaData,
+		Role:         user.Role,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
