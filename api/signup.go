@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/netlify/gotrue/metering"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 )
@@ -22,6 +23,7 @@ type SignupParams struct {
 func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
+	cookie := r.Header.Get(useCookieHeader)
 
 	if config.DisableSignup {
 		return forbiddenError("Signups not allowed for this instance")
@@ -90,6 +92,36 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	if user.IsConfirmed() {
+		var token *AccessTokenResponse
+		err = a.db.Transaction(func(tx *storage.Connection) error {
+			var terr error
+			if terr = models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
+				return terr
+			}
+			if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
+				return terr
+			}
+
+			token, terr = a.issueRefreshToken(ctx, tx, user)
+			if terr != nil {
+				return terr
+			}
+
+			if cookie != "" && config.Cookie.Duration > 0 {
+				if terr = a.setCookieToken(config, token.Token, cookie == useSessionCookie, w); terr != nil {
+					return internalServerError("Failed to set JWT cookie. %s", terr)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		metering.RecordLogin("password", user.ID, instanceID)
+		token.User = user
+		return sendJSON(w, http.StatusOK, token)
+	}
 	return sendJSON(w, http.StatusOK, user)
 }
 
