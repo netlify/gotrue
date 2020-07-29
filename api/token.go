@@ -24,10 +24,11 @@ type GoTrueClaims struct {
 
 // AccessTokenResponse represents an OAuth2 success response
 type AccessTokenResponse struct {
-	Token        string `json:"access_token"`
-	TokenType    string `json:"token_type"` // Bearer
-	ExpiresIn    int    `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
+	Token        string       `json:"access_token"`
+	TokenType    string       `json:"token_type"` // Bearer
+	ExpiresIn    int          `json:"expires_in"`
+	RefreshToken string       `json:"refresh_token"`
+	User         *models.User `json:"user"`
 }
 
 // PasswordGrantParams are the parameters the ResourceOwnerPasswordGrant method accepts
@@ -116,6 +117,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		return err
 	}
 	metering.RecordLogin("password", user.ID, instanceID)
+	token.User = user
 	return sendJSON(w, http.StatusOK, token)
 }
 
@@ -185,6 +187,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		TokenType:    "bearer",
 		ExpiresIn:    config.JWT.Exp,
 		RefreshToken: newToken.Token,
+		User:         user,
 	})
 }
 
