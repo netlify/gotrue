@@ -46,7 +46,11 @@ func (m microsoftProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (
 	}
 
 	data := &UserProvidedData{
-		Email: u.Email,
+		Emails: []Email{{
+			Email:    u.Email,
+			Verified: true,
+			Primary:  true,
+		}},
 		Metadata: map[string]string{
 			nameKey: u.Name,
 		},
