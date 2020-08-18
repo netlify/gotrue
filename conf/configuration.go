@@ -95,17 +95,19 @@ type SMTPConfiguration struct {
 	AdminEmail   string        `json:"admin_email" split_words:"true"`
 }
 
+type MailerConfiguration struct {
+	Autoconfirm bool                      `json:"autoconfirm"`
+	Subjects    EmailContentConfiguration `json:"subjects"`
+	Templates   EmailContentConfiguration `json:"templates"`
+	URLPaths    EmailContentConfiguration `json:"url_paths"`
+}
+
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
-	SiteURL string            `json:"site_url" split_words:"true" required:"true"`
-	JWT     JWTConfiguration  `json:"jwt"`
-	SMTP    SMTPConfiguration `json:"smtp"`
-	Mailer  struct {
-		Autoconfirm bool                      `json:"autoconfirm"`
-		Subjects    EmailContentConfiguration `json:"subjects"`
-		Templates   EmailContentConfiguration `json:"templates"`
-		URLPaths    EmailContentConfiguration `json:"url_paths"`
-	} `json:"mailer"`
+	SiteURL       string                `json:"site_url" split_words:"true" required:"true"`
+	JWT           JWTConfiguration      `json:"jwt"`
+	SMTP          SMTPConfiguration     `json:"smtp"`
+	Mailer        MailerConfiguration   `json:"mailer"`
 	External      ProviderConfiguration `json:"external"`
 	DisableSignup bool                  `json:"disable_signup" split_words:"true"`
 	Webhook       WebhookConfig         `json:"webhook" split_words:"true"`

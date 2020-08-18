@@ -103,7 +103,7 @@ func (a *API) GetInstance(w http.ResponseWriter, r *http.Request) error {
 func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 	i := getInstance(r.Context())
 
-	params := InstanceRequestParams{}
+	params := InstanceRequestParams{BaseConfig: i.BaseConfig}
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 		return badRequestError("Error decoding params: %v", err)
 	}
