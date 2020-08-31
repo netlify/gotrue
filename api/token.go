@@ -59,7 +59,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, username, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return oauthError("invalid_grant", "No user found with this email")
+			return oauthError("invalid_grant", "Invalid Password")
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
