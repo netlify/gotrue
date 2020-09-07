@@ -1,4 +1,4 @@
-name: Release
+name: Build and Release on Push to Master
 
 on:
   push:
@@ -7,18 +7,56 @@ on:
 
 jobs:
   release:
-    name: Release
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['12']
 
+    outputs:
+      status: ${{ steps.github-release.conclusion }}
+
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
-      - name: Upload image to Docker Hub
-        uses: docker/build-push-action@v1
+      - name: Set up Node
+        uses: actions/setup-node@v1
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: ${{ secrets.DOCKER_REPO }}
-          tags: dev
+          node-version: ${{ matrix.node }}
 
-          
+      - name: Release on GitHub
+        id: github-release
+        run: npx semantic-release -p        \
+          @semantic-release/commit-analyzer \
+          @semantic-release/github         \
+          @semantic-release/release-notes-generator
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: release
+    runs-on: ubuntu-18.04
+    if: needs.release.outputs.status == 'success'
+    steps:
+      - uses: actions/checkout@v2
+      
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.14.4' # The Go version to download (if necessary) and use.
+
+      - run: make deps
+
+      - run: make all
+
+      - id: releases
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          owner: supabase
+          repo: gotrue
+          excludes: prerelease, draft
+
+      - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}.tar.gz gotrue
+
+      - uses: actions/upload-artifact@v1
+        with:
+          name: gotrue-${{ steps.releases.outputs.release }}.tar.gz
+          path: ./gotrue-${{ steps.releases.outputs.release }}.tar.gz
