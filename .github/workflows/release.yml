@@ -75,3 +75,4 @@ jobs:
           files: 'gotrue-${{ steps.releases.outputs.release }}.tar.gz'
           release-tag: ${{ steps.releases.outputs.release }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          
