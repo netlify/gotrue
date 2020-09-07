@@ -4,7 +4,7 @@ CHECK_FILES?=$$(go list ./... | grep -v /vendor/)
 help: ## Show this help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {sub("\\\\n",sprintf("\n%22c"," "), $$2);printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-all: lint vet test build ## Run the tests and build the binary.
+all: lint vet build ## Run the tests and build the binary.
 
 build: ## Build the binary.
 	go build -ldflags "-X github.com/netlify/gotrue/cmd.Version=`git rev-parse HEAD`"
