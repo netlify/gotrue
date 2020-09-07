@@ -12,11 +12,18 @@ jobs:
         node: ['12']
 
     outputs:
-      status: ${{ steps.github-release.conclusion }}
+      status: ${{ steps.pre-release.outputs.release != steps.post-release.outputs.release }}
 
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
+      - id: pre-release
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          owner: supabase
+          repo: gotrue
+          excludes: prerelease, draft
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -32,10 +39,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - id: post-release
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          owner: supabase
+          repo: gotrue
+          excludes: prerelease, draft
+
   deploy:
     needs: release
     runs-on: ubuntu-18.04
-    if: needs.release.outputs.status == 'success'
+    if: success() && needs.release.outputs.status == 'true'
     steps:
       - uses: actions/checkout@v2
       
@@ -56,7 +70,8 @@ jobs:
 
       - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}.tar.gz gotrue
 
-      - uses: actions/upload-artifact@v1
+      - uses: AButler/upload-release-assets@v2.0
         with:
-          name: gotrue-${{ steps.releases.outputs.release }}.tar.gz
-          path: ./gotrue-${{ steps.releases.outputs.release }}.tar.gz
+          files: 'gotrue-${{ steps.releases.outputs.release }}.tar.gz'
+          release-tag: ${{ steps.releases.outputs.release }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
