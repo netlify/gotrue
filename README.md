@@ -497,6 +497,10 @@ GoTrue exposes the following endpoints:
   This will revoke all refresh tokens for the user. Remember that the JWT tokens
   will still be valid for stateless auth until they expires.
 
+## Pre-built
+
+- [Docker](https://hub.docker.com/repository/docker/supabase/gotrue)
+
 ## TODO
 
 * Schema for custom user data in config file
