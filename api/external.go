@@ -212,7 +212,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		q.Set("token_type", token.TokenType)
 		q.Set("expires_in", strconv.Itoa(token.ExpiresIn))
 		q.Set("refresh_token", token.RefreshToken)
-		rurl += "?" + q.Encode()
+		rurl += "#" + q.Encode()
 	}
 	http.Redirect(w, r, rurl, http.StatusFound)
 	return nil
