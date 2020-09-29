@@ -497,6 +497,24 @@ GoTrue exposes the following endpoints:
   This will revoke all refresh tokens for the user. Remember that the JWT tokens
   will still be valid for stateless auth until they expires.
 
+
+* **GET /authorize**
+
+  Get access_token from external oauth provider
+
+  query params:
+  ```
+  provider=google | bitbucket | github | gitlab
+  ```
+ 
+  Redirects to provider and then to `/callback`
+  
+* **GET /callback**
+
+  External provider should redirect to here
+ 
+  Redirects to `<GOTRUE_SITE_URL>#access_token=<access_token>&refresh_token=<refresh_token>&expires_in=3600&provider=<provider_name>`
+  
 ## Pre-built
 
 - [Docker](https://hub.docker.com/repository/docker/supabase/gotrue)
