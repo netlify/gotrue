@@ -174,7 +174,7 @@ func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent,
 
 		if eventHookURL, ok := fun[string(event)]; ok {
 			var err error
-			hookURL, err = url.Parse(eventHookURL)
+			hookURL, err = url.Parse(eventHookURL[0])
 			if err != nil {
 				return errors.Wrapf(err, "Failed to parse Event Function Hook URL")
 			}
