@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -32,9 +34,9 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	// GET only supports signup type
 	case "GET":
-		params.Token = r.FormValue("confirmation_token")
+		params.Token = r.FormValue("token")
 		params.Password = ""
-		params.Type = signupVerification
+		params.Type = r.FormValue("type")
 	case "POST":
 		jsonDecoder := json.NewDecoder(r.Body)
 		if err := jsonDecoder.Decode(params); err != nil {
@@ -88,7 +90,16 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	// GET requests should return to the app site after confirmation
 	switch r.Method {
 	case "GET":
-		http.Redirect(w, r, config.SiteURL, http.StatusSeeOther)
+		rurl := config.SiteURL
+		if token != nil {
+			q := url.Values{}
+			q.Set("access_token", token.Token)
+			q.Set("token_type", token.TokenType)
+			q.Set("expires_in", strconv.Itoa(token.ExpiresIn))
+			q.Set("refresh_token", token.RefreshToken)
+			rurl += "#" + q.Encode()
+		}
+		http.Redirect(w, r, rurl, http.StatusSeeOther)
 	case "POST":
 		return sendJSON(w, http.StatusOK, token)
 	}
