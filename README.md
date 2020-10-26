@@ -365,7 +365,7 @@ GoTrue exposes the following endpoints:
   {
     "type": "signup",
     "token": "confirmation-code-delivered-in-email",
-    "password": "12345abcdef"
+    "password": "12345abcdef" // only required if responding to an 'invite'
   }
   ```
   
@@ -380,6 +380,26 @@ GoTrue exposes the following endpoints:
     "expires_in": 3600,
     "refresh_token": "a-refresh-token"
   }
+  ```
+
+* **GET /verify**
+
+  Verify a registration or a password recovery. Type can be `signup` or `recovery`
+  and the `token` is a token returned from either `/signup` or `/recover`.
+
+  ```json
+  {
+    "type": "signup",
+    "token": "confirmation-code-delivered-in-email",
+  }
+  ```
+  
+  `password` is required for signup verification if no existing password exists.
+
+  User will be logged in and redirected to:
+
+  ```json
+  SITE_URL/#access_token=jwt-token-representing-the-user&token_type=bearer&expires_in=3600&refresh_token=a-refresh-token
   ```
 
 * **POST /recover**

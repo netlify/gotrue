@@ -69,7 +69,7 @@ func (m *TemplateMailer) InviteMail(user *models.User, referrerURL string) error
 func (m *TemplateMailer) ConfirmationMail(user *models.User, referrerURL string) error {
 	globalConfig, err := conf.LoadGlobal(configFile)
 
-	url, err := getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Confirmation, "confirmation_token="+user.ConfirmationToken)
+	url, err := getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Confirmation, "token="+user.ConfirmationToken+"&type=signup")
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,9 @@ func (m *TemplateMailer) EmailChangeMail(user *models.User, referrerURL string) 
 
 // RecoveryMail sends a password recovery mail
 func (m *TemplateMailer) RecoveryMail(user *models.User, referrerURL string) error {
-	url, err := getSiteURL(referrerURL, m.Config.SiteURL, m.Config.Mailer.URLPaths.Recovery, "recovery_token="+user.RecoveryToken)
+	globalConfig, err := conf.LoadGlobal(configFile)
+
+	url, err := getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Recovery, "token="+user.RecoveryToken+"&type=recovery")
 	if err != nil {
 		return err
 	}
