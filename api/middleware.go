@@ -29,25 +29,24 @@ type NetlifyMicroserviceClaims struct {
 	FunctionHooks FunctionHooks `json:"function_hooks"`
 }
 
-func (f FunctionHooks) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
+func (f *FunctionHooks) UnmarshalJSON(b []byte) error {
+	var raw map[string][]string
 	err := json.Unmarshal(b, &raw)
+	if err == nil {
+		*f = FunctionHooks(raw)
+		return nil
+	}
+	// If unmarshaling into map[string][]string fails, try legacy format.
+	var legacy map[string]string
+	err = json.Unmarshal(b, &legacy)
 	if err != nil {
 		return err
 	}
-
-	if f == nil {
-		f = make(map[string][]string)
+	if *f == nil {
+		*f = make(FunctionHooks)
 	}
-
-	for event, i := range raw {
-		switch val := i.(type) {
-		case []string:
-			f[event] = val
-		case string:
-			// Support legacy format for function hooks json.
-			f[event] = []string{val}
-		}
+	for event, hook := range legacy {
+		(*f)[event] = []string{hook}
 	}
 	return nil
 }
