@@ -13,7 +13,7 @@ environment variables, or a combination of both. Environment variables are prefi
 
 ### Top-Level
 
-```
+```properties
 GOTRUE_SITE_URL=https://example.netlify.com/
 ```
 
@@ -36,7 +36,7 @@ Header on which to rate limit the `/token` endpoint.
 
 ### API
 
-```
+```properties
 GOTRUE_API_HOST=localhost
 PORT=9999
 ```
@@ -59,7 +59,7 @@ If you wish to inherit a request ID from the incoming request, specify the name 
 
 ### Database
 
-```
+```properties
 GOTRUE_DB_DRIVER=mysql
 DATABASE_URL=root@localhost/gotrue
 ```
@@ -86,7 +86,7 @@ you've built gotrue.
 
 ### Logging
 
-```
+```properties
 LOG_LEVEL=debug # available without GOTRUE prefix (exception)
 GOTRUE_LOG_FILE=/var/log/go/gotrue.log
 ```
@@ -101,7 +101,7 @@ If you wish logs to be written to a file, set `log_file` to a valid file path.
 
 ### JSON Web Tokens (JWT)
 
-```
+```properties
 GOTRUE_JWT_SECRET=supersecretvalue
 GOTRUE_JWT_EXP=3600
 GOTRUE_JWT_AUD=netlify
@@ -132,7 +132,7 @@ The default group to assign all new users to.
 We support `bitbucket`, `github`, `gitlab`, and `google` for external authentication.
 Use the names as the keys underneath `external` to configure each separately.
 
-```
+```properties
 GOTRUE_EXTERNAL_GITHUB_CLIENT_ID=myappclientid
 GOTRUE_EXTERNAL_GITHUB_SECRET=clientsecretvaluessssh
 ```
@@ -164,7 +164,7 @@ The base URL used for constructing the URLs to request authorization and access 
 Sending email is not required, but highly recommended for password recovery.
 If enabled, you must provide the required values below.
 
-```
+```properties
 GOTRUE_SMTP_HOST=smtp.mandrillapp.com
 GOTRUE_SMTP_PORT=587
 GOTRUE_SMTP_USER=smtp-delivery@example.com
