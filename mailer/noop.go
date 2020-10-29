@@ -21,6 +21,10 @@ func (m noopMailer) RecoveryMail(user *models.User, referrerURL string) error {
 	return nil
 }
 
+func (m noopMailer) MagicLinkMail(user *models.User, referrerURL string) error {
+	return nil
+}
+
 func (m *noopMailer) EmailChangeMail(user *models.User, referrerURL string) error {
 	return nil
 }

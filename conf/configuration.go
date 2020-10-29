@@ -74,6 +74,7 @@ type EmailContentConfiguration struct {
 	Confirmation string `json:"confirmation"`
 	Recovery     string `json:"recovery"`
 	EmailChange  string `json:"email_change" split_words:"true"`
+	MagicLink    string `json:"magic_link" split_words:"true"`
 }
 
 type ProviderConfiguration struct {
@@ -200,6 +201,9 @@ func (config *Configuration) ApplyDefaults() {
 	}
 	if config.Mailer.URLPaths.Recovery == "" {
 		config.Mailer.URLPaths.Recovery = "/"
+	}
+	if config.Mailer.URLPaths.MagicLink == "" {
+		config.Mailer.URLPaths.MagicLink = "/"
 	}
 	if config.Mailer.URLPaths.EmailChange == "" {
 		config.Mailer.URLPaths.EmailChange = "/"
