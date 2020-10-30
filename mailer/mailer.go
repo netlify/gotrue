@@ -16,6 +16,7 @@ type Mailer interface {
 	InviteMail(user *models.User, referrerURL string) error
 	ConfirmationMail(user *models.User, referrerURL string) error
 	RecoveryMail(user *models.User, referrerURL string) error
+	MagicLinkMail(user *models.User, referrerURL string) error
 	EmailChangeMail(user *models.User, referrerURL string) error
 	ValidateEmail(email string) error
 }

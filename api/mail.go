@@ -55,6 +55,24 @@ func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, maile
 	return errors.Wrap(tx.UpdateOnly(u, "recovery_token", "recovery_sent_at"), "Database error updating user for recovery")
 }
 
+func (a *API) sendMagicLink(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
+	// since Magic Link is just a recovery with a different template and behaviour
+	// around new users we will reuse the recovery db timer to prevent potential abuse
+	if u.RecoverySentAt != nil && !u.RecoverySentAt.Add(maxFrequency).Before(time.Now()) {
+		return nil
+	}
+
+	oldToken := u.RecoveryToken
+	u.RecoveryToken = crypto.SecureToken()
+	now := time.Now()
+	if err := mailer.MagicLinkMail(u, referrerURL); err != nil {
+		u.RecoveryToken = oldToken
+		return errors.Wrap(err, "Error sending magic link email")
+	}
+	u.RecoverySentAt = &now
+	return errors.Wrap(tx.UpdateOnly(u, "recovery_token", "recovery_sent_at"), "Database error updating user for recovery")
+}
+
 func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mailer.Mailer, email string, referrerURL string) error {
 	oldToken := u.EmailChangeToken
 	oldEmail := u.EmailChange

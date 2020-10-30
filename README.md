@@ -229,6 +229,10 @@ Email subject to use for signup confirmation. Defaults to `Confirm Your Signup`.
 
 Email subject to use for password reset. Defaults to `Reset Your Password`.
 
+`MAILER_SUBJECTS_MAGIC_LINK` - `string`
+
+Email subject to use for magic link email. Defaults to `Your Magic Link`.
+
 `MAILER_SUBJECTS_EMAIL_CHANGE` - `string`
 
 Email subject to use for email change confirmation. Defaults to `Confirm Email Change`.
@@ -273,6 +277,20 @@ Default Content (if template is unavailable):
 
 <p>Follow this link to reset the password for your user:</p>
 <p><a href="{{ .ConfirmationURL }}">Reset Password</a></p>
+```
+
+`MAILER_TEMPLATES_MAGIC_LINK` - `string`
+
+URL path to an email template to use when sending magic link.
+`SiteURL`, `Email`, and `ConfirmationURL` variables are available.
+
+Default Content (if template is unavailable):
+
+```html
+<h2>Magic Link</h2>
+
+<p>Follow this link to login:</p>
+<p><a href="{{ .ConfirmationURL }}">Log In</a></p>
 ```
 
 `MAILER_TEMPLATES_EMAIL_CHANGE` - `string`
@@ -387,6 +405,7 @@ GoTrue exposes the following endpoints:
   Verify a registration or a password recovery. Type can be `signup` or `recovery`
   and the `token` is a token returned from either `/signup` or `/recover`.
 
+  query params:
   ```json
   {
     "type": "signup",
@@ -400,6 +419,23 @@ GoTrue exposes the following endpoints:
 
   ```json
   SITE_URL/#access_token=jwt-token-representing-the-user&token_type=bearer&expires_in=3600&refresh_token=a-refresh-token
+  ```
+
+* **POST /magiclink**
+
+  Magic Link. Will deliver a link (e.g. `/verify?type=recovery&token=fgtyuf68ddqdaDd`) to the user based on
+  email address which they can use to redeem an access_token.
+
+  ```json
+  {
+    "email": "email@example.com"
+  }
+  ```
+
+  Returns:
+
+  ```json
+  {}
   ```
 
 * **POST /recover**

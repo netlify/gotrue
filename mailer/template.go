@@ -31,6 +31,11 @@ const defaultRecoveryMail = `<h2>Reset password</h2>
 <p>Follow this link to reset the password for your user:</p>
 <p><a href="{{ .ConfirmationURL }}">Reset password</a></p>`
 
+const defaultMagicLinkMail = `<h2>Magic Link</h2>
+
+<p>Follow this link to login:</p>
+<p><a href="{{ .ConfirmationURL }}">Log In</a></p>`
+
 const defaultEmailChangeMail = `<h2>Confirm email address change</h2>
 
 <p>Follow this link to confirm the update of your email address from {{ .Email }} to {{ .NewEmail }}:</p>
@@ -135,6 +140,31 @@ func (m *TemplateMailer) RecoveryMail(user *models.User, referrerURL string) err
 		string(withDefault(m.Config.Mailer.Subjects.Recovery, "Reset Your Password")),
 		m.Config.Mailer.Templates.Recovery,
 		defaultRecoveryMail,
+		data,
+	)
+}
+
+// MagicLinkMail sends a login link mail
+func (m *TemplateMailer) MagicLinkMail(user *models.User, referrerURL string) error {
+	globalConfig, err := conf.LoadGlobal(configFile)
+
+	url, err := getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Recovery, "token="+user.RecoveryToken+"&type=recovery")
+	if err != nil {
+		return err
+	}
+	data := map[string]interface{}{
+		"SiteURL":         m.Config.SiteURL,
+		"ConfirmationURL": url,
+		"Email":           user.Email,
+		"Token":           user.RecoveryToken,
+		"Data":            user.UserMetaData,
+	}
+
+	return m.Mailer.Mail(
+		user.Email,
+		string(withDefault(m.Config.Mailer.Subjects.MagicLink, "Your Magic Link")),
+		m.Config.Mailer.Templates.MagicLink,
+		defaultMagicLinkMail,
 		data,
 	)
 }
