@@ -213,10 +213,6 @@ URL path to use in the signup confirmation email. Defaults to `/`.
 
 URL path to use in the password reset email. Defaults to `/`.
 
-`MAILER_URLPATHS_MAGIC_LINK` - `string`
-
-URL path to use in the magic link email. Defaults to `/`.
-
 `MAILER_URLPATHS_EMAIL_CHANGE` - `string`
 
 URL path to use in the email change confirmation email. Defaults to `/`.

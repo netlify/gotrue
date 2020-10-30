@@ -202,9 +202,6 @@ func (config *Configuration) ApplyDefaults() {
 	if config.Mailer.URLPaths.Recovery == "" {
 		config.Mailer.URLPaths.Recovery = "/"
 	}
-	if config.Mailer.URLPaths.MagicLink == "" {
-		config.Mailer.URLPaths.MagicLink = "/"
-	}
 	if config.Mailer.URLPaths.EmailChange == "" {
 		config.Mailer.URLPaths.EmailChange = "/"
 	}
