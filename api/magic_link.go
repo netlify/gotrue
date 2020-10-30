@@ -2,7 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -32,9 +34,23 @@ func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 	aud := a.requestAud(ctx, r)
 	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
 	if err != nil {
-		// return a.Signup(w, r)
 		if models.IsNotFoundError(err) {
-			return notFoundError(err.Error())
+			// User doesn't exist, sign them up with temporary password
+			newBodyContent := `{"email":"` + params.Email + `","password":"foobar"}`
+			r.Body = ioutil.NopCloser(strings.NewReader(newBodyContent))
+			r.ContentLength = int64(len(newBodyContent))
+
+			if config.Mailer.Autoconfirm {
+				// signups are autoconfirmed, send magic link after signup
+				a.Signup(w, r)
+				newBodyContent := `{"email":"` + params.Email + `"}`
+				r.Body = ioutil.NopCloser(strings.NewReader(newBodyContent))
+				r.ContentLength = int64(len(newBodyContent))
+				return a.MagicLink(w, r)
+			}
+			// otherwise confirmation email already contains 'magic link'
+			return a.Signup(w, r)
+
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
@@ -52,5 +68,6 @@ func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Error sending magic link").WithInternalError(err)
 	}
 
-	return sendJSON(w, http.StatusOK, &map[string]string{})
+	w.WriteHeader(http.StatusOK)
+	return nil
 }
