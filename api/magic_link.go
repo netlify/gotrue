@@ -8,6 +8,7 @@ import (
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
+	"github.com/sethvargo/go-password/password"
 )
 
 // MagicLinkParams holds the parameters for a magic link request
@@ -36,7 +37,11 @@ func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			// User doesn't exist, sign them up with temporary password
-			newBodyContent := `{"email":"` + params.Email + `","password":"foobar"}`
+			password, err := password.Generate(64, 10, 10, false, false)
+			if err != nil {
+				internalServerError("error creating user").WithInternalError(err)
+			}
+			newBodyContent := `{"email":"` + params.Email + `","password":"` + password + `"}`
 			r.Body = ioutil.NopCloser(strings.NewReader(newBodyContent))
 			r.ContentLength = int64(len(newBodyContent))
 

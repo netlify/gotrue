@@ -45,6 +45,7 @@ require (
 	github.com/russellhaering/gosaml2 v0.3.1
 	github.com/russellhaering/goxmldsig v0.0.0-20180430223755-7acd5e4a6ef7
 	github.com/sebest/xff v0.0.0-20160910043805-6c115e0ffa35
+	github.com/sethvargo/go-password v0.2.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5 // indirect
