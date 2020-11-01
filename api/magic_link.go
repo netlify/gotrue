@@ -31,6 +31,9 @@ func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 	if params.Email == "" {
 		return unprocessableEntityError("Password recovery requires an email")
 	}
+	if err := a.validateEmail(ctx, params.Email); err != nil {
+		return err
+	}
 
 	aud := a.requestAud(ctx, r)
 	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
