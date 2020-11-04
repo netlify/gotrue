@@ -36,7 +36,8 @@ func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer, re
 		return errors.Wrap(err, "Error sending invite email")
 	}
 	u.InvitedAt = &now
-	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "invited_at"), "Database error updating user for invite")
+	u.ConfirmedAt = &now
+	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "confirmation_sent_at", "invited_at"), "Database error updating user for invite")
 }
 
 func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
