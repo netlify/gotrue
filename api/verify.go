@@ -120,9 +120,8 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	now := time.Now()
 	nextDay := user.ConfirmationSentAt.Add(24 * time.Hour)
-	if now.After(nextDay) {
+	if user.ConfirmationSentAt != nil && time.Now().After(nextDay) {
 		return nil, expiredTokenError("Confirmation token expired")
 	}
 
@@ -169,9 +168,8 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	now := time.Now()
 	nextDay := user.RecoverySentAt.Add(24 * time.Hour)
-	if now.After(nextDay) {
+	if user.RecoverySentAt != nil && time.Now().After(nextDay) {
 		return nil, expiredTokenError("Recovery token expired")
 	}
 
