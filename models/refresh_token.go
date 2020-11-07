@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/netlify/gotrue/storage/namespace"
 	"time"
+
+	"github.com/netlify/gotrue/storage/namespace"
 
 	"github.com/gobuffalo/pop"
 	"github.com/gobuffalo/uuid"
@@ -73,6 +74,10 @@ func createRefreshToken(tx *storage.Connection, user *User) (*RefreshToken, erro
 
 	if err := tx.Create(token); err != nil {
 		return nil, errors.Wrap(err, "error creating refresh token")
+	}
+
+	if err := user.UpdateLastSignInAt(tx); err != nil {
+		return nil, errors.Wrap(err, "error update user`s last_sign_in field")
 	}
 	return token, nil
 }

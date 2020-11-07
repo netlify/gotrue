@@ -100,6 +100,10 @@ func (u *User) BeforeUpdate(tx *pop.Connection) error {
 		return errors.New("Cannot persist system user")
 	}
 
+	if u.LastSignInAt == nil || u.LastSignInAt.IsZero() {
+		return errors.New("Cannot update last_sign_in_at field with empty value")
+	}
+
 	return nil
 }
 
@@ -215,6 +219,11 @@ func (u *User) Confirm(tx *storage.Connection) error {
 	now := time.Now()
 	u.ConfirmedAt = &now
 	return tx.UpdateOnly(u, "confirmation_token", "confirmed_at")
+}
+
+// UpdateLastSignInAt update field last_sign_in_at for user according to specified field
+func (u *User) UpdateLastSignInAt(tx *storage.Connection) error {
+	return tx.UpdateOnly(u, "last_sign_in_at")
 }
 
 // ConfirmEmailChange confirm the change of email for a user
