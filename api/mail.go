@@ -36,7 +36,7 @@ func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer, re
 		return errors.Wrap(err, "Error sending invite email")
 	}
 	u.InvitedAt = &now
-	u.ConfirmedAt = &now
+	u.ConfirmationSentAt = &now
 	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "confirmation_sent_at", "invited_at"), "Database error updating user for invite")
 }
 
