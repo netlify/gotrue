@@ -11,6 +11,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	MaxFriquencyLimitError error = errors.New("Frequency limit reached")
+)
+
 func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
 	if u.ConfirmationSentAt != nil && !u.ConfirmationSentAt.Add(maxFrequency).Before(time.Now()) {
 		return nil
@@ -59,7 +63,7 @@ func (a *API) sendMagicLink(tx *storage.Connection, u *models.User, mailer maile
 	// since Magic Link is just a recovery with a different template and behaviour
 	// around new users we will reuse the recovery db timer to prevent potential abuse
 	if u.RecoverySentAt != nil && !u.RecoverySentAt.Add(maxFrequency).Before(time.Now()) {
-		return nil
+		return MaxFriquencyLimitError
 	}
 
 	oldToken := u.RecoveryToken
