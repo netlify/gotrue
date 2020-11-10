@@ -97,6 +97,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 			q.Set("token_type", token.TokenType)
 			q.Set("expires_in", strconv.Itoa(token.ExpiresIn))
 			q.Set("refresh_token", token.RefreshToken)
+			q.Set("type", params.Type)
 			rurl += "#" + q.Encode()
 		}
 		http.Redirect(w, r, rurl, http.StatusSeeOther)
