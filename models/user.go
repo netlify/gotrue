@@ -100,10 +100,6 @@ func (u *User) BeforeUpdate(tx *pop.Connection) error {
 		return errors.New("Cannot persist system user")
 	}
 
-	if u.LastSignInAt == nil || u.LastSignInAt.IsZero() {
-		return errors.New("Cannot update last_sign_in_at field with empty value")
-	}
-
 	return nil
 }
 
