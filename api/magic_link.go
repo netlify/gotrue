@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -48,17 +49,23 @@ func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 			r.Body = ioutil.NopCloser(strings.NewReader(newBodyContent))
 			r.ContentLength = int64(len(newBodyContent))
 
+			fakeResponse := &responseStub{}
 			if config.Mailer.Autoconfirm {
 				// signups are autoconfirmed, send magic link after signup
-				a.Signup(w, r)
+				if err := a.Signup(fakeResponse, r); err != nil {
+					return err
+				}
 				newBodyContent := `{"email":"` + params.Email + `"}`
 				r.Body = ioutil.NopCloser(strings.NewReader(newBodyContent))
 				r.ContentLength = int64(len(newBodyContent))
-				return a.MagicLink(w, r)
+				return a.MagicLink(fakeResponse, r)
 			}
 			// otherwise confirmation email already contains 'magic link'
-			return a.Signup(w, r)
+			if err := a.Signup(fakeResponse, r); err != nil {
+				return err
+			}
 
+			return sendJSON(w, http.StatusOK, make(map[string]string))
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
@@ -73,9 +80,27 @@ func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 		return a.sendMagicLink(tx, user, mailer, config.SMTP.MaxFrequency, referrer)
 	})
 	if err != nil {
+		if errors.Is(err, MaxFriquencyLimitError) {
+			return tooManyRequestsError("Too many requests accepted. Try again later")
+		}
 		return internalServerError("Error sending magic link").WithInternalError(err)
 	}
 
-	w.WriteHeader(http.StatusOK)
-	return nil
+	return sendJSON(w, http.StatusOK, make(map[string]string))
+}
+
+// responseStub only implement http responsewriter for ignoring
+// incoming data from methods where it passed
+type responseStub struct {
+}
+
+func (rw *responseStub) Header() http.Header {
+	return http.Header{}
+}
+
+func (rw *responseStub) Write(data []byte) (int, error) {
+	return 1, nil
+}
+
+func (rw *responseStub) WriteHeader(statusCode int) {
 }
