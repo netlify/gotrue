@@ -80,7 +80,7 @@ func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 		return a.sendMagicLink(tx, user, mailer, config.SMTP.MaxFrequency, referrer)
 	})
 	if err != nil {
-		if errors.Is(err, MaxFriquencyLimitError) {
+		if errors.Is(err, MaxFrequencyLimitError) {
 			return tooManyRequestsError("Too many requests accepted. Try again later")
 		}
 		return internalServerError("Error sending magic link").WithInternalError(err)
