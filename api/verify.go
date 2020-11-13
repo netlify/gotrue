@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -120,6 +121,11 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
+	nextDay := user.ConfirmationSentAt.Add(24 * time.Hour)
+	if user.ConfirmationSentAt != nil && time.Now().After(nextDay) {
+		return nil, expiredTokenError("Confirmation token expired")
+	}
+
 	err = conn.Transaction(func(tx *storage.Connection) error {
 		var terr error
 		if user.EncryptedPassword == "" {
@@ -161,6 +167,11 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 			return nil, notFoundError(err.Error())
 		}
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
+	}
+
+	nextDay := user.RecoverySentAt.Add(24 * time.Hour)
+	if user.RecoverySentAt != nil && time.Now().After(nextDay) {
+		return nil, expiredTokenError("Recovery token expired")
 	}
 
 	err = conn.Transaction(func(tx *storage.Connection) error {
