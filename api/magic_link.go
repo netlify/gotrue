@@ -81,7 +81,7 @@ func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 	})
 	if err != nil {
 		if errors.Is(err, MaxFrequencyLimitError) {
-			return tooManyRequestsError("For security purposes, you can only request this once every 5 minutes")
+			return tooManyRequestsError("For security purposes, you can only request this once every 60 seconds")
 		}
 		return internalServerError("Error sending magic link").WithInternalError(err)
 	}

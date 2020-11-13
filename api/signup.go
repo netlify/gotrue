@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/netlify/gotrue/metering"
@@ -89,6 +90,9 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	})
 
 	if err != nil {
+		if errors.Is(err, MaxFrequencyLimitError) {
+			return tooManyRequestsError("For security purposes, you can only request this once every minute")
+		}
 		return err
 	}
 
