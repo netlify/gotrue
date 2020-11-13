@@ -164,7 +164,7 @@ func LoadGlobal(filename string) (*GlobalConfiguration, error) {
 	}
 
 	if config.SMTP.MaxFrequency == 0 {
-		config.SMTP.MaxFrequency = 15 * time.Minute
+		config.SMTP.MaxFrequency = 5 * time.Minute
 	}
 	return config, nil
 }
@@ -207,7 +207,7 @@ func (config *Configuration) ApplyDefaults() {
 	}
 
 	if config.SMTP.MaxFrequency == 0 {
-		config.SMTP.MaxFrequency = 15 * time.Minute
+		config.SMTP.MaxFrequency = 5 * time.Minute
 	}
 
 	if config.Cookie.Key == "" {
