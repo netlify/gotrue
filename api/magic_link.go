@@ -58,7 +58,7 @@ func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 				newBodyContent := `{"email":"` + params.Email + `"}`
 				r.Body = ioutil.NopCloser(strings.NewReader(newBodyContent))
 				r.ContentLength = int64(len(newBodyContent))
-				return a.MagicLink(fakeResponse, r)
+				return a.MagicLink(w, r)
 			}
 			// otherwise confirmation email already contains 'magic link'
 			if err := a.Signup(fakeResponse, r); err != nil {
