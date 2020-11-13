@@ -17,7 +17,7 @@ var (
 
 func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
 	if u.ConfirmationSentAt != nil && !u.ConfirmationSentAt.Add(maxFrequency).Before(time.Now()) {
-		return nil
+		return MaxFrequencyLimitError
 	}
 
 	oldToken := u.ConfirmationToken
@@ -45,7 +45,7 @@ func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer, re
 
 func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
 	if u.RecoverySentAt != nil && !u.RecoverySentAt.Add(maxFrequency).Before(time.Now()) {
-		return nil
+		return MaxFrequencyLimitError
 	}
 
 	oldToken := u.RecoveryToken
