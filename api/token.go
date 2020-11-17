@@ -130,7 +130,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 
 	jsonDecoder := json.NewDecoder(r.Body)
 	if err := jsonDecoder.Decode(params); err != nil {
-		return badRequestError("Could not read password grant params: %v", err)
+		return badRequestError("Could not read refresh token grant params: %v", err)
 	}
 
 	cookie := r.Header.Get(useCookieHeader)
