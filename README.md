@@ -571,9 +571,6 @@ GoTrue exposes the following endpoints:
  
   Redirects to `<GOTRUE_SITE_URL>#access_token=<access_token>&refresh_token=<refresh_token>&expires_in=3600&provider=<provider_name>`
   
-## Pre-built
-
-- [Docker](https://hub.docker.com/repository/docker/supabase/gotrue)
 
 ## TODO
 
