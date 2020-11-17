@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -245,11 +246,19 @@ func (a *API) issueRefreshToken(ctx context.Context, conn *storage.Connection, u
 func (a *API) setCookieToken(config *conf.Configuration, tokenString string, session bool, w http.ResponseWriter) error {
 	exp := time.Second * time.Duration(config.Cookie.Duration)
 	cookie := &http.Cookie{
+		Domain:   config.SiteURL,
 		Name:     config.Cookie.Key,
 		Value:    tokenString,
 		Secure:   true,
 		HttpOnly: true,
 		Path:     "/",
+	}
+	if u, err := url.Parse(config.SiteURL); err == nil {
+		if u.Scheme != "http" && u.Scheme != "https" {
+			cookie.Domain = u.Scheme
+		} else {
+			cookie.Domain = u.Hostname()
+		}
 	}
 	if !session {
 		cookie.Expires = time.Now().Add(exp)
