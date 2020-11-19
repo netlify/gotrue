@@ -376,14 +376,13 @@ GoTrue exposes the following endpoints:
 
 * **POST /verify**
 
-  Verify a registration or a password recovery. Type can be `signup` or `recovery`
+  Verify a registration or a password recovery. Type can be `signup` or `recovery` or `invite`
   and the `token` is a token returned from either `/signup` or `/recover`.
 
   ```json
   {
     "type": "signup",
-    "token": "confirmation-code-delivered-in-email",
-    "password": "12345abcdef" // only required if responding to an 'invite'
+    "token": "confirmation-code-delivered-in-email"
   }
   ```
   
@@ -396,13 +395,14 @@ GoTrue exposes the following endpoints:
     "access_token": "jwt-token-representing-the-user",
     "token_type": "bearer",
     "expires_in": 3600,
-    "refresh_token": "a-refresh-token"
+    "refresh_token": "a-refresh-token",
+    "type": "signup | recovery | invite"
   }
   ```
 
 * **GET /verify**
 
-  Verify a registration or a password recovery. Type can be `signup` or `recovery`
+  Verify a registration or a password recovery. Type can be `signup` or `recovery` or `invite`
   and the `token` is a token returned from either `/signup` or `/recover`.
 
   query params:
@@ -412,14 +412,17 @@ GoTrue exposes the following endpoints:
     "token": "confirmation-code-delivered-in-email",
   }
   ```
-  
-  `password` is required for signup verification if no existing password exists.
 
   User will be logged in and redirected to:
 
   ```json
-  SITE_URL/#access_token=jwt-token-representing-the-user&token_type=bearer&expires_in=3600&refresh_token=a-refresh-token
+  SITE_URL/#access_token=jwt-token-representing-the-user&token_type=bearer&expires_in=3600&refresh_token=a-refresh-token&type=invite
   ```
+
+  Your app should detect the query params in the fragment and use them to set the session (supabase-js does this automatically)
+
+  You can use the `type` param to redirect the user to a password set form in the case of `invite` or `recovery`,
+  or show an account confirmed/welcome message in the case of `signup`, or direct them to some additional onboarding flow
 
 * **POST /magiclink**
 
