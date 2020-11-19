@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/netlify/gotrue/models"
 )
 
 // requireAuthentication checks incoming requests for tokens presented using the Authorization header
@@ -19,44 +21,21 @@ func (a *API) requireAuthentication(w http.ResponseWriter, r *http.Request) (con
 	return a.parseJWTClaims(token, r, w)
 }
 
-type adminCheckParams struct {
-	Aud string `json:"aud"`
-}
-
 func (a *API) requireAdmin(ctx context.Context, w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	// Find the administrative user
-	adminUser, err := getUserFromClaims(ctx, a.db)
-	if err != nil {
-		return nil, unauthorizedError("Invalid admin user").WithInternalError(err)
+	claims := getClaims(ctx)
+	if claims == nil {
+		fmt.Printf("[%s] %s %s %d %s\n", time.Now().Format("2006-01-02 15:04:05"), r.Method, r.RequestURI, http.StatusForbidden, "Invalid token")
+		return nil, unauthorizedError("Invalid token")
 	}
 
-	aud := a.requestAud(ctx, r)
-	if r.Body != nil && r.Body != http.NoBody {
-		c, err := addGetBody(w, r)
-		if err != nil {
-			return nil, internalServerError("Error getting body").WithInternalError(err)
-		}
-		ctx = c
-
-		params := adminCheckParams{}
-		bod, err := r.GetBody()
-		if err != nil {
-			return nil, internalServerError("Error getting body").WithInternalError(err)
-		}
-		err = json.NewDecoder(bod).Decode(&params)
-		if err != nil {
-			return nil, badRequestError("Could not decode admin user params: %v", err)
-		}
-		if params.Aud != "" {
-			aud = params.Aud
-		}
+	if claims.Role == "supabase_admin" || claims.Role == "service_role" {
+		// successful authentication
+		return withAdminUser(ctx, &models.User{}), nil
 	}
 
-	// Make sure user is admin
-	if !a.isAdmin(ctx, adminUser, aud) {
-		return nil, unauthorizedError("User not allowed")
-	}
-	return withAdminUser(ctx, adminUser), nil
+	fmt.Printf("[%s] %s %s %d %s\n", time.Now().Format("2006-01-02 15:04:05"), r.Method, r.RequestURI, http.StatusForbidden, "this token needs role 'supabase_admin' or 'service_role'")
+	return nil, unauthorizedError("User not allowed")
 }
 
 func (a *API) extractBearerToken(w http.ResponseWriter, r *http.Request) (string, error) {
