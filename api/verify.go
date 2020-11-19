@@ -10,11 +10,13 @@ import (
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
+	"github.com/sethvargo/go-password/password"
 )
 
 const (
 	signupVerification   = "signup"
 	recoveryVerification = "recovery"
+	inviteVerification   = "invite"
 )
 
 // VerifyParams are the parameters the Verify endpoint accepts
@@ -61,6 +63,8 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		var terr error
 		switch params.Type {
 		case signupVerification:
+			user, terr = a.signupVerify(ctx, tx, params)
+		case inviteVerification:
 			user, terr = a.signupVerify(ctx, tx, params)
 		case recoveryVerification:
 			user, terr = a.recoverVerify(ctx, tx, params)
@@ -130,10 +134,13 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 		var terr error
 		if user.EncryptedPassword == "" {
 			if user.InvitedAt != nil {
-				if params.Password == "" {
-					return unprocessableEntityError("Invited users must specify a password")
+				// sign them up with temporary password, and require application
+				// to present the user with a password set form
+				password, err := password.Generate(64, 10, 0, false, true)
+				if err != nil {
+					internalServerError("error creating user").WithInternalError(err)
 				}
-				if terr = user.UpdatePassword(tx, params.Password); terr != nil {
+				if terr = user.UpdatePassword(tx, password); terr != nil {
 					return internalServerError("Error storing password").WithInternalError(terr)
 				}
 			}
