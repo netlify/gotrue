@@ -354,6 +354,14 @@ GoTrue exposes the following endpoints:
 * **POST /invite**
 
   Invites a new user with an email.
+  This endpoint requires the `service_role` or `supabase_admin` JWT set as an Auth Bearer header:
+
+  e.g.
+  ```json
+  headers: {
+    "Authorization" : "Bearer eyJhbGciOiJI...M3A90LCkxxtX9oNP9KZO"
+  }
+  ```
 
   ```json
   {
