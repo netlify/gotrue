@@ -150,7 +150,7 @@ func (m *TemplateMailer) RecoveryMail(user *models.User, referrerURL string) err
 func (m *TemplateMailer) MagicLinkMail(user *models.User, referrerURL string) error {
 	globalConfig, err := conf.LoadGlobal(configFile)
 
-	url, err := getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Recovery, "token="+user.RecoveryToken+"&type=recovery")
+	url, err := getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Recovery, "token="+user.RecoveryToken+"&type=magiclink")
 	if err != nil {
 		return err
 	}
