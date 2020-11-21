@@ -6,10 +6,16 @@ ENV GOOS=linux
 RUN apk add --no-cache make git
 
 WORKDIR /go/src/github.com/netlify/gotrue
+
+# Pulling dependencies
+COPY ./Makefile .
+COPY ./go.mod .
+COPY ./go.sum .
+RUN make deps
+
+# Building stuff
 COPY . /go/src/github.com/netlify/gotrue
-
-RUN make deps build
-
+RUN make build
 
 FROM alpine:3.7
 RUN adduser -D -u 1000 netlify
