@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -11,6 +12,11 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/sethvargo/go-password/password"
+)
+
+var (
+	// used below to specify need to return answer to user via specific redirect
+	redirectWithQueryError = errors.New("need return answer with query params")
 )
 
 const (
@@ -73,6 +79,14 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		if terr != nil {
+			var e *HTTPError
+			if errors.As(terr, &e) {
+				if errors.Is(e.InternalError, redirectWithQueryError) {
+					rurl := a.prepErrorRedirectUrl(e, r)
+					http.Redirect(w, r, rurl, http.StatusFound)
+					return nil
+				}
+			}
 			return terr
 		}
 
@@ -166,19 +180,20 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 }
 
 func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {
+	return nil, expiredTokenError("Recovery token expired").WithInternalError(redirectWithQueryError)
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 	user, err := models.FindUserByRecoveryToken(conn, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return nil, notFoundError(err.Error())
+			return nil, notFoundError(err.Error()).WithInternalError(redirectWithQueryError)
 		}
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
 	nextDay := user.RecoverySentAt.Add(24 * time.Hour)
 	if user.RecoverySentAt != nil && time.Now().After(nextDay) {
-		return nil, expiredTokenError("Recovery token expired")
+		return nil, expiredTokenError("Recovery token expired").WithInternalError(redirectWithQueryError)
 	}
 
 	err = conn.Transaction(func(tx *storage.Connection) error {
@@ -205,4 +220,22 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 		return nil, internalServerError("Database error updating user").WithInternalError(err)
 	}
 	return user, nil
+}
+
+func (a *API) prepErrorRedirectUrl(err *HTTPError, r *http.Request) string {
+	rurl := a.getExternalRedirectURL(r)
+	if err == nil {
+		return rurl
+	}
+	q := url.Values{}
+
+	log := getLogEntry(r)
+	log.Error(err.Message)
+
+	if str, ok := oauthErrorMap[err.Code]; ok {
+		q.Set("error", str)
+	}
+	q.Set("error_code", strconv.Itoa(err.Code))
+	q.Set("error_description", err.Message)
+	return rurl + "#" + q.Encode()
 }
