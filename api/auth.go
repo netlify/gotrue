@@ -29,7 +29,9 @@ func (a *API) requireAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 		return nil, unauthorizedError("Invalid token")
 	}
 
-	if claims.Role == "supabase_admin" || claims.Role == "service_role" {
+	adminRoles := a.getConfig(ctx).JWT.AdminRoles
+
+	if isStringInSlice(claims.Role, adminRoles) {
 		// successful authentication
 		return withAdminUser(ctx, &models.User{}), nil
 	}

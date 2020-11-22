@@ -213,3 +213,12 @@ func SafeHTTPClient(client *http.Client, log logrus.FieldLogger) *http.Client {
 
 	return client
 }
+
+func isStringInSlice(checkValue string, list []string) bool {
+	for _, val := range list {
+		if val == checkValue {
+			return true
+		}
+	}
+	return false
+}
