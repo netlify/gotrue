@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	signupVerification   = "signup"
-	recoveryVerification = "recovery"
-	inviteVerification   = "invite"
+	signupVerification    = "signup"
+	recoveryVerification  = "recovery"
+	inviteVerification    = "invite"
+	magicLinkVerification = "magiclink"
 )
 
 // VerifyParams are the parameters the Verify endpoint accepts
@@ -66,7 +67,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 			user, terr = a.signupVerify(ctx, tx, params)
 		case inviteVerification:
 			user, terr = a.signupVerify(ctx, tx, params)
-		case recoveryVerification:
+		case recoveryVerification, magicLinkVerification:
 			user, terr = a.recoverVerify(ctx, tx, params)
 		default:
 			return unprocessableEntityError("Verify requires a verification type")
