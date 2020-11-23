@@ -8,9 +8,7 @@ RUN apk add --no-cache make git
 WORKDIR /go/src/github.com/netlify/gotrue
 
 # Pulling dependencies
-COPY ./Makefile .
-COPY ./go.mod .
-COPY ./go.sum .
+COPY ./Makefile ./go.* ./
 RUN make deps
 
 # Building stuff
