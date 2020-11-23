@@ -410,8 +410,8 @@ GoTrue exposes the following endpoints:
 
 * **GET /verify**
 
-  Verify a registration or a password recovery. Type can be `signup` or `recovery` or `invite`
-  and the `token` is a token returned from either `/signup` or `/recover`.
+  Verify a registration or a password recovery. Type can be `signup` or `recovery` or `magiclink` or `invite`
+  and the `token` is a token returned from either `/signup` or `/recover` or `/magiclink`.
 
   query params:
   ```json
@@ -434,7 +434,7 @@ GoTrue exposes the following endpoints:
 
 * **POST /magiclink**
 
-  Magic Link. Will deliver a link (e.g. `/verify?type=recovery&token=fgtyuf68ddqdaDd`) to the user based on
+  Magic Link. Will deliver a link (e.g. `/verify?type=magiclink&token=fgtyuf68ddqdaDd`) to the user based on
   email address which they can use to redeem an access_token.
 
   ```json
@@ -448,6 +448,8 @@ GoTrue exposes the following endpoints:
   ```json
   {}
   ```
+  
+  when clicked the magic link will redirect the user to `<SITE_URL>#access_token=x&refresh_token=y&expires_in=z&token_type=bearer&type=magiclink` (see `/verify` above)
 
 * **POST /recover**
 
