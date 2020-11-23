@@ -436,6 +436,8 @@ GoTrue exposes the following endpoints:
 
   Magic Link. Will deliver a link (e.g. `/verify?type=magiclink&token=fgtyuf68ddqdaDd`) to the user based on
   email address which they can use to redeem an access_token.
+  
+  By default Magic Links can only be sent once every 60 seconds
 
   ```json
   {
@@ -455,6 +457,8 @@ GoTrue exposes the following endpoints:
 
   Password recovery. Will deliver a password recovery mail to the user based on
   email address.
+  
+  By default recovery links can only be sent once every 60 seconds
 
   ```json
   {
