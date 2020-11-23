@@ -303,7 +303,7 @@ How often GoTrue should try a failed hook.
 
 `WEBHOOK_TIMEOUT_SEC` - `number`
 
-Time between retries.
+Time between retries (in seconds).
 
 `WEBHOOK_EVENTS` - `list`
 
