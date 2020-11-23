@@ -180,7 +180,6 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 }
 
 func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {
-	return nil, expiredTokenError("Recovery token expired").WithInternalError(redirectWithQueryError)
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 	user, err := models.FindUserByRecoveryToken(conn, params.Token)
