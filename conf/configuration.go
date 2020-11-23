@@ -43,11 +43,12 @@ type DBConfiguration struct {
 
 // JWTConfiguration holds all the JWT related configuration.
 type JWTConfiguration struct {
-	Secret           string `json:"secret" required:"true"`
-	Exp              int    `json:"exp"`
-	Aud              string `json:"aud"`
-	AdminGroupName   string `json:"admin_group_name" split_words:"true"`
-	DefaultGroupName string `json:"default_group_name" split_words:"true"`
+	Secret           string   `json:"secret" required:"true"`
+	Exp              int      `json:"exp"`
+	Aud              string   `json:"aud"`
+	AdminGroupName   string   `json:"admin_group_name" split_words:"true"`
+	AdminRoles       []string `json:"admin_roles" split_words:"true"`
+	DefaultGroupName string   `json:"default_group_name" split_words:"true"`
 }
 
 // GlobalConfiguration holds all the configuration that applies to all instances.
@@ -187,6 +188,10 @@ func LoadConfig(filename string) (*Configuration, error) {
 func (config *Configuration) ApplyDefaults() {
 	if config.JWT.AdminGroupName == "" {
 		config.JWT.AdminGroupName = "admin"
+	}
+
+	if config.JWT.AdminRoles == nil || len(config.JWT.AdminRoles) == 0 {
+		config.JWT.AdminRoles = []string{"service_role", "supabase_admin"}
 	}
 
 	if config.JWT.Exp == 0 {
