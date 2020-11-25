@@ -289,6 +289,27 @@ Default Content (if template is unavailable):
 <p><a href="{{ .ConfirmationURL }}">Change Email</a></p>
 ```
 
+`WEBHOOK_URL` - `string`
+
+Url of the webhook receiver endpoint. This will be called when events like `validate`, `signup` or `login` occur.
+
+`WEBHOOK_SECRET` - `string`
+
+Shared secret to authorize webhook requests. This secret signs the [JSON Web Signature](https://tools.ietf.org/html/draft-ietf-jose-json-web-signature-41) of the request. You *should* use this to verify the integrity of the request. Otherwise others can feed your webhook receiver with fake data.
+
+`WEBHOOK_RETRIES` - `number`
+
+How often GoTrue should try a failed hook.
+
+`WEBHOOK_TIMEOUT_SEC` - `number`
+
+Time between retries (in seconds).
+
+`WEBHOOK_EVENTS` - `list`
+
+Which events should trigger a webhook. You can provide a comma separated list.
+For example to listen to all events, provide the values `validate,signup,login`.
+
 ## Endpoints
 
 GoTrue exposes the following endpoints:
@@ -368,7 +389,7 @@ GoTrue exposes the following endpoints:
     "password": "12345abcdef"
   }
   ```
-  
+
   `password` is required for signup verification if no existing password exists.
 
   Returns:
