@@ -291,7 +291,7 @@ Default Content (if template is unavailable):
 
 `WEBHOOK_URL` - `string`
 
-Url of the webhook receiver server. This will called when events like  `validate`, `signup` or `login` occurs.
+Url of the webhook receiver endpoint. This will called when events like `validate`, `signup` or `login` occur.
 
 `WEBHOOK_SECRET` - `string`
 
