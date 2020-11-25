@@ -291,11 +291,11 @@ Default Content (if template is unavailable):
 
 `WEBHOOK_URL` - `string`
 
-Url of the webhook listener server. This will called when events like  `validate`, `signup` or `login` occurs.
+Url of the webhook receiver server. This will called when events like  `validate`, `signup` or `login` occurs.
 
 `WEBHOOK_SECRET` - `string`
 
-Shared secret to authorize webhook requests.
+Shared secret to authorize webhook requests. This secret signs the [JSON Web Signature](https://tools.ietf.org/html/draft-ietf-jose-json-web-signature-41) of the request. You *should* use this to verify the integrity of the request. Otherwise others can feed your webhook receiver with fake data.
 
 `WEBHOOK_RETRIES` - `number`
 
