@@ -311,7 +311,7 @@ Default Content (if template is unavailable):
 
 GoTrue exposes the following endpoints:
 
-#### **GET /settings**
+### **GET /settings**
 
   Returns the publicly available settings for this gotrue instance.
 
@@ -328,7 +328,7 @@ GoTrue exposes the following endpoints:
   }
   ```
 
-#### **POST /signup**
+### **POST /signup**
 
   Register a new user with an email and password.
 
@@ -351,7 +351,7 @@ GoTrue exposes the following endpoints:
   }
   ```
 
-#### **POST /invite**
+### **POST /invite**
 
   Invites a new user with an email.
   This endpoint requires the `service_role` or `supabase_admin` JWT set as an Auth Bearer header:
@@ -382,7 +382,7 @@ GoTrue exposes the following endpoints:
   }
   ```
 
-#### **POST /verify**
+### **POST /verify**
 
   Verify a registration or a password recovery. Type can be `signup` or `recovery` or `invite`
   and the `token` is a token returned from either `/signup` or `/recover`.
@@ -408,7 +408,7 @@ GoTrue exposes the following endpoints:
   }
   ```
 
-#### **GET /verify**
+### **GET /verify**
 
   Verify a registration or a password recovery. Type can be `signup` or `recovery` or `magiclink` or `invite`
   and the `token` is a token returned from either `/signup` or `/recover` or `/magiclink`.
@@ -432,7 +432,7 @@ GoTrue exposes the following endpoints:
   You can use the `type` param to redirect the user to a password set form in the case of `invite` or `recovery`,
   or show an account confirmed/welcome message in the case of `signup`, or direct them to some additional onboarding flow
 
-#### **POST /magiclink**
+### **POST /magiclink**
 
   Magic Link. Will deliver a link (e.g. `/verify?type=magiclink&token=fgtyuf68ddqdaDd`) to the user based on
   email address which they can use to redeem an access_token.
@@ -453,7 +453,7 @@ GoTrue exposes the following endpoints:
   
   when clicked the magic link will redirect the user to `<SITE_URL>#access_token=x&refresh_token=y&expires_in=z&token_type=bearer&type=magiclink` (see `/verify` above)
 
-#### **POST /recover**
+### **POST /recover**
 
   Password recovery. Will deliver a password recovery mail to the user based on
   email address.
@@ -472,7 +472,7 @@ GoTrue exposes the following endpoints:
   {}
   ```
 
-#### **POST /token**
+### **POST /token**
 
   This is an OAuth2 endpoint that currently implements
   the password and refresh_token grant types
@@ -518,7 +518,7 @@ GoTrue exposes the following endpoints:
   }
   ```
 
-#### **GET /user**
+### **GET /user**
 
   Get the JSON object for the logged in user (requires authentication)
 
@@ -534,7 +534,7 @@ GoTrue exposes the following endpoints:
   }
   ```
 
-#### **PUT /user**
+### **PUT /user**
 
   Update a user (Requires authentication). Apart from changing email/password, this
   method can be used to set custom user data.
@@ -563,7 +563,7 @@ GoTrue exposes the following endpoints:
   }
   ```
 
-#### **POST /logout**
+### **POST /logout**
 
   Logout a user (Requires authentication).
 
@@ -571,7 +571,7 @@ GoTrue exposes the following endpoints:
   will still be valid for stateless auth until they expires.
 
 
-#### **GET /authorize**
+### **GET /authorize**
 
   Get access_token from external oauth provider
 
@@ -582,7 +582,7 @@ GoTrue exposes the following endpoints:
  
   Redirects to provider and then to `/callback`
   
-#### **GET /callback**
+### **GET /callback**
 
   External provider should redirect to here
  
