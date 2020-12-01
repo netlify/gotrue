@@ -99,6 +99,37 @@ Controls what log levels are output. Choose from `panic`, `fatal`, `error`, `war
 
 If you wish logs to be written to a file, set `log_file` to a valid file path.
 
+### Opentracing
+Currently, only the Datadog tracer is supported.
+
+```properties
+GOTRUE_TRACING_ENABLED=true
+GOTRUE_TRACING_HOST=127.0.0.1
+GOTRUE_TRACING_PORT=8126
+GOTRUE_TRACING_TAGS="tag1:value1,tag2:value2"
+GOTRUE_SERVICE_NAME="gotrue"
+```
+
+`TRACING_ENABLED` - `bool`
+
+Whether tracing is enabled or not. Defaults to `false`.
+
+`TRACING_HOST` - `bool`
+
+The tracing destination.
+
+`TRACING_PORT` - `bool`
+
+The port for the tracing host.
+
+`TRACING_TAGS` - `string`
+
+A comma separated list of key:value pairs. These key value pairs will be added as tags to all opentracing spans.
+
+`SERVICE_NAME` - `string`
+
+The name to use for the service.
+
 ### JSON Web Tokens (JWT)
 
 ```properties
