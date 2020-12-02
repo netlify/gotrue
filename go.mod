@@ -4,25 +4,15 @@ require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20170623214735-571947b0f240
 	github.com/badoux/checkmail v0.0.0-20170203135005-d0a759655d62
 	github.com/beevik/etree v1.1.0
-	github.com/blang/semver v3.5.1+incompatible // indirect
-	github.com/cockroachdb/cockroach-go v0.0.0-20190925194419-606b3d062051 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/didip/tollbooth/v5 v5.1.1
 	github.com/go-chi/chi v4.0.2+incompatible
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/gobuffalo/genny v0.4.1 // indirect
-	github.com/gobuffalo/gogen v0.2.0 // indirect
-	github.com/gobuffalo/mapi v1.1.0 // indirect
-	github.com/gobuffalo/plushgen v0.1.2 // indirect
-	github.com/gobuffalo/pop v4.12.2+incompatible
-	github.com/gobuffalo/pop/v5 v5.3.1 // indirect
-	github.com/gobuffalo/syncx v0.0.0-20190224160051-33c29581e754 // indirect
-	github.com/gobuffalo/tags v2.1.6+incompatible // indirect
+	github.com/gobuffalo/pop/v5 v5.3.1
 	github.com/gobuffalo/uuid v2.0.5+incompatible
 	github.com/imdario/mergo v0.0.0-20160216103600-3e95a51e0639
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/netlify/mailme v1.1.1
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
