@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"net/url"
+	"os"
 
 	"github.com/gobuffalo/pop/v5"
 	"github.com/netlify/gotrue/conf"
@@ -56,7 +57,7 @@ func migrate(cmd *cobra.Command, args []string) {
 		logrus.Fatalf("%+v", errors.Wrap(err, "creating db migrator"))
 	}
 	logrus.Infof("before status")
-	err = mig.Status()
+	err = mig.Status(os.Stdout)
 	if err != nil {
 		logrus.Fatalf("%+v", errors.Wrap(err, "migration status"))
 	}
@@ -69,7 +70,7 @@ func migrate(cmd *cobra.Command, args []string) {
 	}
 
 	logrus.Infof("after status")
-	err = mig.Status()
+	err = mig.Status(os.Stdout)
 	if err != nil {
 		logrus.Fatalf("%+v", errors.Wrap(err, "migration status"))
 	}
