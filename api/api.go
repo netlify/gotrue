@@ -88,6 +88,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	r.Use(addRequestID(globalConfig))
 	r.Use(recoverer)
 	r.UseBypass(tracer)
+	r.Use(addDBConnectionContext(api.db))
 
 	r.Get("/health", api.HealthCheck)
 

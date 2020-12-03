@@ -37,6 +37,14 @@ func addRequestID(globalConfig *conf.GlobalConfiguration) middlewareHandler {
 	}
 }
 
+func addDBConnectionContext(c *storage.Connection) middlewareHandler {
+	return func(w http.ResponseWriter, r *http.Request) (context.Context, error) {
+		ctx := r.Context()
+		c.WithContext(ctx)
+		return ctx, nil
+	}
+}
+
 func sendJSON(w http.ResponseWriter, status int, obj interface{}) error {
 	w.Header().Set("Content-Type", "application/json")
 	b, err := json.Marshal(obj)

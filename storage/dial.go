@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"net/url"
 	"reflect"
 
@@ -8,6 +9,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gobuffalo/pop/v5"
 	"github.com/gobuffalo/pop/v5/columns"
+	"github.com/luna-duclos/instrumentedsql"
+	"github.com/luna-duclos/instrumentedsql/opentracing"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
@@ -30,8 +33,10 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 	}
 
 	db, err := pop.NewConnection(&pop.ConnectionDetails{
-		Dialect: config.DB.Driver,
-		URL:     config.DB.URL,
+		Dialect:                   config.DB.Driver,
+		URL:                       config.DB.URL,
+		UseInstrumentedDriver:     true,
+		InstrumentedDriverOptions: []instrumentedsql.Opt{instrumentedsql.WithTracer(opentracing.NewTracer(true))},
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "opening database connection")
@@ -81,4 +86,8 @@ func getExcludedColumns(model interface{}, includeColumns ...string) ([]string, 
 		xcols = append(xcols, n)
 	}
 	return xcols, nil
+}
+
+func (c *Connection) WithContext(ctx context.Context) {
+	c.Connection = c.Connection.WithContext(ctx)
 }
