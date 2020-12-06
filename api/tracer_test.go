@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,7 +8,7 @@ import (
 	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/log"
+	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -38,81 +37,27 @@ func TestTracer(t *testing.T) {
 }
 
 func (ts *TracerTestSuite) TestTracer_Spans() {
-	spans := []string{}
-
-	tt := &testTracer{spans: &spans, tags: &map[string]string{}}
-	opentracing.SetGlobalTracer(tt)
+	mt := mocktracer.New()
+	opentracing.SetGlobalTracer(mt)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "http://localhost/something1", nil)
 	ts.API.handler.ServeHTTP(w, req)
-	req = httptest.NewRequest(http.MethodPost, "http://localhost/something2", nil)
+	req = httptest.NewRequest(http.MethodGet, "http://localhost/something2", nil)
 	ts.API.handler.ServeHTTP(w, req)
 
-	assert.Equal(ts.T(), http.StatusNotFound, w.Code)
-	assert.Equal(ts.T(), spans, []string{"http.handler", "http.handler"})
-}
+	spans := mt.FinishedSpans()
+	if assert.Equal(ts.T(), 2, len(spans)) {
+		assert.Equal(ts.T(), "POST", spans[0].Tag("http.method"))
+		assert.Equal(ts.T(), "/something1", spans[0].Tag("http.url"))
+		assert.Equal(ts.T(), "POST /something1", spans[0].Tag("resource.name"))
+		assert.Equal(ts.T(), uint16(http.StatusNotFound), spans[0].Tag("http.status_code"))
+		assert.NotEmpty(ts.T(), spans[0].Tag("http.request_id"))
 
-func (ts *TracerTestSuite) TestTracer_Tags() {
-	tags := map[string]string{}
-
-	tt := &testTracer{tags: &tags, spans: &[]string{}}
-	opentracing.SetGlobalTracer(tt)
-
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/something", nil)
-	ts.API.handler.ServeHTTP(w, req)
-
-	assert.Equal(ts.T(), http.StatusNotFound, w.Code)
-	assert.Equal(ts.T(), tags["http.method"], "POST")
-	assert.Equal(ts.T(), tags["http.status_code"], "404")
-	assert.Equal(ts.T(), tags["http.url"], "/something")
-	assert.Equal(ts.T(), tags["resource.name"], "POST /something")
-	assert.NotEmpty(ts.T(), tags["http.request_id"])
+		assert.Equal(ts.T(), "GET", spans[1].Tag("http.method"))
+		assert.Equal(ts.T(), "/something2", spans[1].Tag("http.url"))
+		assert.Equal(ts.T(), "GET /something2", spans[1].Tag("resource.name"))
+		assert.Equal(ts.T(), uint16(http.StatusNotFound), spans[1].Tag("http.status_code"))
+		assert.NotEmpty(ts.T(), spans[1].Tag("http.request_id"))
+	}
 }
-
-type testTracer struct {
-	noopTracer opentracing.NoopTracer
-	spans      *[]string
-	tags       *map[string]string
-}
-
-func (tt testTracer) StartSpan(operationName string, opts ...opentracing.StartSpanOption) opentracing.Span {
-	*tt.spans = append(*(tt.spans), operationName)
-	noopSpan := tt.noopTracer.StartSpan(operationName, opts...)
-	return &testSpan{tags: tt.tags, noopSpan: noopSpan}
-}
-func (tt testTracer) Inject(sm opentracing.SpanContext, format interface{}, carrier interface{}) error {
-	return nil
-}
-func (tt testTracer) Extract(format interface{}, carrier interface{}) (opentracing.SpanContext, error) {
-	return tt.noopTracer.Extract(format, carrier)
-}
-
-type testSpan struct {
-	noopSpan opentracing.Span
-	tags     *map[string]string
-}
-
-func (ts testSpan) Finish()                                          {}
-func (ts testSpan) FinishWithOptions(opts opentracing.FinishOptions) {}
-func (ts testSpan) Context() opentracing.SpanContext                 { return ts.noopSpan.Context() }
-func (ts testSpan) SetOperationName(operationName string) opentracing.Span {
-	return ts.noopSpan.SetOperationName(operationName)
-}
-func (ts testSpan) SetTag(key string, value interface{}) opentracing.Span {
-	(*ts.tags)[key] = fmt.Sprintf("%v", value)
-	return ts.noopSpan.SetTag(key, value)
-}
-func (ts testSpan) LogFields(fields ...log.Field)             {}
-func (ts testSpan) LogKV(alternatingKeyValues ...interface{}) {}
-func (ts testSpan) SetBaggageItem(restrictedKey, value string) opentracing.Span {
-	return ts.noopSpan.SetBaggageItem(restrictedKey, value)
-}
-func (ts testSpan) BaggageItem(restrictedKey string) string {
-	return ts.noopSpan.BaggageItem(restrictedKey)
-}
-func (ts testSpan) Tracer() opentracing.Tracer                            { return ts.noopSpan.Tracer() }
-func (ts testSpan) LogEvent(event string)                                 {}
-func (ts testSpan) LogEventWithPayload(event string, payload interface{}) {}
-func (ts testSpan) Log(data opentracing.LogData)                          {}
