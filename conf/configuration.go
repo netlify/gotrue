@@ -63,6 +63,7 @@ type GlobalConfiguration struct {
 	Logging           LoggingConfig `envconfig:"LOG"`
 	OperatorToken     string        `split_words:"true" required:"true"`
 	MultiInstanceMode bool
+	Tracing           TracingConfig
 	SMTP              SMTPConfiguration
 	RateLimitHeader   string `split_words:"true"`
 }
@@ -162,6 +163,8 @@ func LoadGlobal(filename string) (*GlobalConfiguration, error) {
 	if _, err := ConfigureLogging(&config.Logging); err != nil {
 		return nil, err
 	}
+
+	ConfigureTracing(&config.Tracing)
 
 	if config.SMTP.MaxFrequency == 0 {
 		config.SMTP.MaxFrequency = 15 * time.Minute

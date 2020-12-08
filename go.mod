@@ -7,7 +7,6 @@ require (
 	github.com/beevik/etree v0.0.0-20180609182452-90dafc1e1f11
 	github.com/cockroachdb/cockroach-go v0.0.0-20190925194419-606b3d062051 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/didip/tollbooth/v5 v5.1.1
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/go-chi/chi v4.0.2+incompatible
@@ -28,6 +27,7 @@ require (
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0 // indirect
 	github.com/netlify/mailme v1.1.1
+	github.com/opentracing/opentracing-go v1.1.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/rogpeppe/go-internal v1.5.0 // indirect
@@ -47,8 +47,8 @@ require (
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
 	google.golang.org/api v0.0.0-20170821230356-dd6bdadc5852 // indirect
 	google.golang.org/appengine v1.6.5 // indirect
-	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
-	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
+	gopkg.in/DataDog/dd-trace-go.v1 v1.12.1
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect
 	gopkg.in/yaml.v2 v2.2.5 // indirect
 )
