@@ -51,13 +51,13 @@ func (ts *TracerTestSuite) TestTracer_Spans() {
 		assert.Equal(ts.T(), "POST", spans[0].Tag("http.method"))
 		assert.Equal(ts.T(), "/something1", spans[0].Tag("http.url"))
 		assert.Equal(ts.T(), "POST /something1", spans[0].Tag("resource.name"))
-		assert.Equal(ts.T(), uint16(http.StatusNotFound), spans[0].Tag("http.status_code"))
+		assert.Equal(ts.T(), "404", spans[0].Tag("http.status_code"))
 		assert.NotEmpty(ts.T(), spans[0].Tag("http.request_id"))
 
 		assert.Equal(ts.T(), "GET", spans[1].Tag("http.method"))
 		assert.Equal(ts.T(), "/something2", spans[1].Tag("http.url"))
 		assert.Equal(ts.T(), "GET /something2", spans[1].Tag("resource.name"))
-		assert.Equal(ts.T(), uint16(http.StatusNotFound), spans[1].Tag("http.status_code"))
+		assert.Equal(ts.T(), "404", spans[1].Tag("http.status_code"))
 		assert.NotEmpty(ts.T(), spans[1].Tag("http.request_id"))
 	}
 }

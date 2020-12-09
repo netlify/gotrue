@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -47,7 +48,11 @@ func tracer(next http.Handler) http.Handler {
 		next.ServeHTTP(trw, r.WithContext(traceCtx))
 
 		status := trw.statusCode
-		ext.HTTPStatusCode.Set(span, uint16(status))
+
+		// Setting the status as an int doesn't propogate for use in datadog dashboards,
+		// so we convert to a string.
+		span.SetTag(string(ext.HTTPStatusCode), strconv.Itoa(status))
+
 		if status >= 500 && status < 600 {
 			ext.Error.Set(span, true)
 			span.SetTag("error.type", fmt.Sprintf("%d: %s", status, http.StatusText(status)))
