@@ -68,7 +68,7 @@ jobs:
           repo: gotrue
           excludes: prerelease, draft
 
-      - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}.tar.gz gotrue
+      - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}.tar.gz gotrue gotrue-arm64
 
       - uses: AButler/upload-release-assets@v2.0
         with:
@@ -83,5 +83,3 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ secrets.DOCKER_REPO }}
           tags: latest,${{ steps.releases.outputs.release }}
-
-          

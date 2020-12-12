@@ -1,5 +1,6 @@
 .PHONY: all build deps image lint migrate test vet
 CHECK_FILES?=$$(go list ./... | grep -v /vendor/)
+FLAGS?=-ldflags "-X github.com/netlify/gotrue/cmd.Version=`git rev-parse HEAD`"
 
 help: ## Show this help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {sub("\\\\n",sprintf("\n%22c"," "), $$2);printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -7,7 +8,8 @@ help: ## Show this help.
 all: lint vet build ## Run the tests and build the binary.
 
 build: ## Build the binary.
-	go build -ldflags "-X github.com/netlify/gotrue/cmd.Version=`git rev-parse HEAD`"
+	go build $(FLAGS)
+	GOOS=linux GOARCH=arm64 go build $(FLAGS) -o gotrue-arm64
 
 deps: ## Install dependencies.
 	@go get -u github.com/gobuffalo/pop/soda
