@@ -1,6 +1,7 @@
 .env
 vendor/
 gotrue
+gotrue-arm64
 
 .DS_Store
 .vscode
