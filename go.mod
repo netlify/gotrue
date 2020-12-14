@@ -4,7 +4,7 @@ require (
 	cloud.google.com/go v0.0.0-20170822200954-98f5696b1026 // indirect
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20170623214735-571947b0f240
 	github.com/badoux/checkmail v0.0.0-20170203135005-d0a759655d62
-	github.com/beevik/etree v0.0.0-20180609182452-90dafc1e1f11
+	github.com/beevik/etree v1.1.0
 	github.com/cockroachdb/cockroach-go v0.0.0-20190925194419-606b3d062051 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/didip/tollbooth/v5 v5.1.1
@@ -21,7 +21,6 @@ require (
 	github.com/imdario/mergo v0.0.0-20160216103600-3e95a51e0639
 	github.com/jackc/pgconn v1.1.0 // indirect
 	github.com/joho/godotenv v1.3.0
-	github.com/jonboulle/clockwork v0.0.0-20180716110948-e7c6d408fd5c // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
@@ -32,13 +31,13 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/rogpeppe/go-internal v1.5.0 // indirect
 	github.com/rs/cors v1.6.0
-	github.com/russellhaering/gosaml2 v0.3.1
-	github.com/russellhaering/goxmldsig v0.0.0-20180430223755-7acd5e4a6ef7
+	github.com/russellhaering/gosaml2 v0.6.0
+	github.com/russellhaering/goxmldsig v1.1.0
 	github.com/sebest/xff v0.0.0-20160910043805-6c115e0ffa35
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.6.1
 	golang.org/x/crypto v0.0.0-20191107222254-f4817d981bb6
 	golang.org/x/net v0.0.0-20191108063844-7e6e90b9ea88 // indirect
 	golang.org/x/oauth2 v0.0.0-20170807180024-9a379c6b3e95
