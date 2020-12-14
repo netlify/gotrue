@@ -9,7 +9,7 @@ jobs:
   release:
     strategy:
       matrix:
-        node: ['12']
+        node: ["12"]
 
     outputs:
       status: ${{ steps.pre-release.outputs.release != steps.post-release.outputs.release }}
@@ -52,10 +52,10 @@ jobs:
     if: success() && needs.release.outputs.status == 'true'
     steps:
       - uses: actions/checkout@v2
-      
+
       - uses: actions/setup-go@v2
         with:
-          go-version: '^1.14.4' # The Go version to download (if necessary) and use.
+          go-version: "^1.14.4" # The Go version to download (if necessary) and use.
 
       - run: make deps
 
@@ -68,11 +68,17 @@ jobs:
           repo: gotrue
           excludes: prerelease, draft
 
-      - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}.tar.gz gotrue gotrue-arm64
+      - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}-x86.tar.gz gotrue
+      - run: mv gotrue-arm64 gotrue
+      - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}-arm64.tar.gz gotrue
 
       - uses: AButler/upload-release-assets@v2.0
         with:
-          files: 'gotrue-${{ steps.releases.outputs.release }}.tar.gz'
+          files:
+            [
+              "gotrue-${{ steps.releases.outputs.release }}-x86.tar.gz",
+              "gotrue-${{ steps.releases.outputs.release }}-arm64.tar.gz",
+            ]
           release-tag: ${{ steps.releases.outputs.release }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
