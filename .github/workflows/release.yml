@@ -75,10 +75,9 @@ jobs:
       - uses: AButler/upload-release-assets@v2.0
         with:
           files:
-            [
-              "gotrue-${{ steps.releases.outputs.release }}-x86.tar.gz",
-              "gotrue-${{ steps.releases.outputs.release }}-arm64.tar.gz",
-            ]
+            - "gotrue-${{ steps.releases.outputs.release }}-x86.tar.gz"
+            - "gotrue-${{ steps.releases.outputs.release }}-arm64.tar.gz"
+
           release-tag: ${{ steps.releases.outputs.release }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
