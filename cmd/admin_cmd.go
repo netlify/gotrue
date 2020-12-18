@@ -1,10 +1,10 @@
 package cmd
 
 import (
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -74,7 +74,6 @@ func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
-	defer db.Close()
 
 	aud := getAudience(config)
 	if exists, err := models.IsDuplicatedEmail(db, iid, args[0], aud); exists {
@@ -91,7 +90,7 @@ func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 
 	err = db.Transaction(func(tx *storage.Connection) error {
 		var terr error
-		if terr = tx.Create(user); terr != nil {
+		if terr = tx.Create(user).Error; terr != nil {
 			return terr
 		}
 
@@ -126,7 +125,6 @@ func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
-	defer db.Close()
 
 	user, err := models.FindUserByEmailAndAudience(db, iid, args[0], getAudience(config))
 	if err != nil {
@@ -137,7 +135,7 @@ func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 		}
 	}
 
-	if err = db.Destroy(user); err != nil {
+	if err = db.Delete(user).Error; err != nil {
 		logrus.Fatalf("Error removing user (%s): %+v", args[0], err)
 	}
 
@@ -151,7 +149,6 @@ func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configur
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
-	defer db.Close()
 
 	user, err := models.FindUserByEmailAndAudience(db, iid, args[0], getAudience(config))
 	if err != nil {
@@ -170,7 +167,7 @@ func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configur
 		user.Role = config.JWT.AdminGroupName
 	}
 
-	if err = db.UpdateOnly(user, "role", "is_super_admin"); err != nil {
+	if err = db.Model(&user).Select("role", "is_super_admin").Updates(user).Error; err != nil {
 		logrus.Fatalf("Error updating role for user (%s): %+v", args[0], err)
 	}
 

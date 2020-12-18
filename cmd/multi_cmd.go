@@ -40,7 +40,6 @@ func multi(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logrus.Fatalf("Error opening database: %+v", err)
 	}
-	defer db.Close()
 
 	globalConfig.MultiInstanceMode = true
 	api := api.NewAPIWithVersion(context.Background(), globalConfig, db, Version)

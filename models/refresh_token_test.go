@@ -1,12 +1,13 @@
 package models
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/test"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -17,7 +18,8 @@ type RefreshTokenTestSuite struct {
 }
 
 func (ts *RefreshTokenTestSuite) SetupTest() {
-	TruncateAll(ts.db)
+	err := storage.TruncateAll(ts.db)
+	assert.NoError(ts.T(), err)
 }
 
 func TestRefreshToken(t *testing.T) {
@@ -30,7 +32,6 @@ func TestRefreshToken(t *testing.T) {
 	ts := &RefreshTokenTestSuite{
 		db: conn,
 	}
-	defer ts.db.Close()
 
 	suite.Run(t, ts)
 }
@@ -82,7 +83,7 @@ func (ts *RefreshTokenTestSuite) createUserWithEmail(email string) *User {
 	user, err := NewUser(uuid.Nil, email, "secret", "test", nil)
 	require.NoError(ts.T(), err)
 
-	err = ts.db.Create(user)
+	err = ts.db.Create(user).Error
 	require.NoError(ts.T(), err)
 
 	return user

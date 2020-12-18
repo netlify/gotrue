@@ -75,7 +75,7 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		UUID:       params.UUID,
 		BaseConfig: params.BaseConfig,
 	}
-	if err = a.db.Create(&i); err != nil {
+	if err = a.db.Create(&i).Error; err != nil {
 		return internalServerError("Database error creating instance").WithInternalError(err)
 	}
 

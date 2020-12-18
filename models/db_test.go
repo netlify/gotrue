@@ -1,12 +1,17 @@
 package models_test
 
 import (
+	"github.com/netlify/gotrue/conf"
+	"github.com/netlify/gotrue/storage/test"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 	"testing"
 
-	"github.com/gobuffalo/pop/v5"
 	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
 )
+
+const modelsTestConfig = "../hack/test.env"
 
 func TestTableNameNamespacing(t *testing.T) {
 	cases := []struct {
@@ -19,8 +24,16 @@ func TestTableNameNamespacing(t *testing.T) {
 		{expected: "test_users", value: []*models.User{}},
 	}
 
+	globalConfig, err := conf.LoadGlobal(modelsTestConfig)
+	require.NoError(t, err)
+
+	conn, err := test.SetupDBConnection(globalConfig)
+	require.NoError(t, err)
+
 	for _, tc := range cases {
-		m := &pop.Model{Value: tc.value}
-		assert.Equal(t, tc.expected, m.TableName())
+		stmt := &gorm.Statement{DB: conn.DB}
+		err := stmt.Parse(tc.value)
+		assert.NoError(t, err)
+		assert.Equal(t, tc.expected, stmt.Schema.Table)
 	}
 }

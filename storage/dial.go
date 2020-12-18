@@ -1,22 +1,27 @@
 package storage
 
 import (
+	"fmt"
 	"net/url"
-	"reflect"
+	"path/filepath"
 
-	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/gobuffalo/pop/v5"
-	"github.com/gobuffalo/pop/v5/columns"
 	"github.com/netlify/gotrue/conf"
-	"github.com/netlify/gotrue/storage/namespace"
+	"github.com/onrik/gorm-logrus"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
+	"gorm.io/driver/sqlserver"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"gorm.io/gorm/schema"
 )
 
 // Connection is the interface a storage provider must implement.
 type Connection struct {
-	*pop.Connection
+	*gorm.DB
+	transaction bool
 }
 
 // Dial will connect to that storage engine
@@ -29,56 +34,79 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 		config.DB.Driver = u.Scheme
 	}
 
-	db, err := pop.NewConnection(&pop.ConnectionDetails{
-		Dialect: config.DB.Driver,
-		URL:     config.DB.URL,
-	})
+	if config.DB.Database == "" {
+		config.DB.Driver = "gotrue"
+		if config.DB.Namespace != "" {
+			config.DB.Driver += "_" + config.DB.Namespace
+		}
+	}
+
+	dialect := func() gorm.Dialector {
+		switch config.DB.Driver {
+		case "mysql":
+			return mysql.Open(config.DB.URL)
+		case "sqlserver":
+			return sqlserver.Open(config.DB.URL)
+		case "postgres":
+			return postgres.New(postgres.Config{
+				DSN:                  config.DB.URL,
+				PreferSimpleProtocol: true,
+			})
+		case "sqlite":
+			fallthrough
+		default:
+			u, _ := url.Parse(config.DB.URL)
+			name := fmt.Sprintf("%s.sqlite", config.DB.Database)
+			file := filepath.Join(u.Path, name)
+			return sqlite.Open(file)
+		}
+	}
+
+	namespace := func() string {
+		if config.DB.Namespace != "" {
+			return config.DB.Namespace + "_"
+		}
+		return ""
+	}
+
+	orm, err := gorm.Open(dialect(), &gorm.Config{
+		Logger: gorm_logrus.New(),
+		NamingStrategy: schema.NamingStrategy{
+			TablePrefix: namespace(), // table name prefix
+		}})
 	if err != nil {
 		return nil, errors.Wrap(err, "opening database connection")
 	}
-	if err := db.Open(); err != nil {
-		return nil, errors.Wrap(err, "checking database connection")
-	}
-
-	if config.DB.Namespace != "" {
-		namespace.SetNamespace(config.DB.Namespace)
-	}
 
 	if logrus.StandardLogger().Level == logrus.DebugLevel {
-		pop.Debug = true
+		orm.Logger.LogMode(logger.Info)
 	}
 
-	return &Connection{db}, nil
+	conn := &Connection{DB: orm}
+
+	if config.DB.AutoMigrate {
+		if config.DB.Driver != "sqlite" && config.DB.Driver != "" {
+			orm.Exec(fmt.Sprintf(
+				"CREATE DATABASE IF NOT EXISTS %s",
+				config.DB.Database))
+		}
+		orm.Exec(fmt.Sprintf(
+			"USE %s",
+			config.DB.Database))
+		err = MigrateDatabase(conn)
+		if err != nil {
+			return nil, errors.Wrap(err, "migrating database")
+		}
+	}
+
+	return conn, nil
 }
 
 func (c *Connection) Transaction(fn func(*Connection) error) error {
-	if c.TX == nil {
-		return c.Connection.Transaction(func(tx *pop.Connection) error {
-			return fn(&Connection{tx})
-		})
+	if c.transaction {
+		return fn(c)
 	}
-	return fn(c)
-}
-
-func getExcludedColumns(model interface{}, includeColumns ...string) ([]string, error) {
-	sm := &pop.Model{Value: model}
-	st := reflect.TypeOf(model)
-	if st.Kind() == reflect.Ptr {
-		st = st.Elem()
-	}
-
-	// get all columns and remove included to get excluded set
-	cols := columns.ForStructWithAlias(model, sm.TableName(), sm.As)
-	for _, f := range includeColumns {
-		if _, ok := cols.Cols[f]; !ok {
-			return nil, errors.Errorf("Invalid column name %s", f)
-		}
-		cols.Remove(f)
-	}
-
-	xcols := make([]string, len(cols.Cols))
-	for n := range cols.Cols {
-		xcols = append(xcols, n)
-	}
-	return xcols, nil
+	return c.DB.Transaction(func(tx *gorm.DB) error {
+		return fn(&Connection{DB: tx, transaction: true})
+	})
 }

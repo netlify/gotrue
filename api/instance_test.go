@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/netlify/gotrue/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,13 +35,12 @@ func TestInstance(t *testing.T) {
 	ts := &InstanceTestSuite{
 		API: api,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *InstanceTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	storage.TruncateAll(ts.API.db)
 }
 
 func (ts *InstanceTestSuite) TestCreate() {
@@ -85,7 +85,7 @@ func (ts *InstanceTestSuite) TestGet() {
 				Secret: "testsecret",
 			},
 		},
-	})
+	}).Error
 	require.NoError(ts.T(), err)
 
 	req := httptest.NewRequest(http.MethodGet, "/instances/"+instanceID.String(), nil)
@@ -109,7 +109,7 @@ func (ts *InstanceTestSuite) TestUpdate() {
 				Secret: "testsecret",
 			},
 		},
-	})
+	}).Error
 	require.NoError(ts.T(), err)
 
 	var buffer bytes.Buffer
@@ -148,7 +148,7 @@ func (ts *InstanceTestSuite) TestUpdate_DisableEmail() {
 				},
 			},
 		},
-	})
+	}).Error
 	require.NoError(ts.T(), err)
 
 	var buffer bytes.Buffer
@@ -187,7 +187,7 @@ func (ts *InstanceTestSuite) TestUpdate_PreserveSMTPConfig() {
 				Pass: "password123",
 			},
 		},
-	})
+	}).Error
 	require.NoError(ts.T(), err)
 
 	var buffer bytes.Buffer
@@ -225,7 +225,7 @@ func (ts *InstanceTestSuite) TestUpdate_ClearPassword() {
 				Pass: "password123",
 			},
 		},
-	})
+	}).Error
 	require.NoError(ts.T(), err)
 
 	var buffer bytes.Buffer

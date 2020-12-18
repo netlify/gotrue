@@ -111,7 +111,7 @@ func (a *API) signupNewUser(ctx context.Context, conn *storage.Connection, param
 	}
 
 	err = conn.Transaction(func(tx *storage.Connection) error {
-		if terr := tx.Create(user); terr != nil {
+		if terr := tx.Create(user).Error; terr != nil {
 			return internalServerError("Database error saving new user").WithInternalError(terr)
 		}
 		if terr := user.SetRole(tx, config.JWT.DefaultGroupName); terr != nil {

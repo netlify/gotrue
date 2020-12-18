@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/test"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,7 +46,7 @@ func setupAPIForTestForInstance() (*API, *conf.Configuration, uuid.UUID, error) 
 			ID:         instanceID,
 			UUID:       testUUID,
 			BaseConfig: c,
-		})
+		}).Error
 		return instanceID, err
 	}
 
@@ -70,7 +70,6 @@ func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Config
 
 	config, err := conf.LoadConfig(apiTestConfig)
 	if err != nil {
-		conn.Close()
 		return nil, nil, err
 	}
 
@@ -78,14 +77,12 @@ func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Config
 	if cb != nil {
 		instanceID, err = cb(globalConfig, config, conn)
 		if err != nil {
-			conn.Close()
 			return nil, nil, err
 		}
 	}
 
 	ctx, err := WithInstanceConfig(context.Background(), config, instanceID)
 	if err != nil {
-		conn.Close()
 		return nil, nil, err
 	}
 

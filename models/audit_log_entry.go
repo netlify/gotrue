@@ -7,8 +7,9 @@ import (
 
 	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/storage"
-	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
+	"github.com/vcraescu/go-paginator/v2"
+	"github.com/vcraescu/go-paginator/v2/adapter"
 )
 
 type AuditAction string
@@ -45,24 +46,18 @@ var actionLogTypeMap = map[AuditAction]auditLogType{
 	UserRecoveryRequestedAction: user,
 }
 
-// AuditLogEntry is the database model for audit log entries.
-type AuditLogEntry struct {
-	InstanceID uuid.UUID `json:"-" db:"instance_id"`
-	ID         uuid.UUID `json:"id" db:"id"`
-
-	Payload JSONMap `json:"payload" db:"payload"`
-
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
+func init() {
+	storage.AddMigration(&AuditLogEntry{})
 }
 
-func (AuditLogEntry) TableName() string {
-	tableName := "audit_log_entries"
+// AuditLogEntry is the database model for audit log entries.
+type AuditLogEntry struct {
+	InstanceID uuid.UUID `json:"-" gorm:"index:audit_logs_instance_id_idx;type:varchar(255) DEFAULT NULL"`
+	ID         uuid.UUID `json:"id" gorm:"primaryKey;type:varchar(255) NOT NULL"`
 
-	if namespace.GetNamespace() != "" {
-		return namespace.GetNamespace() + "_" + tableName
-	}
+	Payload JSONMap `json:"payload" gorm:"type:JSON NULL DEFAULT NULL"`
 
-	return tableName
+	CreatedAt time.Time `json:"created_at" gorm:"type:timestamp NULL DEFAULT NULL"`
 }
 
 func NewAuditLogEntry(tx *storage.Connection, instanceID uuid.UUID, actor *User, action AuditAction, traits map[string]interface{}) error {
@@ -90,11 +85,11 @@ func NewAuditLogEntry(tx *storage.Connection, instanceID uuid.UUID, actor *User,
 		l.Payload["traits"] = traits
 	}
 
-	return errors.Wrap(tx.Create(&l), "Database error creating audit log entry")
+	return errors.Wrap(tx.Create(&l).Error, "Database error creating audit log entry")
 }
 
 func FindAuditLogEntries(tx *storage.Connection, instanceID uuid.UUID, filterColumns []string, filterValue string, pageParams *Pagination) ([]*AuditLogEntry, error) {
-	q := tx.Q().Order("created_at desc").Where("instance_id = ?", instanceID)
+	q := tx.Model(AuditLogEntry{}).Order("created_at desc").Where("instance_id = ?", instanceID)
 
 	if len(filterColumns) > 0 && filterValue != "" {
 		lf := "%" + filterValue + "%"
@@ -118,10 +113,18 @@ func FindAuditLogEntries(tx *storage.Connection, instanceID uuid.UUID, filterCol
 	logs := []*AuditLogEntry{}
 	var err error
 	if pageParams != nil {
-		err = q.Paginate(int(pageParams.Page), int(pageParams.PerPage)).All(&logs)
-		pageParams.Count = uint64(q.Paginator.TotalEntriesSize)
+		p := paginator.New(adapter.NewGORMAdapter(q), int(pageParams.PerPage))
+		p.SetPage(int(pageParams.Page))
+		if err = p.Results(&logs); err != nil {
+			return nil, err
+		}
+		var cnt int
+		if cnt, err = p.PageNums(); err != nil {
+			return nil, err
+		}
+		pageParams.Count = uint64(cnt)
 	} else {
-		err = q.All(&logs)
+		err = q.Find(&logs).Error
 	}
 
 	return logs, err

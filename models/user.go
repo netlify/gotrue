@@ -1,53 +1,57 @@
 package models
 
 import (
-	"database/sql"
 	"strings"
 	"time"
 
-	"github.com/gobuffalo/pop/v5"
 	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/storage"
-	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
+	"github.com/vcraescu/go-paginator/v2"
+	"github.com/vcraescu/go-paginator/v2/adapter"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 const SystemUserID = "0"
 
 var SystemUserUUID = uuid.Nil
 
-// User respresents a registered user with email/password authentication
+func init() {
+	storage.AddMigration(&User{})
+}
+
+// User represents a registered user with email/password authentication
 type User struct {
-	InstanceID uuid.UUID `json:"-" db:"instance_id"`
-	ID         uuid.UUID `json:"id" db:"id"`
+	InstanceID uuid.UUID `json:"-" gorm:"index:users_instance_id_idx;index:users_instance_id_email_idx;type:varchar(255) DEFAULT NULL"`
+	ID         uuid.UUID `json:"id" gorm:"primaryKey;type:varchar(255) NOT NULL"`
 
-	Aud               string     `json:"aud" db:"aud"`
-	Role              string     `json:"role" db:"role"`
-	Email             string     `json:"email" db:"email"`
-	EncryptedPassword string     `json:"-" db:"encrypted_password"`
-	ConfirmedAt       *time.Time `json:"confirmed_at,omitempty" db:"confirmed_at"`
-	InvitedAt         *time.Time `json:"invited_at,omitempty" db:"invited_at"`
+	Aud               string     `json:"aud" gorm:"type:varchar(255) DEFAULT NULL"`
+	Role              string     `json:"role" gorm:"type:varchar(255) DEFAULT NULL"`
+	Email             string     `json:"email" gorm:"index:users_instance_id_email_idx;type:varchar(255) DEFAULT NULL"`
+	EncryptedPassword string     `json:"-" gorm:"type:varchar(255) DEFAULT NULL"`
+	ConfirmedAt       *time.Time `json:"confirmed_at,omitempty" gorm:"type:timestamp NULL DEFAULT NULL"`
+	InvitedAt         *time.Time `json:"invited_at,omitempty" gorm:"type:timestamp NULL DEFAULT NULL"`
 
-	ConfirmationToken  string     `json:"-" db:"confirmation_token"`
-	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty" db:"confirmation_sent_at"`
+	ConfirmationToken  string     `json:"-" gorm:"type:varchar(255) DEFAULT NULL"`
+	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty" gorm:"type:timestamp NULL DEFAULT NULL"`
 
-	RecoveryToken  string     `json:"-" db:"recovery_token"`
-	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty" db:"recovery_sent_at"`
+	RecoveryToken  string     `json:"-" gorm:"type:varchar(255) DEFAULT NULL"`
+	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty" gorm:"type:timestamp NULL DEFAULT NULL"`
 
-	EmailChangeToken  string     `json:"-" db:"email_change_token"`
-	EmailChange       string     `json:"new_email,omitempty" db:"email_change"`
-	EmailChangeSentAt *time.Time `json:"email_change_sent_at,omitempty" db:"email_change_sent_at"`
+	EmailChangeToken  string     `json:"-" gorm:"type:varchar(255) DEFAULT NULL"`
+	EmailChange       string     `json:"new_email,omitempty" gorm:"type:varchar(255) DEFAULT NULL"`
+	EmailChangeSentAt *time.Time `json:"email_change_sent_at,omitempty" gorm:"type:timestamp NULL DEFAULT NULL"`
 
-	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty" db:"last_sign_in_at"`
+	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty" gorm:"type:timestamp NULL DEFAULT NULL"`
 
-	AppMetaData  JSONMap `json:"app_metadata" db:"raw_app_meta_data"`
-	UserMetaData JSONMap `json:"user_metadata" db:"raw_user_meta_data"`
+	AppMetaData  JSONMap `json:"app_metadata" gorm:"column:raw_app_meta_data;type:JSON NULL DEFAULT NULL"`
+	UserMetaData JSONMap `json:"user_metadata" gorm:"column:raw_user_meta_data;type:JSON NULL DEFAULT NULL"`
 
-	IsSuperAdmin bool `json:"-" db:"is_super_admin"`
+	IsSuperAdmin bool `json:"-" gorm:"type:tinyint(1) DEFAULT NULL"`
 
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	CreatedAt time.Time `json:"created_at" gorm:"type:timestamp NULL DEFAULT NULL"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"type:timestamp NULL DEFAULT NULL"`
 }
 
 // NewUser initializes a new user from an email, password and user data.
@@ -81,21 +85,11 @@ func NewSystemUser(instanceID uuid.UUID, aud string) *User {
 	}
 }
 
-func (User) TableName() string {
-	tableName := "users"
-
-	if namespace.GetNamespace() != "" {
-		return namespace.GetNamespace() + "_" + tableName
-	}
-
-	return tableName
-}
-
-func (u *User) BeforeCreate(tx *pop.Connection) error {
+func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return u.BeforeUpdate(tx)
 }
 
-func (u *User) BeforeUpdate(tx *pop.Connection) error {
+func (u *User) BeforeUpdate(tx *gorm.DB) error {
 	if u.ID == SystemUserUUID {
 		return errors.New("Cannot persist system user")
 	}
@@ -103,7 +97,7 @@ func (u *User) BeforeUpdate(tx *pop.Connection) error {
 	return nil
 }
 
-func (u *User) BeforeSave(tx *pop.Connection) error {
+func (u *User) BeforeSave(tx *gorm.DB) error {
 	if u.ID == SystemUserUUID {
 		return errors.New("Cannot persist system user")
 	}
@@ -138,7 +132,7 @@ func (u *User) IsConfirmed() bool {
 // SetRole sets the users Role to roleName
 func (u *User) SetRole(tx *storage.Connection, roleName string) error {
 	u.Role = strings.TrimSpace(roleName)
-	return tx.UpdateOnly(u, "role")
+	return tx.Model(&u).Select("role").Updates(u).Error
 }
 
 // HasRole returns true when the users role is set to roleName
@@ -161,7 +155,7 @@ func (u *User) UpdateUserMetaData(tx *storage.Connection, updates map[string]int
 			}
 		}
 	}
-	return tx.UpdateOnly(u, "raw_user_meta_data")
+	return tx.Model(&u).Select("raw_user_meta_data").Updates(u).Error
 }
 
 // UpdateAppMetaData updates all app data from a map of updates
@@ -177,12 +171,12 @@ func (u *User) UpdateAppMetaData(tx *storage.Connection, updates map[string]inte
 			}
 		}
 	}
-	return tx.UpdateOnly(u, "raw_app_meta_data")
+	return tx.Model(&u).Select("raw_app_meta_data").Updates(u).Error
 }
 
 func (u *User) SetEmail(tx *storage.Connection, email string) error {
 	u.Email = email
-	return tx.UpdateOnly(u, "email")
+	return tx.Model(&u).Select("email").Updates(u).Error
 }
 
 // hashPassword generates a hashed password from a plaintext string
@@ -200,7 +194,7 @@ func (u *User) UpdatePassword(tx *storage.Connection, password string) error {
 		return err
 	}
 	u.EncryptedPassword = pw
-	return tx.UpdateOnly(u, "encrypted_password")
+	return tx.Model(&u).Select("encrypted_password").Updates(u).Error
 }
 
 // Authenticate a user from a password
@@ -214,7 +208,7 @@ func (u *User) Confirm(tx *storage.Connection) error {
 	u.ConfirmationToken = ""
 	now := time.Now()
 	u.ConfirmedAt = &now
-	return tx.UpdateOnly(u, "confirmation_token", "confirmed_at")
+	return tx.Model(&u).Select("confirmation_token", "confirmed_at").Updates(u).Error
 }
 
 // ConfirmEmailChange confirm the change of email for a user
@@ -222,25 +216,26 @@ func (u *User) ConfirmEmailChange(tx *storage.Connection) error {
 	u.Email = u.EmailChange
 	u.EmailChange = ""
 	u.EmailChangeToken = ""
-	return tx.UpdateOnly(u, "email", "email_change", "email_change_token")
+	return tx.Model(&u).Select("email", "email_change", "email_change_token").Updates(u).Error
 }
 
 // Recover resets the recovery token
 func (u *User) Recover(tx *storage.Connection) error {
 	u.RecoveryToken = ""
-	return tx.UpdateOnly(u, "recovery_token")
+	return tx.Model(&u).Select("recovery_token").Updates(u).Error
 }
 
 // CountOtherUsers counts how many other users exist besides the one provided
 func CountOtherUsers(tx *storage.Connection, instanceID, id uuid.UUID) (int, error) {
-	userCount, err := tx.Q().Where("instance_id = ? and id != ?", instanceID, id).Count(&User{})
-	return userCount, errors.Wrap(err, "error finding registered users")
+	var userCount int64
+	err := tx.Model(&User{}).Where("instance_id = ? and id != ?", instanceID, id).Count(&userCount).Error
+	return int(userCount), errors.Wrap(err, "error finding registered users")
 }
 
 func findUser(tx *storage.Connection, query string, args ...interface{}) (*User, error) {
 	obj := &User{}
-	if err := tx.Q().Where(query, args...).First(obj); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+	if err := tx.Where(query, args...).First(obj).Error; err != nil {
+		if errors.Cause(err) == gorm.ErrRecordNotFound {
 			return nil, UserNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding user")
@@ -277,8 +272,8 @@ func FindUserByRecoveryToken(tx *storage.Connection, token string) (*User, error
 // FindUserWithRefreshToken finds a user from the provided refresh token.
 func FindUserWithRefreshToken(tx *storage.Connection, token string) (*User, *RefreshToken, error) {
 	refreshToken := &RefreshToken{}
-	if err := tx.Where("token = ?", token).First(refreshToken); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+	if err := tx.First(refreshToken, "token = ?", token).Error; err != nil {
+		if errors.Cause(err) == gorm.ErrRecordNotFound {
 			return nil, nil, RefreshTokenNotFoundError{}
 		}
 		return nil, nil, errors.Wrap(err, "error finding refresh token")
@@ -295,7 +290,7 @@ func FindUserWithRefreshToken(tx *storage.Connection, token string) (*User, *Ref
 // FindUsersInAudience finds users with the matching audience.
 func FindUsersInAudience(tx *storage.Connection, instanceID uuid.UUID, aud string, pageParams *Pagination, sortParams *SortParams, filter string) ([]*User, error) {
 	users := []*User{}
-	q := tx.Q().Where("instance_id = ? and aud = ?", instanceID, aud)
+	q := tx.Model(users).Where("instance_id = ? and aud = ?", instanceID, aud)
 
 	if filter != "" {
 		lf := "%" + filter + "%"
@@ -311,10 +306,18 @@ func FindUsersInAudience(tx *storage.Connection, instanceID uuid.UUID, aud strin
 
 	var err error
 	if pageParams != nil {
-		err = q.Paginate(int(pageParams.Page), int(pageParams.PerPage)).All(&users)
-		pageParams.Count = uint64(q.Paginator.TotalEntriesSize)
+		p := paginator.New(adapter.NewGORMAdapter(q), int(pageParams.PerPage))
+		p.SetPage(int(pageParams.Page))
+		if err = p.Results(&users); err != nil {
+			return nil, err
+		}
+		var cnt int
+		if cnt, err = p.PageNums(); err != nil {
+			return nil, err
+		}
+		pageParams.Count = uint64(cnt)
 	} else {
-		err = q.All(&users)
+		err = q.Find(&users).Error
 	}
 
 	return users, err

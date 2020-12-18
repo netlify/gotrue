@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"encoding/xml"
+	"github.com/netlify/gotrue/storage"
 	"html/template"
 	"io"
 	"net/http"
@@ -16,11 +17,11 @@ import (
 	"time"
 
 	"github.com/beevik/etree"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/russellhaering/gosaml2/types"
 	dsig "github.com/russellhaering/goxmldsig"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -41,13 +42,12 @@ func TestExternalSaml(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *ExternalSamlTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	storage.TruncateAll(ts.API.db)
 }
 
 func (ts *ExternalSamlTestSuite) docFromTemplate(path string, data interface{}) *etree.Document {

@@ -31,7 +31,6 @@ func TestTracer(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
