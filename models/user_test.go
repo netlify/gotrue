@@ -20,7 +20,7 @@ type UserTestSuite struct {
 }
 
 func (ts *UserTestSuite) SetupTest() {
-	TruncateAll(ts.db)
+	storage.TruncateAll(ts.db)
 }
 
 func TestUser(t *testing.T) {
@@ -33,7 +33,6 @@ func TestUser(t *testing.T) {
 	ts := &UserTestSuite{
 		db: conn,
 	}
-	defer ts.db.Close()
 
 	suite.Run(t, ts)
 }
@@ -141,7 +140,7 @@ func (ts *UserTestSuite) TestFindUserByRecoveryToken() {
 	u := ts.createUser()
 	u.RecoveryToken = "asdf"
 
-	err := ts.db.Update(u)
+	err := ts.db.Save(u).Error
 	require.NoError(ts.T(), err)
 
 	n, err := FindUserByRecoveryToken(ts.db, u.RecoveryToken)
@@ -189,7 +188,7 @@ func (ts *UserTestSuite) createUserWithEmail(email string) *User {
 	user, err := NewUser(uuid.Nil, email, "secret", "test", nil)
 	require.NoError(ts.T(), err)
 
-	err = ts.db.Create(user)
+	err = ts.db.Create(user).Error
 	require.NoError(ts.T(), err)
 
 	return user

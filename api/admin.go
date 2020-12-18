@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
 )
 
 type adminUserParams struct {
@@ -194,7 +194,7 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 			return terr
 		}
 
-		if terr := tx.Create(user); terr != nil {
+		if terr := tx.Create(user).Error; terr != nil {
 			return terr
 		}
 
@@ -237,7 +237,7 @@ func (a *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
 			return internalServerError("Error recording audit log entry").WithInternalError(terr)
 		}
 
-		if terr := tx.Destroy(user); terr != nil {
+		if terr := tx.Delete(user).Error; terr != nil {
 			return internalServerError("Database error deleting user").WithInternalError(terr)
 		}
 		return nil

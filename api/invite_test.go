@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/netlify/gotrue/storage"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -37,13 +38,12 @@ func TestInvite(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *InviteTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	storage.TruncateAll(ts.API.db)
 
 	// Setup response recorder with super admin privileges
 	ts.token = ts.makeSuperAdmin("admin@example.com")
@@ -52,14 +52,14 @@ func (ts *InviteTestSuite) SetupTest() {
 func (ts *InviteTestSuite) makeSuperAdmin(email string) string {
 	// Cleanup existing user, if they already exist
 	if u, _ := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, email, ts.Config.JWT.Aud); u != nil {
-		require.NoError(ts.T(), ts.API.db.Destroy(u), "Error deleting user")
+		require.NoError(ts.T(), ts.API.db.Delete(u).Error, "Error deleting user")
 	}
 
 	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test User"})
 	require.NoError(ts.T(), err, "Error making new user")
 
 	u.IsSuperAdmin = true
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u).Error, "Error creating user")
 
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
@@ -123,7 +123,7 @@ func (ts *InviteTestSuite) TestVerifyInvite() {
 	user.EncryptedPassword = ""
 	user.ConfirmationToken = "asdf"
 	require.NoError(ts.T(), err)
-	require.NoError(ts.T(), ts.API.db.Create(user))
+	require.NoError(ts.T(), ts.API.db.Create(user).Error)
 
 	// Find test user
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
@@ -156,7 +156,7 @@ func (ts *InviteTestSuite) TestVerifyInvite_NoPassword() {
 	user.EncryptedPassword = ""
 	user.ConfirmationToken = "asdf2"
 	require.NoError(ts.T(), err)
-	require.NoError(ts.T(), ts.API.db.Create(user))
+	require.NoError(ts.T(), ts.API.db.Create(user).Error)
 
 	// Find test user
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)

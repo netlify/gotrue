@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"github.com/netlify/gotrue/storage"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
-	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -34,13 +34,12 @@ func TestToken(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *TokenTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	storage.TruncateAll(ts.API.db)
 }
 
 func (ts *TokenTestSuite) TestRateLimitToken() {

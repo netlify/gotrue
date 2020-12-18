@@ -24,7 +24,8 @@ func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mail
 		return errors.Wrap(err, "Error sending confirmation email")
 	}
 	u.ConfirmationSentAt = &now
-	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "confirmation_sent_at"), "Database error updating user for confirmation")
+	err := tx.Model(&u).Select("confirmation_token", "confirmation_sent_at").Updates(u).Error
+	return errors.Wrap(err, "Database error updating user for confirmation")
 }
 
 func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer, referrerURL string) error {
@@ -36,7 +37,8 @@ func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer, re
 		return errors.Wrap(err, "Error sending invite email")
 	}
 	u.InvitedAt = &now
-	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "invited_at"), "Database error updating user for invite")
+	err := tx.Model(&u).Select("confirmation_token", "invited_at").Updates(u).Error
+	return errors.Wrap(err, "Database error updating user for invite")
 }
 
 func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
@@ -52,7 +54,8 @@ func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, maile
 		return errors.Wrap(err, "Error sending recovery email")
 	}
 	u.RecoverySentAt = &now
-	return errors.Wrap(tx.UpdateOnly(u, "recovery_token", "recovery_sent_at"), "Database error updating user for recovery")
+	err := tx.Model(&u).Select("recovery_token", "recovery_sent_at").Updates(u).Error
+	return errors.Wrap(err, "Database error updating user for recovery")
 }
 
 func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mailer.Mailer, email string, referrerURL string) error {
@@ -68,7 +71,8 @@ func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mai
 	}
 
 	u.EmailChangeSentAt = &now
-	return errors.Wrap(tx.UpdateOnly(u, "email_change_token", "email_change", "email_change_sent_at"), "Database error updating user for email change")
+	err := tx.Model(&u).Select("email_change_token", "email_change", "email_change_sent_at").Updates(u).Error
+	return errors.Wrap(err, "Database error updating user for email change")
 }
 
 func (a *API) validateEmail(ctx context.Context, email string) error {

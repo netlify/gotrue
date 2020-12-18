@@ -3,14 +3,15 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/netlify/gotrue/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -33,25 +34,24 @@ func TestRecover(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *RecoverTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	storage.TruncateAll(ts.API.db)
 
 	// Create user
 	u, err := models.NewUser(ts.instanceID, "test@example.com", "password", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error creating test user model")
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error saving new test user")
+	require.NoError(ts.T(), ts.API.db.Create(u).Error, "Error saving new test user")
 }
 
 func (ts *RecoverTestSuite) TestRecover_FirstRecovery() {
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	u.RecoverySentAt = &time.Time{}
-	require.NoError(ts.T(), ts.API.db.Update(u))
+	require.NoError(ts.T(), ts.API.db.Save(u).Error)
 
 	// Request body
 	var buffer bytes.Buffer
@@ -79,7 +79,7 @@ func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	u.RecoverySentAt = &recoveryTime
-	require.NoError(ts.T(), ts.API.db.Update(u))
+	require.NoError(ts.T(), ts.API.db.Save(u).Error)
 
 	// Request body
 	var buffer bytes.Buffer
@@ -110,7 +110,7 @@ func (ts *RecoverTestSuite) TestRecover_NewEmailSent() {
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	u.RecoverySentAt = &recoveryTime
-	require.NoError(ts.T(), ts.API.db.Update(u))
+	require.NoError(ts.T(), ts.API.db.Save(u).Error)
 
 	// Request body
 	var buffer bytes.Buffer

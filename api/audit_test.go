@@ -3,15 +3,16 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/netlify/gotrue/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -35,13 +36,12 @@ func TestAudit(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *AuditTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	storage.TruncateAll(ts.API.db)
 	ts.token = ts.makeSuperAdmin("test@example.com")
 }
 
@@ -50,7 +50,7 @@ func (ts *AuditTestSuite) makeSuperAdmin(email string) string {
 	require.NoError(ts.T(), err, "Error making new user")
 
 	u.IsSuperAdmin = true
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u).Error, "Error creating user")
 
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
@@ -125,7 +125,7 @@ func (ts *AuditTestSuite) prepareDeleteEvent() {
 	// DELETE USER
 	u, err := models.NewUser(ts.instanceID, "test-delete@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
+	require.NoError(ts.T(), ts.API.db.Create(u).Error, "Error creating user")
 
 	// Setup request
 	w := httptest.NewRecorder()

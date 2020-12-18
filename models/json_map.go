@@ -16,7 +16,7 @@ func (j JSONMap) Value() (driver.Value, error) {
 	return driver.Value(string(data)), nil
 }
 
-func (j JSONMap) Scan(src interface{}) error {
+func (j *JSONMap) Scan(src interface{}) error {
 	var source []byte
 	switch v := src.(type) {
 	case string:
@@ -30,5 +30,5 @@ func (j JSONMap) Scan(src interface{}) error {
 	if len(source) == 0 {
 		source = []byte("{}")
 	}
-	return json.Unmarshal(source, &j)
+	return json.Unmarshal(source, j)
 }

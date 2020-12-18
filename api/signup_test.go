@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/netlify/gotrue/storage"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -35,13 +36,13 @@ func TestSignup(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
+	// defer api.db.Close()
 
 	suite.Run(t, ts)
 }
 
 func (ts *SignupTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	storage.TruncateAll(ts.API.db)
 	ts.Config.Webhook = conf.WebhookConfig{}
 }
 
@@ -127,7 +128,6 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		assert.Len(usermeta, 1)
 		assert.EqualValues(1, usermeta["a"])
 	}))
-	defer svr.Close()
 
 	// Allowing connection to localhost for the tests only
 	localhost := removeLocalhostFromPrivateIPBlock()
@@ -228,7 +228,7 @@ func (ts *SignupTestSuite) TestVerifySignup() {
 	user, err := models.NewUser(ts.instanceID, "test@example.com", "testing", ts.Config.JWT.Aud, nil)
 	user.ConfirmationToken = "asdf3"
 	require.NoError(ts.T(), err)
-	require.NoError(ts.T(), ts.API.db.Create(user))
+	require.NoError(ts.T(), ts.API.db.Create(user).Error)
 
 	// Find test user
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)

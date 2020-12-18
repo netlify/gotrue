@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/netlify/gotrue/storage"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -29,7 +30,6 @@ func TestExternal(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
@@ -38,13 +38,13 @@ func (ts *ExternalTestSuite) SetupTest() {
 	ts.Config.DisableSignup = false
 	ts.Config.Mailer.Autoconfirm = false
 
-	models.TruncateAll(ts.API.db)
+	storage.TruncateAll(ts.API.db)
 }
 
 func (ts *ExternalTestSuite) createUser(email string, name string, avatar string, confirmationToken string) (*models.User, error) {
 	// Cleanup existing user, if they already exist
 	if u, _ := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, email, ts.Config.JWT.Aud); u != nil {
-		require.NoError(ts.T(), ts.API.db.Destroy(u), "Error deleting user")
+		require.NoError(ts.T(), ts.API.db.Delete(u).Error, "Error deleting user")
 	}
 
 	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": name, "avatar_url": avatar})
@@ -53,7 +53,7 @@ func (ts *ExternalTestSuite) createUser(email string, name string, avatar string
 		u.ConfirmationToken = confirmationToken
 	}
 	ts.Require().NoError(err, "Error making new user")
-	ts.Require().NoError(ts.API.db.Create(u), "Error creating user")
+	ts.Require().NoError(ts.API.db.Create(u).Error, "Error creating user")
 
 	return u, err
 }
