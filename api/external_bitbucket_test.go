@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	jwt "github.com/dgrijalva/jwt-go/v4"
+	"github.com/dgrijalva/jwt-go/v4"
 )
 
 func (ts *ExternalTestSuite) TestSignupExternalBitbucket() {

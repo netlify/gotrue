@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go/v4"
+	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
@@ -55,7 +55,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 	log := getLogEntry(r)
 	log.WithField("provider", providerType).Info("Redirecting to external provider")
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ExternalProviderClaims{
+	token := jwt.NewWithClaims(config.JWT.SigningMethod(), ExternalProviderClaims{
 		NetlifyMicroserviceClaims: NetlifyMicroserviceClaims{
 			StandardClaims: jwt.StandardClaims{
 				ExpiresAt: jwt.At(time.Now().Add(5 * time.Minute)),

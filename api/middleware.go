@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	jwt "github.com/dgrijalva/jwt-go/v4"
+	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/didip/tollbooth/v5"
 	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/gofrs/uuid"

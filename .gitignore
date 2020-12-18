@@ -1,11 +1,10 @@
 gotrue
 www/dist/
 .data
-
 *.sqlite
 
-# Created by https://www.toptal.com/developers/gitignore/api/macos,go,node,jetbrains+all,visualstudiocode
-# Edit at https://www.toptal.com/developers/gitignore?templates=macos,go,node,jetbrains+all,visualstudiocode
+# Created by https://www.toptal.com/developers/gitignore/api/macos,go,node,yarn,jetbrains+all,visualstudiocode
+# Edit at https://www.toptal.com/developers/gitignore?templates=macos,go,node,yarn,jetbrains+all,visualstudiocode
 
 ### Go ###
 # Binaries for programs and plugins
@@ -268,4 +267,20 @@ dist
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/macos,go,node,jetbrains+all,visualstudiocode
+### yarn ###
+# https://yarnpkg.com/advanced/qa#which-files-should-be-gitignored
+
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+
+# if you are NOT using Zero-installs, then:
+# comment the following lines
+!.yarn/cache
+
+# and uncomment the following lines
+# .pnp.*
+
+# End of https://www.toptal.com/developers/gitignore/api/macos,go,node,yarn,jetbrains+all,visualstudiocode
