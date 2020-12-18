@@ -3,17 +3,17 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/netlify/gotrue/storage"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/gobuffalo/uuid"
+	jwt "github.com/dgrijalva/jwt-go/v4"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -88,17 +88,16 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 
 		// verify the signature
 		signature := r.Header.Get("x-webhook-signature")
-		p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 		claims := new(jwt.StandardClaims)
-		token, err := p.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(ts.Config.Webhook.Secret), nil
-		})
+		}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
 		assert.True(token.Valid)
 		assert.Equal(ts.instanceID.String(), claims.Subject) // not configured for multitenancy
 		assert.Equal("gotrue", claims.Issuer)
-		assert.WithinDuration(time.Now(), time.Unix(claims.IssuedAt, 0), 5*time.Second)
+		assert.WithinDuration(time.Now(), claims.IssuedAt.Time, 5*time.Second)
 
-		// verify the contents
+		// verify the contentss
 
 		defer squash(r.Body.Close)
 		raw, err := ioutil.ReadAll(r.Body)

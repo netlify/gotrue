@@ -4,7 +4,7 @@ import (
 	"gorm.io/gorm"
 	"time"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"

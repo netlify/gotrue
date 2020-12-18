@@ -9,7 +9,7 @@ import (
 	"net/http/httptrace"
 	"net/url"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -61,8 +61,12 @@ func getUserFromClaims(ctx context.Context, conn *storage.Connection) (*models.U
 	// System User
 	instanceID := getInstanceID(ctx)
 
+	if len(claims.Audience) <= 0 {
+		return nil, errors.New("Invalid audience")
+	}
+
 	if claims.Subject == models.SystemUserUUID.String() || claims.Subject == models.SystemUserID {
-		return models.NewSystemUser(instanceID, claims.Audience), nil
+		return models.NewSystemUser(instanceID, claims.Audience[0]), nil
 	}
 	userID, err := uuid.FromString(claims.Subject)
 	if err != nil {
@@ -88,8 +92,8 @@ func (a *API) requestAud(ctx context.Context, r *http.Request) string {
 
 	// Then check the token
 	claims := getClaims(ctx)
-	if claims != nil && claims.Audience != "" {
-		return claims.Audience
+	if claims != nil && len(claims.Audience) > 0 && claims.Audience[0] != "" {
+		return claims.Audience[0]
 	}
 
 	// Finally, return the default of none of the above methods are successful

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/api"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage"

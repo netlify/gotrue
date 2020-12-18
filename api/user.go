@@ -2,9 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/dgrijalva/jwt-go/v4"
 	"net/http"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 )
@@ -32,7 +33,8 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	aud := a.requestAud(ctx, r)
-	if aud != claims.Audience {
+
+	if err = claims.VerifyAudience(jwt.DefaultValidationHelper, aud); err != nil {
 		return badRequestError("Token audience doesn't match request audience")
 	}
 

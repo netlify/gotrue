@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go/v4"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/metering"
 	"github.com/netlify/gotrue/models"
@@ -139,7 +139,10 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 			return internalServerError(terr.Error())
 		}
 
-		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
+		tokenString, terr = generateAccessToken(user,
+			time.Second*time.Duration(config.JWT.Exp),
+			config.JWT.Secret,
+			config.JWT.SigningMethod())
 		if terr != nil {
 			return internalServerError("error generating jwt token").WithInternalError(terr)
 		}
@@ -163,19 +166,19 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	})
 }
 
-func generateAccessToken(user *models.User, expiresIn time.Duration, secret string) (string, error) {
+func generateAccessToken(user *models.User, expiresIn time.Duration, secret string, method jwt.SigningMethod) (string, error) {
 	claims := &GoTrueClaims{
 		StandardClaims: jwt.StandardClaims{
 			Subject:   user.ID.String(),
-			Audience:  user.Aud,
-			ExpiresAt: time.Now().Add(expiresIn).Unix(),
+			Audience:  jwt.ClaimStrings{user.Aud},
+			ExpiresAt: jwt.At(time.Now().Add(expiresIn)),
 		},
 		Email:        user.Email,
 		AppMetaData:  user.AppMetaData,
 		UserMetaData: user.UserMetaData,
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(method, claims)
 	return token.SignedString([]byte(secret))
 }
 
@@ -195,7 +198,10 @@ func (a *API) issueRefreshToken(ctx context.Context, conn *storage.Connection, u
 			return internalServerError("Database error granting user").WithInternalError(terr)
 		}
 
-		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
+		tokenString, terr = generateAccessToken(user,
+			time.Second*time.Duration(config.JWT.Exp),
+			config.JWT.Secret,
+			config.JWT.SigningMethod())
 		if terr != nil {
 			return internalServerError("error generating jwt token").WithInternalError(terr)
 		}

@@ -8,10 +8,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go/v4"
 	"github.com/didip/tollbooth/v5"
 	"github.com/didip/tollbooth/v5/limiter"
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/models"
 )
 
@@ -82,6 +82,7 @@ func (a *API) loadJWSSignatureHeader(w http.ResponseWriter, r *http.Request) (co
 
 func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	ctx := r.Context()
+	cfg := a.getConfig(ctx)
 
 	signature := getSignature(ctx)
 	if signature == "" {
@@ -89,10 +90,9 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 	}
 
 	claims := NetlifyMicroserviceClaims{}
-	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
-	_, err := p.ParseWithClaims(signature, &claims, func(token *jwt.Token) (interface{}, error) {
+	_, err := jwt.ParseWithClaims(signature, &claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(a.config.OperatorToken), nil
-	})
+	}, jwt.WithValidMethods([]string{cfg.JWT.SigningMethod().Alg()}))
 	if err != nil {
 		return nil, badRequestError("Operator microservice signature is invalid: %v", err)
 	}

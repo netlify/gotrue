@@ -13,8 +13,8 @@ import (
 	"net/url"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/gobuffalo/uuid"
+	jwt "github.com/dgrijalva/jwt-go/v4"
+	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -214,7 +214,7 @@ func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *sto
 
 	claims := webhookClaims{
 		StandardClaims: jwt.StandardClaims{
-			IssuedAt: time.Now().Unix(),
+			IssuedAt: jwt.Now(),
 			Subject:  instanceID.String(),
 			Issuer:   gotrueIssuer,
 		},
