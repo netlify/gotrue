@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
@@ -45,6 +46,7 @@ type DBConfiguration struct {
 // JWTConfiguration holds all the JWT related configuration.
 type JWTConfiguration struct {
 	Secret           string `json:"secret" required:"true"`
+	Method           string `json:"method" default:"HS256"`
 	Exp              int    `json:"exp"`
 	Aud              string `json:"aud"`
 	AdminGroupName   string `json:"admin_group_name" split_words:"true"`
@@ -138,7 +140,16 @@ type WebhookConfig struct {
 	Retries    int      `json:"retries"`
 	TimeoutSec int      `json:"timeout_sec"`
 	Secret     string   `json:"secret"`
+	Method     string   `json:"method" default:"HS256"`
 	Events     []string `json:"events"`
+}
+
+func (w *WebhookConfig) SigningMethod() jwt.SigningMethod {
+	m := "HS256"
+	if w.Method != "" {
+		m = w.Method
+	}
+	return jwt.GetSigningMethod(m)
 }
 
 func (w *WebhookConfig) HasEvent(event string) bool {
@@ -262,4 +273,8 @@ func (o *OAuthProviderConfiguration) Validate() error {
 		return errors.New("Missing redirect URI")
 	}
 	return nil
+}
+
+func (c *JWTConfiguration) SigningMethod() jwt.SigningMethod {
+	return jwt.GetSigningMethod(c.Method)
 }

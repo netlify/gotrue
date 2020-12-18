@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go/v4"
 )
 
 func (ts *ExternalTestSuite) TestSignupExternalFacebook() {
@@ -23,10 +23,9 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebook() {
 	ts.Equal("email", q.Get("scope"))
 
 	claims := ExternalProviderClaims{}
-	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
-	_, err = p.ParseWithClaims(q.Get("state"), &claims, func(token *jwt.Token) (interface{}, error) {
+	_, err = jwt.ParseWithClaims(q.Get("state"), &claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(ts.API.config.OperatorToken), nil
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
 	ts.Require().NoError(err)
 
 	ts.Equal("facebook", claims.Provider)

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/gobuffalo/uuid"
+	"github.com/dgrijalva/jwt-go/v4"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
@@ -61,13 +61,17 @@ func (ts *InviteTestSuite) makeSuperAdmin(email string) string {
 	u.IsSuperAdmin = true
 	require.NoError(ts.T(), ts.API.db.Create(u).Error, "Error creating user")
 
-	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
+	token, err := generateAccessToken(u,
+		time.Second*time.Duration(ts.Config.JWT.Exp),
+		ts.Config.JWT.Secret,
+		ts.Config.JWT.SigningMethod())
 	require.NoError(ts.T(), err, "Error generating access token")
 
-	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
-	_, err = p.Parse(token, func(token *jwt.Token) (interface{}, error) {
+	_, err = jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return []byte(ts.Config.JWT.Secret), nil
-	})
+	},
+	jwt.WithAudience(ts.Config.JWT.Aud),
+	jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
 	require.NoError(ts.T(), err, "Error parsing token")
 
 	return token
