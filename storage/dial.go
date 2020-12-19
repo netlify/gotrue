@@ -84,22 +84,24 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 		orm.Logger.LogMode(logger.Info)
 	}
 
+	if config.DB.Driver != "sqlite" && config.DB.Driver != "" {
+		orm.Exec(fmt.Sprintf(
+			"CREATE DATABASE IF NOT EXISTS %s",
+			config.DB.Database))
+	}
+	orm.Exec(fmt.Sprintf(
+		"USE %s",
+		config.DB.Database))
+
 	conn := &Connection{DB: orm}
 	conn = conn.withContext(context.Background(), config, uuid.Nil)
 
-	if config.DB.AutoMigrate {
-		if config.DB.Driver != "sqlite" && config.DB.Driver != "" {
-			orm.Exec(fmt.Sprintf(
-				"CREATE DATABASE IF NOT EXISTS %s",
-				config.DB.Database))
-		}
-		orm.Exec(fmt.Sprintf(
-			"USE %s",
-			config.DB.Database))
-		err = MigrateDatabase(conn)
-		if err != nil {
-			return nil, errors.Wrap(err, "migrating database")
-		}
+	if !config.DB.AutoMigrate {
+		return conn, nil
+	}
+
+	if err = MigrateDatabase(conn); err != nil {
+		return nil, errors.Wrap(err, "migrating database")
 	}
 
 	return conn, nil
