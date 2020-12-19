@@ -1,10 +1,12 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"path/filepath"
 
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/onrik/gorm-logrus"
 	"github.com/pkg/errors"
@@ -83,6 +85,7 @@ func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
 	}
 
 	conn := &Connection{DB: orm}
+	conn = conn.withContext(context.Background(), config, uuid.Nil)
 
 	if config.DB.AutoMigrate {
 		if config.DB.Driver != "sqlite" && config.DB.Driver != "" {
