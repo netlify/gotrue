@@ -1,6 +1,9 @@
 package api
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+)
 
 type ProviderSettings struct {
 	Bitbucket bool `json:"bitbucket"`
@@ -23,10 +26,19 @@ type Settings struct {
 	Autoconfirm       bool             `json:"autoconfirm"`
 }
 
-func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
-	config := a.getConfig(r.Context())
+func (a *API) handleSettings(w http.ResponseWriter, r *http.Request) error {
+	return sendJSON(w, http.StatusOK, a.Settings(r.Context()))
+}
 
-	return sendJSON(w, http.StatusOK, &Settings{
+func (a *API) Settings(ctx context.Context) *Settings {
+	if ctx == nil {
+		ctx = a.ctx
+	}
+	config := a.getConfig(ctx)
+	if config == nil {
+		return nil
+	}
+	return &Settings{
 		ExternalProviders: ProviderSettings{
 			Bitbucket: config.External.Bitbucket.Enabled,
 			GitHub:    config.External.Github.Enabled,
@@ -41,5 +53,5 @@ func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
 		},
 		DisableSignup: config.DisableSignup,
 		Autoconfirm:   config.Mailer.Autoconfirm,
-	})
+	}
 }

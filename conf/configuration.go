@@ -57,7 +57,9 @@ type JWTConfiguration struct {
 type GlobalConfiguration struct {
 	API struct {
 		Host            string
-		Port            int `envconfig:"PORT" default:"8081"`
+		RestPort        int `envconfig:"REST_PORT" default:"8081"`
+		RpcPort         int `envconfig:"RPC_PORT" default:"3001"`
+		RpcWebPort      int `envconfig:"RPCWEB_PORT" default:"6001"`
 		Endpoint        string
 		RequestIDHeader string `envconfig:"REQUEST_ID_HEADER"`
 	}

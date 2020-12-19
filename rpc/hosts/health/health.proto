@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option go_package = "github.com/netlify/gotrue/rpc/servers/health;health";
+
+package health;
+
+service Health {
+    // Sends a greeting
+    rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {
+    }
+}
+
+message HealthCheckRequest {
+}
+
+message HealthCheckResponse {
+    string version = 1;
+    string name = 2;
+    string description = 3;
+}

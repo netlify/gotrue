@@ -11,6 +11,7 @@ require (
 	github.com/didip/tollbooth/v5 v5.2.0
 	github.com/go-chi/chi v4.0.2+incompatible
 	github.com/gofrs/uuid v3.3.0+incompatible
+	github.com/golang/protobuf v1.4.3
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/imdario/mergo v0.3.11
 	github.com/joho/godotenv v1.3.0
@@ -28,7 +29,11 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/vcraescu/go-paginator/v2 v2.0.0
 	golang.org/x/crypto v0.0.0-20201217014255-9d1352758620
+	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
 	golang.org/x/oauth2 v0.0.0-20201208152858-08078c50e5b5
+	golang.org/x/tools v0.0.0-20201218024724-ae774e9781d2 // indirect
+	google.golang.org/grpc v1.34.0
+	google.golang.org/protobuf v1.25.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.27.1
 	gorm.io/driver/mysql v1.0.3
 	gorm.io/driver/postgres v1.0.5

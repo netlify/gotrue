@@ -3,10 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
-	"os"
-	"os/signal"
 	"regexp"
-	"syscall"
 	"time"
 
 	"github.com/didip/tollbooth/v5"
@@ -17,6 +14,7 @@ import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
+	"github.com/netlify/gotrue/util"
 	"github.com/rs/cors"
 	"github.com/sebest/xff"
 	"github.com/sirupsen/logrus"
@@ -31,6 +29,7 @@ var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 
 // API is the main REST API
 type API struct {
+	ctx     context.Context
 	handler http.Handler
 	db      *storage.Connection
 	config  *conf.GlobalConfiguration
@@ -38,7 +37,7 @@ type API struct {
 }
 
 // ListenAndServe starts the REST API
-func (a *API) ListenAndServe(hostAndPort string) {
+func (a *API) ListenAndServeREST(hostAndPort string) {
 	log := logrus.WithField("component", "api")
 	server := &http.Server{
 		Addr:    hostAndPort,
@@ -48,7 +47,7 @@ func (a *API) ListenAndServe(hostAndPort string) {
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
-		waitForTermination(log, done)
+		util.WaitForTermination(log, done)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 		server.Shutdown(ctx)
@@ -59,18 +58,6 @@ func (a *API) ListenAndServe(hostAndPort string) {
 	}
 }
 
-// WaitForShutdown blocks until the system signals termination or done has a value
-func waitForTermination(log logrus.FieldLogger, done <-chan struct{}) {
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
-	select {
-	case sig := <-signals:
-		log.Infof("Triggering shutdown from signal %s", sig)
-	case <-done:
-		log.Infof("Shutting down...")
-	}
-}
-
 // NewAPI instantiates a new REST API
 func NewAPI(globalConfig *conf.GlobalConfiguration, db *storage.Connection) *API {
 	return NewAPIWithVersion(context.Background(), globalConfig, db, defaultVersion)
@@ -78,7 +65,7 @@ func NewAPI(globalConfig *conf.GlobalConfiguration, db *storage.Connection) *API
 
 // NewAPIWithVersion creates a new REST API using the specified version
 func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, db *storage.Connection, version string) *API {
-	api := &API{config: globalConfig, db: db, version: version}
+	api := &API{ctx: ctx, config: globalConfig, db: db, version: version}
 
 	xffmw, _ := xff.Default()
 	logger := newStructuredLogger(logrus.StandardLogger())
@@ -89,7 +76,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	r.Use(recoverer)
 	r.UseBypass(tracer)
 
-	r.Get("/health", api.HealthCheck)
+	r.Get("/health", api.handleHealthCheck)
 
 	r.Route("/callback", func(r *router) {
 		r.UseBypass(logger)
@@ -109,7 +96,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 			r.Use(api.loadInstanceConfig)
 		}
 
-		r.Get("/settings", api.Settings)
+		r.Get("/settings", api.handleSettings)
 
 		r.Get("/authorize", api.ExternalProviderRedirect)
 
@@ -215,14 +202,6 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 	}
 
 	return NewAPIWithVersion(ctx, globalConfig, db, version), config, nil
-}
-
-func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
-	return sendJSON(w, http.StatusOK, map[string]string{
-		"version":     a.version,
-		"name":        "GoTrue",
-		"description": "GoTrue is a user registration and authentication API",
-	})
 }
 
 func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanceID uuid.UUID) (context.Context, error) {

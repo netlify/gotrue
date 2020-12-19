@@ -1,0 +1,43 @@
+version: "3.7"
+
+services:
+
+  gotrue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./dev.env
+    expose:
+      - "3001"
+      - "6001"
+      - "8081"
+    ports:
+      - "3001:3001"
+      - "8081:8081"
+    networks:
+      gotrue_mesh:
+        aliases:
+          - host.docker.internal
+    restart: unless-stopped
+
+  envoy:
+    image: grpcweb/envoy:latest
+    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
+    volumes:
+       - ./envoy.yaml:/etc/envoy/envoy.yaml
+    expose:
+      - "8080"
+      - "9901"
+    ports:
+     - "9001:8080"
+     - "9901:9901"
+    networks:
+      gotrue_mesh: {}
+    restart: unless-stopped
+    # make this work on linux
+    # extra_hosts:
+    #  host.docker.internal: 172.17.0.1
+
+networks:
+  gotrue_mesh: {}

@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+
+  db:
+    image: mysql:latest
+    volumes:
+      - db_volume:/var/lib/mysql
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+    expose:
+      - '3306'
+    ports:
+      - "3306:3306"
+    #https://stackoverflow.com/questions/55559386/how-to-fix-mbind-operation-not-permitted-in-mysql-error-log
+    cap_add:
+      - SYS_NICE  # CAP_SYS_NICE
+    networks:
+      gotrue_mesh:
+        aliases:
+          - gotrue_db
+volumes:
+   db_volume: {}
+
+networks:
+  gotrue_mesh: {}

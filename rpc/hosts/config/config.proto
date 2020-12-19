@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+option go_package = "github.com/netlify/gotrue/rpc/servers/config;config";
+
+package config;
+
+service Config {
+    // Sends a greeting
+    rpc Settings (SettingsRequest) returns (SettingsResponse) {
+    }
+}
+
+message SettingsRequest {
+}
+
+message ProviderSettings {
+    bool bitbucket = 1;
+    bool github = 2;
+    bool gitlab = 3;
+    bool google = 4;
+    bool facebook = 5;
+    bool email = 6;
+    bool saml = 7;
+}
+
+message ProviderLabels {
+    string saml = 1;
+}
+
+message SettingsResponse {
+    ProviderSettings external = 1;
+    ProviderLabels external_labels = 2;
+    bool disable_signup = 3;
+    bool autoconfirm = 4;
+}
