@@ -20,7 +20,7 @@ require (
 	github.com/gobuffalo/pop/v5 v5.3.1
 	github.com/gobuffalo/uuid v2.0.5+incompatible
 	github.com/gobuffalo/validate/v3 v3.3.0 // indirect
-	github.com/gofrs/uuid v3.3.0+incompatible // indirect
+	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/imdario/mergo v0.0.0-20160216103600-3e95a51e0639
 	github.com/jackc/pgx/v4 v4.10.1 // indirect
 	github.com/joho/godotenv v1.3.0

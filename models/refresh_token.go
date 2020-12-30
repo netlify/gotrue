@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gobuffalo/pop/v5"
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/namespace"
