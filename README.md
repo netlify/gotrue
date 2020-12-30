@@ -13,7 +13,7 @@ environment variables, or a combination of both. Environment variables are prefi
 
 ### Top-Level
 
-```
+```properties
 GOTRUE_SITE_URL=https://example.netlify.com/
 ```
 
@@ -36,7 +36,7 @@ Header on which to rate limit the `/token` endpoint.
 
 ### API
 
-```
+```properties
 GOTRUE_API_HOST=localhost
 PORT=9999
 ```
@@ -59,7 +59,7 @@ If you wish to inherit a request ID from the incoming request, specify the name 
 
 ### Database
 
-```
+```properties
 GOTRUE_DB_DRIVER=mysql
 DATABASE_URL=root@localhost/gotrue
 ```
@@ -86,7 +86,7 @@ you've built gotrue.
 
 ### Logging
 
-```
+```properties
 LOG_LEVEL=debug # available without GOTRUE prefix (exception)
 GOTRUE_LOG_FILE=/var/log/go/gotrue.log
 ```
@@ -99,9 +99,40 @@ Controls what log levels are output. Choose from `panic`, `fatal`, `error`, `war
 
 If you wish logs to be written to a file, set `log_file` to a valid file path.
 
+### Opentracing
+Currently, only the Datadog tracer is supported.
+
+```properties
+GOTRUE_TRACING_ENABLED=true
+GOTRUE_TRACING_HOST=127.0.0.1
+GOTRUE_TRACING_PORT=8126
+GOTRUE_TRACING_TAGS="tag1:value1,tag2:value2"
+GOTRUE_SERVICE_NAME="gotrue"
+```
+
+`TRACING_ENABLED` - `bool`
+
+Whether tracing is enabled or not. Defaults to `false`.
+
+`TRACING_HOST` - `bool`
+
+The tracing destination.
+
+`TRACING_PORT` - `bool`
+
+The port for the tracing host.
+
+`TRACING_TAGS` - `string`
+
+A comma separated list of key:value pairs. These key value pairs will be added as tags to all opentracing spans.
+
+`SERVICE_NAME` - `string`
+
+The name to use for the service.
+
 ### JSON Web Tokens (JWT)
 
-```
+```properties
 GOTRUE_JWT_SECRET=supersecretvalue
 GOTRUE_JWT_EXP=3600
 GOTRUE_JWT_AUD=netlify
@@ -132,7 +163,7 @@ The default group to assign all new users to.
 We support `bitbucket`, `github`, `gitlab`, and `google` for external authentication.
 Use the names as the keys underneath `external` to configure each separately.
 
-```
+```properties
 GOTRUE_EXTERNAL_GITHUB_CLIENT_ID=myappclientid
 GOTRUE_EXTERNAL_GITHUB_SECRET=clientsecretvaluessssh
 ```
@@ -164,7 +195,7 @@ The base URL used for constructing the URLs to request authorization and access 
 Sending email is not required, but highly recommended for password recovery.
 If enabled, you must provide the required values below.
 
-```
+```properties
 GOTRUE_SMTP_HOST=smtp.mandrillapp.com
 GOTRUE_SMTP_PORT=587
 GOTRUE_SMTP_USER=smtp-delivery@example.com
@@ -307,6 +338,27 @@ Default Content (if template is unavailable):
 <p><a href="{{ .ConfirmationURL }}">Change Email</a></p>
 ```
 
+`WEBHOOK_URL` - `string`
+
+Url of the webhook receiver endpoint. This will be called when events like `validate`, `signup` or `login` occur.
+
+`WEBHOOK_SECRET` - `string`
+
+Shared secret to authorize webhook requests. This secret signs the [JSON Web Signature](https://tools.ietf.org/html/draft-ietf-jose-json-web-signature-41) of the request. You *should* use this to verify the integrity of the request. Otherwise others can feed your webhook receiver with fake data.
+
+`WEBHOOK_RETRIES` - `number`
+
+How often GoTrue should try a failed hook.
+
+`WEBHOOK_TIMEOUT_SEC` - `number`
+
+Time between retries (in seconds).
+
+`WEBHOOK_EVENTS` - `list`
+
+Which events should trigger a webhook. You can provide a comma separated list.
+For example to listen to all events, provide the values `validate,signup,login`.
+
 ## Endpoints
 
 GoTrue exposes the following endpoints:
@@ -393,7 +445,7 @@ GoTrue exposes the following endpoints:
     "token": "confirmation-code-delivered-in-email"
   }
   ```
-  
+
   `password` is required for signup verification if no existing password exists.
 
   Returns:

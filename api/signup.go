@@ -73,7 +73,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 			if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
 				return terr
 			}
-			if terr = triggerHook(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+			if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
 				return terr
 			}
 			if terr = user.Confirm(tx); terr != nil {
@@ -103,7 +103,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 			if terr = models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
 				return terr
 			}
-			if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
+			if terr = triggerEventHooks(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
 				return terr
 			}
 
@@ -153,7 +153,7 @@ func (a *API) signupNewUser(ctx context.Context, conn *storage.Connection, param
 		if terr := user.SetRole(tx, config.JWT.DefaultGroupName); terr != nil {
 			return internalServerError("Database error updating user").WithInternalError(terr)
 		}
-		if terr := triggerHook(ctx, tx, ValidateEvent, user, instanceID, config); terr != nil {
+		if terr := triggerEventHooks(ctx, tx, ValidateEvent, user, instanceID, config); terr != nil {
 			return terr
 		}
 		return nil

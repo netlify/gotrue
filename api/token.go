@@ -78,7 +78,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return oauthError("invalid_grant", "No user found with this email")
+			return oauthError("invalid_grant", "No user found with that email, or password invalid.")
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
@@ -88,7 +88,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	}
 
 	if !user.Authenticate(params.Password) {
-		return oauthError("invalid_grant", "Invalid Password")
+		return oauthError("invalid_grant", "No user found with that email, or password invalid.")
 	}
 
 	var token *AccessTokenResponse
@@ -97,7 +97,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
 			return terr
 		}
-		if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
+		if terr = triggerEventHooks(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
 			return terr
 		}
 

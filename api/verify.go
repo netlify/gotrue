@@ -165,7 +165,7 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 			return terr
 		}
 
-		if terr = triggerHook(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+		if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
 			return terr
 		}
 
@@ -206,7 +206,7 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 				return terr
 			}
 
-			if terr = triggerHook(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+			if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
 				return terr
 			}
 			if terr = user.Confirm(tx); terr != nil {

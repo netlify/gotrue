@@ -12,7 +12,7 @@ build: ## Build the binary.
 	GOOS=linux GOARCH=arm64 go build $(FLAGS) -o gotrue-arm64
 
 deps: ## Install dependencies.
-	@go get -u github.com/gobuffalo/pop/soda
+	@go get -u github.com/gobuffalo/pop/v5/soda
 	@go get -u golang.org/x/lint/golint
 	@go mod download
 

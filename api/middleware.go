@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -18,12 +19,36 @@ const (
 	jwsSignatureHeaderName = "x-nf-sign"
 )
 
+type FunctionHooks map[string][]string
+
 type NetlifyMicroserviceClaims struct {
 	jwt.StandardClaims
-	SiteURL       string            `json:"site_url"`
-	InstanceID    string            `json:"id"`
-	NetlifyID     string            `json:"netlify_id"`
-	FunctionHooks map[string]string `json:"function_hooks"`
+	SiteURL       string        `json:"site_url"`
+	InstanceID    string        `json:"id"`
+	NetlifyID     string        `json:"netlify_id"`
+	FunctionHooks FunctionHooks `json:"function_hooks"`
+}
+
+func (f *FunctionHooks) UnmarshalJSON(b []byte) error {
+	var raw map[string][]string
+	err := json.Unmarshal(b, &raw)
+	if err == nil {
+		*f = FunctionHooks(raw)
+		return nil
+	}
+	// If unmarshaling into map[string][]string fails, try legacy format.
+	var legacy map[string]string
+	err = json.Unmarshal(b, &legacy)
+	if err != nil {
+		return err
+	}
+	if *f == nil {
+		*f = make(FunctionHooks)
+	}
+	for event, hook := range legacy {
+		(*f)[event] = []string{hook}
+	}
+	return nil
 }
 
 func addGetBody(w http.ResponseWriter, req *http.Request) (context.Context, error) {
