@@ -19,8 +19,8 @@ type azureProvider struct {
 }
 
 type azureUser struct {
-	Name   string `json:"name"`
-  Email  string `json:"email"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 type azureEmail struct {
@@ -64,12 +64,12 @@ func (g azureProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 	}
 
 	if u.Email == "" {
-  		return nil, errors.New("Unable to find email with Azure provider")
-  	}
+		return nil, errors.New("Unable to find email with Azure provider")
+	}
 
 	return &UserProvidedData{
 		Metadata: map[string]string{
-			nameKey:      u.Name,
+			nameKey: u.Name,
 		},
 		Emails: []Email{{
 			Email:    u.Email,

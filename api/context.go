@@ -4,9 +4,10 @@ import (
 	"context"
 
 	jwt "github.com/dgrijalva/jwt-go"
+
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gobuffalo/uuid"
 )
 
 type contextKey string
