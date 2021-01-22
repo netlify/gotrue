@@ -24,7 +24,7 @@ type ExternalProviderClaims struct {
 	Referrer    string `json:"referrer,omitempty"`
 }
 
-// SignupParams are the parameters the Signup endpoint accepts
+// ExternalSignupParams are the parameters the Signup endpoint accepts
 type ExternalSignupParams struct {
 	Provider string `json:"provider"`
 	Code     string `json:"code"`
@@ -308,6 +308,8 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 		return provider.NewGoogleProvider(config.External.Google)
 	case "facebook":
 		return provider.NewFacebookProvider(config.External.Facebook)
+	case "azure":
+		return provider.NewAzureProvider(config.External.Azure)
 	case "saml":
 		return provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	default:

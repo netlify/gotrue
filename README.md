@@ -160,7 +160,7 @@ The default group to assign all new users to.
 
 ### External Authentication Providers
 
-We support `bitbucket`, `github`, `gitlab`, and `google` for external authentication.
+We support `azure`, `bitbucket`, `github`, `gitlab`, and `google` for external authentication.
 Use the names as the keys underneath `external` to configure each separately.
 
 ```properties
@@ -370,6 +370,7 @@ GoTrue exposes the following endpoints:
   ```json
   {
     "external": {
+      "azure": true,
       "bitbucket": true,
       "github": true,
       "gitlab": true,
@@ -629,7 +630,7 @@ GoTrue exposes the following endpoints:
 
   query params:
   ```
-  provider=google | bitbucket | github | gitlab
+  provider=azure | google | bitbucket | github | gitlab
   ```
  
   Redirects to provider and then to `/callback`
