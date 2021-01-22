@@ -3,12 +3,11 @@ package models
 import (
 	"time"
 
-	"github.com/netlify/gotrue/storage/namespace"
-
 	"github.com/gobuffalo/pop/v5"
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/storage"
+	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
 )
 

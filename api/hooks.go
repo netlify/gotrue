@@ -152,39 +152,37 @@ func closeBody(rsp *http.Response) {
 	}
 }
 
-func triggerHook(ctx context.Context, conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
-	var hookURL *url.URL
-	secret := config.Webhook.Secret
+func triggerEventHooks(ctx context.Context, conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
 	if config.Webhook.URL != "" {
-		var err error
-		hookURL, err = url.Parse(config.Webhook.URL)
+		hookURL, err := url.Parse(config.Webhook.URL)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to parse Webhook URL")
 		}
 		if !config.Webhook.HasEvent(string(event)) {
 			return nil
 		}
+		return triggerHook(ctx, hookURL, config.Webhook.Secret, conn, event, user, instanceID, config)
 	}
 
-	if hookURL == nil {
-		fun := getFunctionHooks(ctx)
-		if fun == nil {
-			return nil
-		}
-
-		if eventHookURL, ok := fun[string(event)]; ok {
-			var err error
-			hookURL, err = url.Parse(eventHookURL)
-			if err != nil {
-				return errors.Wrapf(err, "Failed to parse Event Function Hook URL")
-			}
-			secret = config.JWT.Secret
-		} else {
-			// abort hook call if there are no functions for this event
-			return nil
-		}
+	fun := getFunctionHooks(ctx)
+	if fun == nil {
+		return nil
 	}
 
+	for _, eventHookURL := range fun[string(event)] {
+		hookURL, err := url.Parse(eventHookURL)
+		if err != nil {
+			return errors.Wrapf(err, "Failed to parse Event Function Hook URL")
+		}
+		err = triggerHook(ctx, hookURL, config.JWT.Secret, conn, event, user, instanceID, config)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
 	if !hookURL.IsAbs() {
 		siteURL, err := url.Parse(config.SiteURL)
 		if err != nil {

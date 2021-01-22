@@ -87,6 +87,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	r.UseBypass(xffmw.Handler)
 	r.Use(addRequestID(globalConfig))
 	r.Use(recoverer)
+	r.UseBypass(tracer)
 
 	r.Get("/health", api.HealthCheck)
 

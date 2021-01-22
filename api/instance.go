@@ -103,15 +103,13 @@ func (a *API) GetInstance(w http.ResponseWriter, r *http.Request) error {
 func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 	i := getInstance(r.Context())
 
-	params := InstanceRequestParams{}
+	params := InstanceRequestParams{BaseConfig: i.BaseConfig}
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 		return badRequestError("Error decoding params: %v", err)
 	}
 
-	if params.BaseConfig != nil {
-		if err := i.UpdateConfig(a.db, params.BaseConfig); err != nil {
-			return internalServerError("Database error updating instance").WithInternalError(err)
-		}
+	if err := i.UpdateConfig(a.db, params.BaseConfig); err != nil {
+		return internalServerError("Database error updating instance").WithInternalError(err)
 	}
 
 	// Hide SMTP credential from response
