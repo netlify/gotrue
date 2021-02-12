@@ -111,6 +111,22 @@ func (a *API) getReferrer(r *http.Request) string {
 	return referrer
 }
 
+// validateRedirectURL ensures any redirect URL is from a safe origin
+func (a *API) validateRedirectURL(r *http.Request, reqref string) string {
+	ctx := r.Context()
+	config := a.getConfig(ctx)
+	redirectURL := config.SiteURL
+	if reqref != "" {
+		base, berr := url.Parse(config.SiteURL)
+		refurl, rerr := url.Parse(reqref)
+		// As long as the referrer came from the site, we will redirect back there
+		if berr == nil && rerr == nil && base.Hostname() == refurl.Hostname() {
+			redirectURL = reqref
+		}
+	}
+	return redirectURL
+}
+
 var privateIPBlocks []*net.IPNet
 
 func init() {
