@@ -52,6 +52,10 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 	}
 
 	referrer := a.getReferrer(r)
+	redirectURL := a.validateRedirectURL(r, r.URL.Query().Get("redirect_to"))
+	if redirectURL == "" {
+		redirectURL = referrer
+	}
 	log := getLogEntry(r)
 	log.WithField("provider", providerType).Info("Redirecting to external provider")
 
@@ -66,7 +70,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		},
 		Provider:    providerType,
 		InviteToken: inviteToken,
-		Referrer:    referrer,
+		Referrer:    redirectURL,
 	})
 	tokenString, err := token.SignedString([]byte(a.config.OperatorToken))
 	if err != nil {
