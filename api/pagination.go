@@ -29,6 +29,11 @@ func addPaginationHeaders(w http.ResponseWriter, r *http.Request, p *models.Pagi
 		url.RawQuery = query.Encode()
 		header += "<" + url.String() + ">; rel=\"next\", "
 	}
+	if p.Page > 1 {
+		query.Set("page", fmt.Sprintf("%v", p.Page-1))
+		url.RawQuery = query.Encode()
+		header += "<" + url.String() + ">; rel=\"prev\", "
+	}
 	query.Set("page", fmt.Sprintf("%v", totalPages))
 	url.RawQuery = query.Encode()
 	header += "<" + url.String() + ">; rel=\"last\""
