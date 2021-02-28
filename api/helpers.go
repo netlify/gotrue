@@ -116,14 +116,26 @@ func (a *API) validateRedirectURL(r *http.Request, reqref string) string {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
 	redirectURL := config.SiteURL
-	if reqref != "" {
-		base, berr := url.Parse(config.SiteURL)
-		refurl, rerr := url.Parse(reqref)
-		// As long as the referrer came from the site, we will redirect back there
-		if berr == nil && rerr == nil && base.Hostname() == refurl.Hostname() {
-			redirectURL = reqref
+	if reqref == "" {
+		return redirectURL
+	}
+
+	base, berr := url.Parse(config.SiteURL)
+	refurl, rerr := url.Parse(reqref)
+
+	// As long as the referrer came from the site, we will redirect back there
+	if berr == nil && rerr == nil && base.Hostname() == refurl.Hostname() {
+		return reqref
+	}
+
+	// For case when user came from mobile app or other permitted resource - redirect back
+	for _, uri := range config.URIAllowList {
+		puri, perr := url.Parse(uri)
+		if perr == nil && puri.Hostname() == refurl.Hostname() {
+			return reqref
 		}
 	}
+
 	return redirectURL
 }
 

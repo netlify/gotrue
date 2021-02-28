@@ -110,6 +110,7 @@ type MailerConfiguration struct {
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
 	SiteURL       string                `json:"site_url" split_words:"true" required:"true"`
+	URIAllowList  []string              `json:"uri_allow_list" split_words:"true"`
 	JWT           JWTConfiguration      `json:"jwt"`
 	SMTP          SMTPConfiguration     `json:"smtp"`
 	Mailer        MailerConfiguration   `json:"mailer"`
@@ -227,6 +228,10 @@ func (config *Configuration) ApplyDefaults() {
 
 	if config.Cookie.Duration == 0 {
 		config.Cookie.Duration = 86400
+	}
+
+	if config.URIAllowList == nil {
+		config.URIAllowList = []string{}
 	}
 }
 
