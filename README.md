@@ -1,7 +1,9 @@
-# GoTrue - User management for APIs
+![GoTrue](gotrue.png)
 
-GoTrue is a small open-source API written in golang, that can act as a self-standing
-API service for handling user registration and authentication for JAM projects.
+<p align="center">User management for APIs</p>
+
+GoTrue is a small open-source API written in Golang, that can act as a self-standing
+API service for handling user registration and authentication for Jamstack projects.
 
 It's based on OAuth2 and JWT and will handle user signup, authentication and custom
 user data.
