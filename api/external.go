@@ -35,7 +35,11 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 	config := a.getConfig(ctx)
 
 	providerType := r.URL.Query().Get("provider")
-	provider, err := a.Provider(ctx, providerType)
+
+	// add scopes
+	scopes := r.URL.Query().Get("scopes")
+
+	provider, err := a.Provider(ctx, providerType, scopes)
 	if err != nil {
 		return badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
 	}
@@ -296,7 +300,7 @@ func (a *API) loadExternalState(ctx context.Context, state string) (context.Cont
 }
 
 // Provider returns a Provider interface for the given name.
-func (a *API) Provider(ctx context.Context, name string) (provider.Provider, error) {
+func (a *API) Provider(ctx context.Context, name string, scopes string) (provider.Provider, error) {
 	config := a.getConfig(ctx)
 	name = strings.ToLower(name)
 
@@ -304,7 +308,7 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 	case "bitbucket":
 		return provider.NewBitbucketProvider(config.External.Bitbucket)
 	case "github":
-		return provider.NewGithubProvider(config.External.Github)
+		return provider.NewGithubProvider(config.External.Github, scopes)
 	case "gitlab":
 		return provider.NewGitlabProvider(config.External.Gitlab)
 	case "google":

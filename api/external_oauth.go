@@ -58,7 +58,7 @@ func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType s
 }
 
 func (a *API) OAuthProvider(ctx context.Context, name string) (provider.OAuthProvider, error) {
-	providerCandidate, err := a.Provider(ctx, name)
+	providerCandidate, err := a.Provider(ctx, name, "")
 	if err != nil {
 		return nil, err
 	}
