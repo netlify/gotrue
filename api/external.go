@@ -314,7 +314,7 @@ func (a *API) Provider(ctx context.Context, name string, scopes string) (provide
 	case "google":
 		return provider.NewGoogleProvider(config.External.Google, scopes)
 	case "facebook":
-		return provider.NewFacebookProvider(config.External.Facebook)
+		return provider.NewFacebookProvider(config.External.Facebook, scopes)
 	case "azure":
 		return provider.NewAzureProvider(config.External.Azure)
 	case "saml":
