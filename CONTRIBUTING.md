@@ -5,8 +5,9 @@ please read the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Setup
 
-> Install Go 1.11.1
-> Install Docker to run tests
+* Install Go 1.11.1
+* Install [Soda CLI](https://gobuffalo.io/en/docs/db/toolbox)
+* Install Docker to run tests
 
 GoTrue uses the Go Modules support built into Go 1.11 to build. The easiest is to clone GoTrue in a directory outside of GOPATH, as in the following example:
 
