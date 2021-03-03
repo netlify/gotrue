@@ -182,7 +182,7 @@ The OAuth2 Client ID registered with the external provider.
 
 The OAuth2 Client Secret provided by the external provider when you registered.
 
-`EXTERNAL_X_REDIRECT_URI` - `string` **required for gitlab**
+`EXTERNAL_X_REDIRECT_URI` - `string` **required for gitlab & github**
 
 The URI a OAuth2 provider will redirect to with the `code` and `state` values.
 
