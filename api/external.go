@@ -316,7 +316,7 @@ func (a *API) Provider(ctx context.Context, name string, scopes string) (provide
 	case "facebook":
 		return provider.NewFacebookProvider(config.External.Facebook, scopes)
 	case "azure":
-		return provider.NewAzureProvider(config.External.Azure)
+		return provider.NewAzureProvider(config.External.Azure, scopes)
 	case "saml":
 		return provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	default:
