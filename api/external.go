@@ -310,7 +310,7 @@ func (a *API) Provider(ctx context.Context, name string, scopes string) (provide
 	case "github":
 		return provider.NewGithubProvider(config.External.Github, scopes)
 	case "gitlab":
-		return provider.NewGitlabProvider(config.External.Gitlab)
+		return provider.NewGitlabProvider(config.External.Gitlab, scopes)
 	case "google":
 		return provider.NewGoogleProvider(config.External.Google)
 	case "facebook":
