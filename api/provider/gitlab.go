@@ -45,7 +45,10 @@ func NewGitlabProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAut
 				TokenURL: host + "/oauth/token",
 			},
 			RedirectURL: ext.RedirectURI,
-			Scopes:      []string{"read_user" + " " + scopes},
+			Scopes:      []string{
+				"read_user",
+				scopes,
+			},
 		},
 		Host: host,
 	}, nil
