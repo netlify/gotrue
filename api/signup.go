@@ -40,6 +40,10 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	if params.Password == "" {
 		return unprocessableEntityError("Signup requires a valid password")
 	}
+	if len(params.Password) < config.PasswordMinLength {
+		return unprocessableEntityError("Password length is lower than permited")
+	}
+
 	if err := a.validateEmail(ctx, params.Email); err != nil {
 		return err
 	}

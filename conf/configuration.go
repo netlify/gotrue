@@ -109,14 +109,15 @@ type MailerConfiguration struct {
 
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
-	SiteURL       string                `json:"site_url" split_words:"true" required:"true"`
-	JWT           JWTConfiguration      `json:"jwt"`
-	SMTP          SMTPConfiguration     `json:"smtp"`
-	Mailer        MailerConfiguration   `json:"mailer"`
-	External      ProviderConfiguration `json:"external"`
-	DisableSignup bool                  `json:"disable_signup" split_words:"true"`
-	Webhook       WebhookConfig         `json:"webhook" split_words:"true"`
-	Cookie        struct {
+	SiteURL           string                `json:"site_url" split_words:"true" required:"true"`
+	PasswordMinLength int                   `json:"password_min_length" default:"6"`
+	JWT               JWTConfiguration      `json:"jwt"`
+	SMTP              SMTPConfiguration     `json:"smtp"`
+	Mailer            MailerConfiguration   `json:"mailer"`
+	External          ProviderConfiguration `json:"external"`
+	DisableSignup     bool                  `json:"disable_signup" split_words:"true"`
+	Webhook           WebhookConfig         `json:"webhook" split_words:"true"`
+	Cookie            struct {
 		Key      string `json:"key"`
 		Duration int    `json:"duration"`
 	} `json:"cookies"`
