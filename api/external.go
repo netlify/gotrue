@@ -35,8 +35,6 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 	config := a.getConfig(ctx)
 
 	providerType := r.URL.Query().Get("provider")
-
-	// add scopes
 	scopes := r.URL.Query().Get("scopes")
 
 	provider, err := a.Provider(ctx, providerType, scopes)
