@@ -3,12 +3,13 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/gofrs/uuid"
 )
 
 type adminUserParams struct {
@@ -94,6 +95,7 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 	adminUser := getAdminUser(ctx)
 	instanceID := getInstanceID(ctx)
 	params, err := a.getAdminParams(r)
+	config := getConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -112,6 +114,10 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		if params.Password != "" {
+			if len(params.Password) < config.PasswordMinLength {
+				return fmt.Errorf("Password should be at least %d characters", config.PasswordMinLength)
+			}
+
 			if terr := user.UpdatePassword(tx, params.Password); terr != nil {
 				return terr
 			}
