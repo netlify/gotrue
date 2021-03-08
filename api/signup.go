@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/netlify/gotrue/metering"
@@ -41,7 +42,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		return unprocessableEntityError("Signup requires a valid password")
 	}
 	if len(params.Password) < config.PasswordMinLength {
-		return unprocessableEntityError("Password length is lower than permited")
+		return unprocessableEntityError(fmt.Sprintf("Password should be at least %d characters", config.PasswordMinLength))
 	}
 
 	if err := a.validateEmail(ctx, params.Email); err != nil {

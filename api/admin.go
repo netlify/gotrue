@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -115,7 +115,7 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 
 		if params.Password != "" {
 			if len(params.Password) < config.PasswordMinLength {
-				return errors.New("password length is lower than permitted")
+				return fmt.Errorf("Password should be at least %d characters", config.PasswordMinLength)
 			}
 
 			if terr := user.UpdatePassword(tx, params.Password); terr != nil {
