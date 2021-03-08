@@ -19,11 +19,11 @@ GOTRUE_SITE_URL=https://example.netlify.com/
 
 `SITE_URL` - `string` **required**
 
-The base URL your site is located at. Currently used in combination with other settings to construct URLs used in emails.
+The base URL your site is located at. Currently used in combination with other settings to construct URLs used in emails. Any URI that shares a host with `SITE_URL` is a permitted value for `redirect_to` params (see `/authorize` etc.).
 
 `URI_ALLOW_LIST` - `string`
 
-A comma separated list of domains that can be handled by backend. Defaults to [].
+A comma separated list of URIs (e.g. "https://supabase.io/welcome,io.supabase.gotruedemo://logincallback") which are permitted as valid `redirect_to` destinations, in addition to SITE_URL. Defaults to [].
 
 `OPERATOR_TOKEN` - `string` _Multi-instance mode only_
 
