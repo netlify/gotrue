@@ -115,7 +115,7 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 
 		if params.Password != "" {
 			if len(params.Password) < config.PasswordMinLength {
-				return errors.New("password length is lower than permited")
+				return errors.New("password length is lower than permitted")
 			}
 
 			if terr := user.UpdatePassword(tx, params.Password); terr != nil {
