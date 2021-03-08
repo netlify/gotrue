@@ -38,6 +38,10 @@ When signup is disabled the only way to create new users is through invites. Def
 
 Header on which to rate limit the `/token` endpoint.
 
+`PASSWORD_MIN_LENGTH` - `int`
+
+Minimum password length, defaults to 6.
+
 ### API
 
 ```properties
