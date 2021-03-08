@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
+	"strings"
 
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
@@ -113,8 +114,7 @@ func (a *API) getReferrer(r *http.Request) string {
 
 	// For case when user came from mobile app or other permitted resource - redirect back
 	for _, uri := range config.URIAllowList {
-		puri, perr := url.Parse(uri)
-		if perr == nil && puri.Hostname() == refurl.Hostname() {
+		if strings.HasPrefix(reqref, uri) {
 			return reqref
 		}
 	}
@@ -141,8 +141,7 @@ func (a *API) validateRedirectURL(r *http.Request, reqref string) string {
 
 	// For case when user came from mobile app or other permitted resource - redirect back
 	for _, uri := range config.URIAllowList {
-		puri, perr := url.Parse(uri)
-		if perr == nil && puri.Hostname() == refurl.Hostname() {
+		if strings.HasPrefix(reqref, uri) {
 			return reqref
 		}
 	}
