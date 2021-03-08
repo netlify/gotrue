@@ -3,8 +3,10 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -145,4 +147,91 @@ func (ts *VerifyTestSuite) TestExpiredRecoveryToken() {
 	ts.API.handler.ServeHTTP(w, req)
 
 	assert.Equal(ts.T(), http.StatusGone, w.Code, w.Body.String())
+}
+
+func (ts *VerifyTestSuite) TestVerifyPermitedCustomUri() {
+	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	require.NoError(ts.T(), err)
+	u.RecoverySentAt = &time.Time{}
+	require.NoError(ts.T(), ts.API.db.Update(u))
+
+	// Request body
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"email": "test@example.com",
+	}))
+
+	// Setup request
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/recover", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup response recorder
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
+
+	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	require.NoError(ts.T(), err)
+
+	assert.WithinDuration(ts.T(), time.Now(), *u.RecoverySentAt, 1*time.Second)
+	assert.False(ts.T(), u.IsConfirmed())
+
+	redirectUrl, _ := url.Parse(ts.Config.URIAllowList[0])
+
+	reqURL := fmt.Sprintf("http://localhost/verify?type=%s&token=%s&redirect_to=%s", "recovery", u.RecoveryToken, redirectUrl.String())
+	req = httptest.NewRequest(http.MethodGet, reqURL, nil)
+
+	w = httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusSeeOther, w.Code)
+	rUrl, _ := w.Result().Location()
+	assert.Equal(ts.T(), redirectUrl.Hostname(), rUrl.Hostname())
+
+	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	require.NoError(ts.T(), err)
+	assert.True(ts.T(), u.IsConfirmed())
+}
+
+func (ts *VerifyTestSuite) TestVerifyNotPermitedCustomUri() {
+	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	require.NoError(ts.T(), err)
+	u.RecoverySentAt = &time.Time{}
+	require.NoError(ts.T(), ts.API.db.Update(u))
+
+	// Request body
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"email": "test@example.com",
+	}))
+
+	// Setup request
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/recover", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup response recorder
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
+
+	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	require.NoError(ts.T(), err)
+
+	assert.WithinDuration(ts.T(), time.Now(), *u.RecoverySentAt, 1*time.Second)
+	assert.False(ts.T(), u.IsConfirmed())
+
+	fakeRedirectUrl, _ := url.Parse("http://custom-url.com")
+	siteUrl, _ := url.Parse(ts.Config.SiteURL)
+
+	reqURL := fmt.Sprintf("http://localhost/verify?type=%s&token=%s&redirect_to=%s", "recovery", u.RecoveryToken, fakeRedirectUrl.String())
+	req = httptest.NewRequest(http.MethodGet, reqURL, nil)
+
+	w = httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusSeeOther, w.Code)
+	rUrl, _ := w.Result().Location()
+	assert.Equal(ts.T(), siteUrl.Hostname(), rUrl.Hostname())
+
+	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	require.NoError(ts.T(), err)
+	assert.True(ts.T(), u.IsConfirmed())
 }

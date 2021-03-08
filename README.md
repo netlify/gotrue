@@ -21,6 +21,10 @@ GOTRUE_SITE_URL=https://example.netlify.com/
 
 The base URL your site is located at. Currently used in combination with other settings to construct URLs used in emails.
 
+`URI_ALLOW_LIST` - `string`
+
+A comma separated list of domains that can be handled by backend. Defaults to [].
+
 `OPERATOR_TOKEN` - `string` _Multi-instance mode only_
 
 The shared secret with an operator (usually Netlify) for this microservice. Used to verify requests have been proxied through the operator and
