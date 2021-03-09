@@ -94,6 +94,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 
 	providerType := getExternalProviderType(ctx)
 	var userData *provider.UserProvidedData
+	var providerToken string
 	if providerType == "saml" {
 		samlUserData, err := a.samlCallback(r, ctx)
 		if err != nil {
@@ -101,11 +102,12 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		}
 		userData = samlUserData
 	} else {
-		oAuthUserData, err := a.oAuthCallback(ctx, r, providerType)
+		oAuthResponseData, err := a.oAuthCallback(ctx, r, providerType)
 		if err != nil {
 			return err
 		}
-		userData = oAuthUserData
+		userData = oAuthResponseData.userData
+		providerToken = oAuthResponseData.token
 	}
 
 	var user *models.User
@@ -213,6 +215,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 	rurl := a.getExternalRedirectURL(r)
 	if token != nil {
 		q := url.Values{}
+		q.Set("provider_token", providerToken)
 		q.Set("access_token", token.Token)
 		q.Set("token_type", token.TokenType)
 		q.Set("expires_in", strconv.Itoa(token.ExpiresIn))
