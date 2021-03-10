@@ -638,7 +638,8 @@ GoTrue exposes the following endpoints:
 
   query params:
   ```
-  provider=azure | google | bitbucket | github | gitlab
+  provider=azure | google | bitbucket | github | gitlab | facebook
+  scopes=<optional additional scopes depending on the provider (email and name are requested by default)>
   ```
  
   Redirects to provider and then to `/callback`
@@ -647,5 +648,6 @@ GoTrue exposes the following endpoints:
 
   External provider should redirect to here
  
-  Redirects to `<GOTRUE_SITE_URL>#access_token=<access_token>&refresh_token=<refresh_token>&expires_in=3600&provider=<provider_name>`
+  Redirects to `<GOTRUE_SITE_URL>#access_token=<access_token>&refresh_token=<refresh_token>&provider_token=<provider_oauth_token>&expires_in=3600&provider=<provider_name>`
+  If additional scopes were requested then `provider_token` will be populated, you can use this to fetch additional data from the provider or interact with their services 
   
