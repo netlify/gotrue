@@ -8,6 +8,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type OAuthProviderData struct {
+	userData *provider.UserProvidedData
+	token string
+}
+
 // loadOAuthState parses the `state` query parameter as a JWS payload,
 // extracting the provider requested
 func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Context, error) {
@@ -20,7 +25,7 @@ func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Co
 	return a.loadExternalState(ctx, state)
 }
 
-func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType string) (*provider.UserProvidedData, error) {
+func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType string) (*OAuthProviderData, error) {
 	rq := r.URL.Query()
 
 	extError := rq.Get("error")
@@ -44,21 +49,24 @@ func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType s
 		"code":     oauthCode,
 	}).Debug("Exchanging oauth code")
 
-	tok, err := oAuthProvider.GetOAuthToken(oauthCode)
+	token, err := oAuthProvider.GetOAuthToken(oauthCode)
 	if err != nil {
 		return nil, internalServerError("Unable to exchange external code: %s", oauthCode).WithInternalError(err)
 	}
 
-	userData, err := oAuthProvider.GetUserData(ctx, tok)
+	userData, err := oAuthProvider.GetUserData(ctx, token)
 	if err != nil {
 		return nil, internalServerError("Error getting user email from external provider").WithInternalError(err)
 	}
 
-	return userData, nil
+	return &OAuthProviderData{
+		userData: userData,
+		token: token.AccessToken,
+	}, nil
 }
 
 func (a *API) OAuthProvider(ctx context.Context, name string) (provider.OAuthProvider, error) {
-	providerCandidate, err := a.Provider(ctx, name)
+	providerCandidate, err := a.Provider(ctx, name, "")
 	if err != nil {
 		return nil, err
 	}

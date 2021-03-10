@@ -35,7 +35,9 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 	config := a.getConfig(ctx)
 
 	providerType := r.URL.Query().Get("provider")
-	provider, err := a.Provider(ctx, providerType)
+	scopes := r.URL.Query().Get("scopes")
+
+	provider, err := a.Provider(ctx, providerType, scopes)
 	if err != nil {
 		return badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
 	}
@@ -92,6 +94,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 
 	providerType := getExternalProviderType(ctx)
 	var userData *provider.UserProvidedData
+	var providerToken string
 	if providerType == "saml" {
 		samlUserData, err := a.samlCallback(r, ctx)
 		if err != nil {
@@ -99,11 +102,12 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 		}
 		userData = samlUserData
 	} else {
-		oAuthUserData, err := a.oAuthCallback(ctx, r, providerType)
+		oAuthResponseData, err := a.oAuthCallback(ctx, r, providerType)
 		if err != nil {
 			return err
 		}
-		userData = oAuthUserData
+		userData = oAuthResponseData.userData
+		providerToken = oAuthResponseData.token
 	}
 
 	var user *models.User
@@ -211,6 +215,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 	rurl := a.getExternalRedirectURL(r)
 	if token != nil {
 		q := url.Values{}
+		q.Set("provider_token", providerToken)
 		q.Set("access_token", token.Token)
 		q.Set("token_type", token.TokenType)
 		q.Set("expires_in", strconv.Itoa(token.ExpiresIn))
@@ -296,7 +301,7 @@ func (a *API) loadExternalState(ctx context.Context, state string) (context.Cont
 }
 
 // Provider returns a Provider interface for the given name.
-func (a *API) Provider(ctx context.Context, name string) (provider.Provider, error) {
+func (a *API) Provider(ctx context.Context, name string, scopes string) (provider.Provider, error) {
 	config := a.getConfig(ctx)
 	name = strings.ToLower(name)
 
@@ -304,15 +309,15 @@ func (a *API) Provider(ctx context.Context, name string) (provider.Provider, err
 	case "bitbucket":
 		return provider.NewBitbucketProvider(config.External.Bitbucket)
 	case "github":
-		return provider.NewGithubProvider(config.External.Github)
+		return provider.NewGithubProvider(config.External.Github, scopes)
 	case "gitlab":
-		return provider.NewGitlabProvider(config.External.Gitlab)
+		return provider.NewGitlabProvider(config.External.Gitlab, scopes)
 	case "google":
-		return provider.NewGoogleProvider(config.External.Google)
+		return provider.NewGoogleProvider(config.External.Google, scopes)
 	case "facebook":
-		return provider.NewFacebookProvider(config.External.Facebook)
+		return provider.NewFacebookProvider(config.External.Facebook, scopes)
 	case "azure":
-		return provider.NewAzureProvider(config.External.Azure)
+		return provider.NewAzureProvider(config.External.Azure, scopes)
 	case "saml":
 		return provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	default:
