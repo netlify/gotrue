@@ -5,22 +5,39 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-playground/log"
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 )
 
+const (
+	emailChangeType = "email_change"
+)
+
 // UserUpdateParams parameters for updating a user
 type UserUpdateParams struct {
-	Email            string                 `json:"email"`
-	Password         string                 `json:"password"`
-	EmailChangeToken string                 `json:"email_change_token"`
-	Data             map[string]interface{} `json:"data"`
-	AppData          map[string]interface{} `json:"app_metadata,omitempty"`
+	Email    string                 `json:"email"`
+	Password string                 `json:"password"`
+	Data     map[string]interface{} `json:"data"`
+	AppData  map[string]interface{} `json:"app_metadata,omitempty"`
+}
+type EmailChangeParams struct {
+	EmailChangeToken string `json:"email_change_token"`
 }
 
-// UserGet returns a user
+// UserGet responsible for getting user info or confirm updated fields
 func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
+	userChangeType := r.FormValue("type")
+	switch userChangeType {
+	case emailChangeType:
+		return a.userEmailChangeVerify(w, r)
+	default:
+		return a.userInfo(w, r)
+	}
+}
+
+func (a *API) userInfo(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	claims := getClaims(ctx)
 	if claims == nil {
@@ -43,6 +60,51 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 			return notFoundError(err.Error())
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
+	}
+
+	return sendJSON(w, http.StatusOK, user)
+}
+
+func (a *API) userEmailChangeVerify(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
+
+	params := &EmailChangeParams{}
+	params.EmailChangeToken = r.FormValue("email_change_token")
+	if params.EmailChangeToken == "" {
+		return badRequestError("Could not found email_change_token")
+	}
+
+	claims := getClaims(ctx)
+	userID, err := uuid.FromString(claims.Subject)
+	if err != nil {
+		return badRequestError("Could not read User ID claim")
+	}
+
+	log.Debugf("Got change token %v", params.EmailChangeToken)
+
+	user, err := models.FindUserByID(a.db, userID)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			return notFoundError(err.Error())
+		}
+		return internalServerError("Database error finding user").WithInternalError(err)
+	}
+
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		var terr error
+
+		if params.EmailChangeToken != user.EmailChangeToken {
+			return unauthorizedError("Email Change Token didn't match token on file")
+		}
+
+		if terr = user.ConfirmEmailChange(tx); terr != nil {
+			return internalServerError("Error updating user").WithInternalError(terr)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return sendJSON(w, http.StatusOK, user)
@@ -106,17 +168,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 
-		if params.EmailChangeToken != "" {
-			log.Debugf("Got change token %v", params.EmailChangeToken)
-
-			if params.EmailChangeToken != user.EmailChangeToken {
-				return unauthorizedError("Email Change Token didn't match token on file")
-			}
-
-			if terr = user.ConfirmEmailChange(tx); terr != nil {
-				return internalServerError("Error updating user").WithInternalError(terr)
-			}
-		} else if params.Email != "" && params.Email != user.Email {
+		if params.Email != "" && params.Email != user.Email {
 			if terr = a.validateEmail(ctx, params.Email); terr != nil {
 				return terr
 			}
