@@ -114,7 +114,7 @@ func (m *TemplateMailer) EmailChangeMail(user *models.User, referrerURL string) 
 		redirectParam = "&redirect_to=" + referrerURL
 	}
 
-	url, err := getSiteURL(referrerURL, m.Config.SiteURL, m.Config.Mailer.URLPaths.EmailChange, "email_change_token="+user.EmailChangeToken+"&type=email_change"+redirectParam)
+	url, err := getSiteURL(referrerURL, m.Config.SiteURL, m.Config.Mailer.URLPaths.EmailChange, "token="+user.EmailChangeToken+"&type=email_change"+redirectParam)
 	if err != nil {
 		return err
 	}
@@ -127,16 +127,11 @@ func (m *TemplateMailer) EmailChangeMail(user *models.User, referrerURL string) 
 		"Data":            user.UserMetaData,
 	}
 
-	emailTemplate := m.Config.Mailer.Subjects.EmailChange
-	if emailTemplate == "" {
-		emailTemplate = defaultEmailChangeMail
-	}
-
 	return m.Mailer.Mail(
 		user.EmailChange,
 		string(withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change")),
 		m.Config.Mailer.Templates.EmailChange,
-		emailTemplate,
+		defaultEmailChangeMail,
 		data,
 	)
 }

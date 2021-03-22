@@ -279,6 +279,11 @@ func FindUserByRecoveryToken(tx *storage.Connection, token string) (*User, error
 	return findUser(tx, "recovery_token = ?", token)
 }
 
+// FindUserByRecoveryToken finds a user with the matching recovery token.
+func FindUserByEmailChangeToken(tx *storage.Connection, token string) (*User, error) {
+	return findUser(tx, "email_change_token = ?", token)
+}
+
 // FindUserWithRefreshToken finds a user from the provided refresh token.
 func FindUserWithRefreshToken(tx *storage.Connection, token string) (*User, *RefreshToken, error) {
 	refreshToken := &RefreshToken{}
