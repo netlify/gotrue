@@ -256,7 +256,11 @@ func findUser(tx *storage.Connection, query string, args ...interface{}) (*User,
 
 // FindUserByConfirmationToken finds users with the matching confirmation token.
 func FindUserByConfirmationToken(tx *storage.Connection, token string) (*User, error) {
-	return findUser(tx, "confirmation_token = ?", token)
+	user, err := findUser(tx, "confirmation_token = ?", token)
+	if err != nil {
+		return nil, ConfirmationTokenNotFoundError{}
+	}
+	return user, nil
 }
 
 // FindUserByEmailAndAudience finds a user with the matching email and audience.
