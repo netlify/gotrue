@@ -14,5 +14,5 @@ jobs:
           stale-issue-label: 'stale'
           stale-issue-message: 'This issue has been automatically marked as stale because it has not had activity in 1 year. It will be closed in 7 days if no further activity occurs. Thanks!'
           days-before-issue-close: 7
-          close-issue-message: 'This issue was closed because it had no activity for over 60 days.'
+          close-issue-message: 'This issue was closed because it had no activity for over 1 year.'
           days-before-pr-close: -1
