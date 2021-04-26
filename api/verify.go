@@ -140,7 +140,7 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 	user, err := models.FindUserByConfirmationToken(conn, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return nil, notFoundError(err.Error())
+			return nil, notFoundError(err.Error()).WithInternalError(redirectWithQueryError)
 		}
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
