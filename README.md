@@ -172,6 +172,7 @@ We support `azure`, `bitbucket`, `github`, `gitlab`, `facebook`, and `google` fo
 Use the names as the keys underneath `external` to configure each separately.
 
 ```properties
+GOTRUE_EXTERNAL_GITHUB_ENABLED=true
 GOTRUE_EXTERNAL_GITHUB_CLIENT_ID=myappclientid
 GOTRUE_EXTERNAL_GITHUB_SECRET=clientsecretvaluessssh
 ```
