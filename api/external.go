@@ -11,6 +11,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gofrs/uuid"
+	"github.com/markbates/goth/gothic"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -37,7 +38,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 	providerType := r.URL.Query().Get("provider")
 	scopes := r.URL.Query().Get("scopes")
 
-	provider, err := a.Provider(ctx, providerType, scopes)
+	p, err := a.Provider(ctx, providerType, scopes)
 	if err != nil {
 		return badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
 	}
@@ -78,7 +79,18 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		return internalServerError("Error creating state").WithInternalError(err)
 	}
 
-	http.Redirect(w, r, provider.AuthCodeURL(tokenString), http.StatusFound)
+	var url string
+	if twitterProvider, ok := p.(*provider.TwitterProvider); ok {
+		url = twitterProvider.AuthCodeURL(tokenString)
+		err := gothic.StoreInSession(providerType, twitterProvider.Marshal(), r, w)
+		if err != nil {
+			return internalServerError("Error storing request token in session").WithInternalError(err)
+		}
+	} else {
+		url = p.AuthCodeURL(tokenString)
+	}
+
+	http.Redirect(w, r, url, http.StatusFound)
 	return nil
 }
 
@@ -101,6 +113,13 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			return err
 		}
 		userData = samlUserData
+	} else if providerType == "twitter" {
+		oAuthResponseData, err := a.oAuth1Callback(ctx, r, providerType)
+		if err != nil {
+			return err
+		}
+		userData = oAuthResponseData.userData
+		providerToken = oAuthResponseData.token
 	} else {
 		oAuthResponseData, err := a.oAuthCallback(ctx, r, providerType)
 		if err != nil {
@@ -316,6 +335,8 @@ func (a *API) Provider(ctx context.Context, name string, scopes string) (provide
 		return provider.NewGoogleProvider(config.External.Google, scopes)
 	case "facebook":
 		return provider.NewFacebookProvider(config.External.Facebook, scopes)
+	case "twitter":
+		return provider.NewTwitterProvider(config.External.Twitter, scopes)
 	case "azure":
 		return provider.NewAzureProvider(config.External.Azure, scopes)
 	case "saml":

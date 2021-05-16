@@ -4,13 +4,15 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/markbates/goth/gothic"
+	"github.com/mrjones/oauth"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/sirupsen/logrus"
 )
 
 type OAuthProviderData struct {
 	userData *provider.UserProvidedData
-	token string
+	token    string
 }
 
 // loadOAuthState parses the `state` query parameter as a JWS payload,
@@ -22,6 +24,14 @@ func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Co
 	}
 
 	ctx := r.Context()
+	oauthToken := r.URL.Query().Get("oauth_token")
+	if oauthToken != "" {
+		ctx = withRequestToken(ctx, oauthToken)
+	}
+	oauthVerifier := r.URL.Query().Get("oauth_verifier")
+	if oauthVerifier != "" {
+		ctx = withOAuthVerifier(ctx, oauthVerifier)
+	}
 	return a.loadExternalState(ctx, state)
 }
 
@@ -61,8 +71,44 @@ func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType s
 
 	return &OAuthProviderData{
 		userData: userData,
-		token: token.AccessToken,
+		token:    token.AccessToken,
 	}, nil
+}
+
+func (a *API) oAuth1Callback(ctx context.Context, r *http.Request, providerType string) (*OAuthProviderData, error) {
+	oAuthProvider, err := a.OAuthProvider(ctx, providerType)
+	if err != nil {
+		return nil, badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
+	}
+	value, err := gothic.GetFromSession(providerType, r)
+	if err != nil {
+		return &OAuthProviderData{}, err
+	}
+	oauthVerifier := getOAuthVerifier(ctx)
+	var accessToken *oauth.AccessToken
+	var userData *provider.UserProvidedData
+	if twitterProvider, ok := oAuthProvider.(*provider.TwitterProvider); ok {
+		requestToken, err := twitterProvider.Unmarshal(value)
+		if err != nil {
+			return &OAuthProviderData{}, err
+		}
+		twitterProvider.OauthVerifier = oauthVerifier
+		accessToken, err = twitterProvider.Consumer.AuthorizeToken(requestToken, oauthVerifier)
+		if err != nil {
+			return nil, internalServerError("Unable to retrieve access token").WithInternalError(err)
+		}
+		userData, err = twitterProvider.FetchUserData(ctx, accessToken)
+	}
+
+	if err != nil {
+		return nil, internalServerError("Error getting user email from external provider").WithInternalError(err)
+	}
+
+	return &OAuthProviderData{
+		userData: userData,
+		token:    accessToken.Token,
+	}, nil
+
 }
 
 func (a *API) OAuthProvider(ctx context.Context, name string) (provider.OAuthProvider, error) {
