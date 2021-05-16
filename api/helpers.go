@@ -97,56 +97,73 @@ func (a *API) requestAud(ctx context.Context, r *http.Request) string {
 	return config.JWT.Aud
 }
 
+// tries extract redirect url from header or from query params
+func getRedirectTo(r *http.Request, fieldName string) (reqref string) {
+	reqref = r.Header.Get(fieldName)
+	if reqref != "" {
+		return
+	}
+
+	if err := r.ParseForm(); err == nil {
+		reqref = r.Form.Get(fieldName)
+	}
+
+	return
+}
+
+func isRedirectURLValid(config *conf.Configuration, redirectURL string) bool {
+	if redirectURL == "" {
+		return false
+	}
+
+	base, berr := url.Parse(config.SiteURL)
+	refurl, rerr := url.Parse(redirectURL)
+
+	// As long as the referrer came from the site, we will redirect back there
+	if berr == nil && rerr == nil && base.Hostname() == refurl.Hostname() {
+		return true
+	}
+
+	// For case when user came from mobile app or other permitted resource - redirect back
+	for _, uri := range config.URIAllowList {
+		if strings.HasPrefix(redirectURL, uri) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (a *API) getReferrer(r *http.Request) string {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
-	reqref := r.Referer()
-	if reqref == "" {
-		return ""
-	}
 
-	base, berr := url.Parse(config.SiteURL)
-	refurl, rerr := url.Parse(reqref)
-	// As long as the referrer came from the site, we will redirect back there
-	if berr == nil && rerr == nil && base.Hostname() == refurl.Hostname() {
+	// try get redirect url from query or post data first
+	reqref := getRedirectTo(r, config.RedirectParamName)
+	if isRedirectURLValid(config, reqref) {
 		return reqref
 	}
 
-	// For case when user came from mobile app or other permitted resource - redirect back
-	for _, uri := range config.URIAllowList {
-		if strings.HasPrefix(reqref, uri) {
-			return reqref
-		}
+	// instead try referrer header value
+	reqref = r.Referer()
+	if isRedirectURLValid(config, reqref) {
+		return reqref
 	}
 
-	return ""
+	return config.SiteURL
 }
 
-// validateRedirectURL ensures any redirect URL is from a safe origin
-func (a *API) validateRedirectURL(r *http.Request, reqref string) string {
+// getRedirectURLOrReferrer ensures any redirect URL is from a safe origin
+func (a *API) getRedirectURLOrReferrer(r *http.Request, reqref string) string {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
-	redirectURL := config.SiteURL
-	if reqref == "" {
-		return redirectURL
-	}
 
-	base, berr := url.Parse(config.SiteURL)
-	refurl, rerr := url.Parse(reqref)
-
-	// As long as the referrer came from the site, we will redirect back there
-	if berr == nil && rerr == nil && base.Hostname() == refurl.Hostname() {
+	// if redirect url fails - try fill by extra variant
+	if isRedirectURLValid(config, reqref) {
 		return reqref
 	}
 
-	// For case when user came from mobile app or other permitted resource - redirect back
-	for _, uri := range config.URIAllowList {
-		if strings.HasPrefix(reqref, uri) {
-			return reqref
-		}
-	}
-
-	return redirectURL
+	return a.getReferrer(r)
 }
 
 var privateIPBlocks []*net.IPNet

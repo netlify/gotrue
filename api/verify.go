@@ -49,7 +49,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		params.Token = r.FormValue("token")
 		params.Password = ""
 		params.Type = r.FormValue("type")
-		params.RedirectTo = a.validateRedirectURL(r, r.FormValue("redirect_to"))
+		params.RedirectTo = a.getRedirectURLOrReferrer(r, r.FormValue("redirect_to"))
 	case "POST":
 		jsonDecoder := json.NewDecoder(r.Body)
 		if err := jsonDecoder.Decode(params); err != nil {
@@ -114,9 +114,6 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	case "GET":
 		rurl := params.RedirectTo
-		if rurl == "" {
-			rurl = config.SiteURL
-		}
 		if token != nil {
 			q := url.Values{}
 			q.Set("access_token", token.Token)
