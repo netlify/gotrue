@@ -111,7 +111,6 @@ type MailerConfiguration struct {
 type Configuration struct {
 	SiteURL           string                `json:"site_url" split_words:"true" required:"true"`
 	URIAllowList      []string              `json:"uri_allow_list" split_words:"true"`
-	RedirectParamName string                `json:"redirect_param_name" default:"redirect_to"`
 	PasswordMinLength int                   `json:"password_min_length" default:"6"`
 	JWT               JWTConfiguration      `json:"jwt"`
 	SMTP              SMTPConfiguration     `json:"smtp"`

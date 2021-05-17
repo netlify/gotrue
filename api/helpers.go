@@ -98,14 +98,14 @@ func (a *API) requestAud(ctx context.Context, r *http.Request) string {
 }
 
 // tries extract redirect url from header or from query params
-func getRedirectTo(r *http.Request, fieldName string) (reqref string) {
-	reqref = r.Header.Get(fieldName)
+func getRedirectTo(r *http.Request) (reqref string) {
+	reqref = r.Header.Get("redirect_to")
 	if reqref != "" {
 		return
 	}
 
 	if err := r.ParseForm(); err == nil {
-		reqref = r.Form.Get(fieldName)
+		reqref = r.Form.Get("redirect_to")
 	}
 
 	return
@@ -139,7 +139,7 @@ func (a *API) getReferrer(r *http.Request) string {
 	config := a.getConfig(ctx)
 
 	// try get redirect url from query or post data first
-	reqref := getRedirectTo(r, config.RedirectParamName)
+	reqref := getRedirectTo(r)
 	if isRedirectURLValid(config, reqref) {
 		return reqref
 	}
