@@ -85,6 +85,7 @@ type ProviderConfiguration struct {
 	Gitlab      OAuthProviderConfiguration `json:"gitlab"`
 	Google      OAuthProviderConfiguration `json:"google"`
 	Facebook    OAuthProviderConfiguration `json:"facebook"`
+	Twitter     OAuthProviderConfiguration `json:"twitter"`
 	Azure       OAuthProviderConfiguration `json:"azure"`
 	Email       EmailProviderConfiguration `json:"email"`
 	Saml        SamlProviderConfiguration  `json:"saml"`
@@ -109,8 +110,8 @@ type MailerConfiguration struct {
 
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
-	SiteURL       string                `json:"site_url" split_words:"true" required:"true"`
-	URIAllowList  []string              `json:"uri_allow_list" split_words:"true"`
+	SiteURL           string                `json:"site_url" split_words:"true" required:"true"`
+	URIAllowList      []string              `json:"uri_allow_list" split_words:"true"`
 	PasswordMinLength int                   `json:"password_min_length" default:"6"`
 	JWT               JWTConfiguration      `json:"jwt"`
 	SMTP              SMTPConfiguration     `json:"smtp"`
