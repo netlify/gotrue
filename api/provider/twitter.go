@@ -48,10 +48,12 @@ func NewTwitterProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAu
 }
 
 func (t TwitterProvider) GetOAuthToken(_ string) (*oauth2.Token, error) {
+	// stub method for OAuthProvider interface, unused in OAuth1.0 protocol
 	return &oauth2.Token{}, nil
 }
 
 func (t TwitterProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
+	// stub method for OAuthProvider interface, unused in OAuth1.0 protocol
 	return &UserProvidedData{}, nil
 }
 
