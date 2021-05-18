@@ -3,6 +3,7 @@ package api
 import "net/http"
 
 type ProviderSettings struct {
+	Apple     bool `json:"apple"`
 	Bitbucket bool `json:"bitbucket"`
 	GitHub    bool `json:"github"`
 	GitLab    bool `json:"gitlab"`
@@ -30,6 +31,7 @@ func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
 
 	return sendJSON(w, http.StatusOK, &Settings{
 		ExternalProviders: ProviderSettings{
+			Apple:     config.External.Apple.Enabled,
 			Bitbucket: config.External.Bitbucket.Enabled,
 			GitHub:    config.External.Github.Enabled,
 			GitLab:    config.External.Gitlab.Enabled,
