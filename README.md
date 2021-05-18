@@ -23,7 +23,7 @@ GOTRUE_SITE_URL=https://example.netlify.com/
 
 The base URL your site is located at. Currently used in combination with other settings to construct URLs used in emails.
 
-`OPERATOR_TOKEN` - `string` _Multi-instance mode only_
+`OPERATOR_TOKEN` - `string` **required**
 
 The shared secret with an operator (usually Netlify) for this microservice. Used to verify requests have been proxied through the operator and
 the payload values can be trusted.
