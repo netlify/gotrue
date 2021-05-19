@@ -671,7 +671,7 @@ GoTrue exposes the following endpoints:
 
   query params:
   ```
-  provider=azure | google | bitbucket | github | gitlab | facebook
+  provider=azure | google | bitbucket | github | gitlab | facebook | twitter
   scopes=<optional additional scopes depending on the provider (email and name are requested by default)>
   ```
  
