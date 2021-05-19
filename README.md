@@ -168,7 +168,7 @@ The default group to assign all new users to.
 
 ### External Authentication Providers
 
-We support `azure`, `bitbucket`, `github`, `gitlab`, `facebook`, `twitter`, and `google` for external authentication.
+We support `azure`, `bitbucket`, `github`, `gitlab`, `facebook`, `twitter`, `apple` and `google` for external authentication.
 Use the names as the keys underneath `external` to configure each separately.
 
 ```properties
@@ -198,6 +198,38 @@ The URI a OAuth2 provider will redirect to with the `code` and `state` values.
 `EXTERNAL_X_URL` - `string`
 
 The base URL used for constructing the URLs to request authorization and access tokens. Used by `gitlab` only. Defaults to `https://gitlab.com`.
+
+#### Apple OAuth 
+
+To try out external authentication with Apple locally, you will need to do the following:
+1. Remap localhost to \<my_custom_dns \> in your `/etc/hosts` config.
+2. Configure gotrue to serve HTTPS traffic over localhost by replacing `ListenAndServe` in [api.go](api/api.go) with:
+   ```
+      func (a *API) ListenAndServe(hostAndPort string) {
+        log := logrus.WithField("component", "api")
+        path, err := os.Getwd()
+        if err != nil {
+          log.Println(err)
+        }
+        server := &http.Server{
+          Addr:    hostAndPort,
+          Handler: a.handler,
+        }
+        done := make(chan struct{})
+        defer close(done)
+        go func() {
+          waitForTermination(log, done)
+          ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+          defer cancel()
+          server.Shutdown(ctx)
+        }()
+        if err := server.ListenAndServeTLS("PATH_TO_CRT_FILE", "PATH_TO_KEY_FILE"); err != http.ErrServerClosed {
+          log.WithError(err).Fatal("http server listen failed")
+        }
+    }
+   ```
+3. Generate the crt and key file. See [here](https://www.freecodecamp.org/news/how-to-get-https-working-on-your-local-development-environment-in-5-minutes-7af615770eec/) for more information.
+4. Generate the `GOTRUE_EXTERNAL_APPLE_SECRET` by following this [post](https://medium.com/identity-beyond-borders/how-to-configure-sign-in-with-apple-77c61e336003)!
 
 ### E-Mail
 
