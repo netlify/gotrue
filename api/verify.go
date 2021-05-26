@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/netlify/gotrue/models"
@@ -121,12 +120,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 			q.Set("expires_in", strconv.Itoa(token.ExpiresIn))
 			q.Set("refresh_token", token.RefreshToken)
 			q.Set("type", params.Type)
-
-			if strings.HasSuffix(rurl, "#") || strings.HasSuffix(rurl, "?") || strings.HasSuffix(rurl, "/") {
-				rurl += q.Encode()
-			} else {
-				rurl += "#" + q.Encode()
-			}
+			rurl += "#" + q.Encode()
 		}
 		http.Redirect(w, r, rurl, http.StatusSeeOther)
 	case "POST":
