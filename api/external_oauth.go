@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	"github.com/markbates/goth/gothic"
 	"github.com/mrjones/oauth"
@@ -18,7 +19,13 @@ type OAuthProviderData struct {
 // loadOAuthState parses the `state` query parameter as a JWS payload,
 // extracting the provider requested
 func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Context, error) {
-	state := r.URL.Query().Get("state")
+	var state string
+	if r.Method == http.MethodPost {
+		state = r.FormValue("state")
+	} else {
+		state = r.URL.Query().Get("state")
+	}
+
 	if state == "" {
 		return nil, badRequestError("OAuth state parameter missing")
 	}
@@ -36,7 +43,12 @@ func (a *API) loadOAuthState(w http.ResponseWriter, r *http.Request) (context.Co
 }
 
 func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType string) (*OAuthProviderData, error) {
-	rq := r.URL.Query()
+	var rq url.Values
+	if err := r.ParseForm(); r.Method == http.MethodPost && err == nil {
+		rq = r.Form
+	} else {
+		rq = r.URL.Query()
+	}
 
 	extError := rq.Get("error")
 	if extError != "" {
@@ -69,6 +81,15 @@ func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType s
 		return nil, internalServerError("Error getting user email from external provider").WithInternalError(err)
 	}
 
+	switch externalProvider := oAuthProvider.(type) {
+	case *provider.AppleProvider:
+		// apple only returns user info the first time
+		oauthUser := rq.Get("user")
+		if oauthUser != "" {
+			userData.Metadata = externalProvider.ParseUser(oauthUser)
+		}
+	}
+
 	return &OAuthProviderData{
 		userData: userData,
 		token:    token.AccessToken,
@@ -98,10 +119,9 @@ func (a *API) oAuth1Callback(ctx context.Context, r *http.Request, providerType 
 			return nil, internalServerError("Unable to retrieve access token").WithInternalError(err)
 		}
 		userData, err = twitterProvider.FetchUserData(ctx, accessToken)
-	}
-
-	if err != nil {
-		return nil, internalServerError("Error getting user email from external provider").WithInternalError(err)
+		if err != nil {
+			return nil, internalServerError("Error getting user email from external provider").WithInternalError(err)
+		}
 	}
 
 	return &OAuthProviderData{

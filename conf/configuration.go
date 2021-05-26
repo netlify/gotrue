@@ -80,6 +80,7 @@ type EmailContentConfiguration struct {
 }
 
 type ProviderConfiguration struct {
+	Apple       OAuthProviderConfiguration `json:"apple"`
 	Bitbucket   OAuthProviderConfiguration `json:"bitbucket"`
 	Github      OAuthProviderConfiguration `json:"github"`
 	Gitlab      OAuthProviderConfiguration `json:"gitlab"`

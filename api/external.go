@@ -16,6 +16,7 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
 )
 
 type ExternalProviderClaims struct {
@@ -76,18 +77,29 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		return internalServerError("Error creating state").WithInternalError(err)
 	}
 
-	var url string
-	if twitterProvider, ok := p.(*provider.TwitterProvider); ok {
-		url = twitterProvider.AuthCodeURL(tokenString)
-		err := gothic.StoreInSession(providerType, twitterProvider.Marshal(), r, w)
+	var authURL string
+	switch externalProvider := p.(type) {
+	case *provider.TwitterProvider:
+		authURL = externalProvider.AuthCodeURL(tokenString)
+		err := gothic.StoreInSession(providerType, externalProvider.Marshal(), r, w)
 		if err != nil {
 			return internalServerError("Error storing request token in session").WithInternalError(err)
 		}
-	} else {
-		url = p.AuthCodeURL(tokenString)
+	case *provider.AppleProvider:
+		opts := make([]oauth2.AuthCodeOption, 0, 1)
+		opts = append(opts, oauth2.SetAuthURLParam("response_mode", "form_post"))
+		authURL = externalProvider.Config.AuthCodeURL(tokenString, opts...)
+		if authURL != "" {
+			if u, err := url.Parse(authURL); err == nil {
+				u.RawQuery = strings.ReplaceAll(u.RawQuery, "+", "%20")
+				authURL = u.String()
+			}
+		}
+	default:
+		authURL = p.AuthCodeURL(tokenString)
 	}
 
-	http.Redirect(w, r, url, http.StatusFound)
+	http.Redirect(w, r, authURL, http.StatusFound)
 	return nil
 }
 
@@ -323,6 +335,8 @@ func (a *API) Provider(ctx context.Context, name string, scopes string) (provide
 	name = strings.ToLower(name)
 
 	switch name {
+	case "apple":
+		return provider.NewAppleProvider(config.External.Apple)
 	case "bitbucket":
 		return provider.NewBitbucketProvider(config.External.Bitbucket)
 	case "github":
