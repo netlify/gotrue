@@ -671,11 +671,13 @@ GoTrue exposes the following endpoints:
 
   query params:
   ```
-  provider=azure | google | bitbucket | github | gitlab | facebook | twitter
+  provider=azure | google | bitbucket | github | gitlab | facebook | twitter | apple
   scopes=<optional additional scopes depending on the provider (email and name are requested by default)>
   ```
  
   Redirects to provider and then to `/callback`
+  
+  For apple specific setup see: https://github.com/supabase/gotrue#apple-oauth
   
 ### **GET /callback**
 
