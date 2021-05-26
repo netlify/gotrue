@@ -29,6 +29,8 @@ const (
 	externalReferrerKey     = contextKey("external_referrer")
 	functionHooksKey        = contextKey("function_hooks")
 	adminUserKey            = contextKey("admin_user")
+	oauthTokenKey           = contextKey("oauth_token") // for OAuth1.0, also known as request token
+	oauthVerifierKey        = contextKey("oauth_verifier")
 )
 
 // withToken adds the JWT token to the context.
@@ -222,4 +224,29 @@ func getAdminUser(ctx context.Context) *models.User {
 		return nil
 	}
 	return obj.(*models.User)
+}
+
+// withRequestToken adds the request token to the context
+func withRequestToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, oauthTokenKey, token)
+}
+
+func getRequestToken(ctx context.Context) string {
+	obj := ctx.Value(oauthTokenKey)
+	if obj == nil {
+		return ""
+	}
+	return obj.(string)
+}
+
+func withOAuthVerifier(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, oauthVerifierKey, token)
+}
+
+func getOAuthVerifier(ctx context.Context) string {
+	obj := ctx.Value(oauthVerifierKey)
+	if obj == nil {
+		return ""
+	}
+	return obj.(string)
 }
