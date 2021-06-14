@@ -25,9 +25,56 @@ CREATE SCHEMA auth;
 
 ALTER SCHEMA auth OWNER TO supabase_admin;
 
+--
+-- Name: role(); Type: FUNCTION; Schema: auth; Owner: postgres
+--
+
+CREATE FUNCTION auth.role() RETURNS text
+    LANGUAGE sql STABLE
+    AS $$
+  select nullif(current_setting('request.jwt.claim.role', true), '')::text;
+$$;
+
+
+ALTER FUNCTION auth.role() OWNER TO postgres;
+
+--
+-- Name: uid(); Type: FUNCTION; Schema: auth; Owner: postgres
+--
+
+CREATE FUNCTION auth.uid() RETURNS uuid
+    LANGUAGE sql STABLE
+    AS $$
+  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
+$$;
+
+
+ALTER FUNCTION auth.uid() OWNER TO postgres;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: audit_log_entries; Type: TABLE; Schema: auth; Owner: postgres
+--
+
+CREATE TABLE auth.audit_log_entries (
+    instance_id uuid,
+    id uuid NOT NULL,
+    payload json,
+    created_at timestamp with time zone
+);
+
+
+ALTER TABLE auth.audit_log_entries OWNER TO postgres;
+
+--
+-- Name: TABLE audit_log_entries; Type: COMMENT; Schema: auth; Owner: postgres
+--
+
+COMMENT ON TABLE auth.audit_log_entries IS 'Auth: Audit trail for user actions.';
+
 
 --
 -- Name: instances; Type: TABLE; Schema: auth; Owner: postgres
@@ -97,51 +144,6 @@ ALTER SEQUENCE auth.refresh_tokens_id_seq OWNED BY auth.refresh_tokens.id;
 
 
 --
--- Name: totp_secrets; Type: TABLE; Schema: auth; Owner: postgres
---
-
-CREATE TABLE auth.totp_secrets (
-    instance_id uuid,
-    id bigint NOT NULL,
-    user_id uuid NOT NULL,
-    encrypted_secret text,
-    otp_last_requested_at timestamp with time zone,
-    created_at timestamp with time zone,
-    updated_at timestamp with time zone
-);
-
-
-ALTER TABLE auth.totp_secrets OWNER TO postgres;
-
---
--- Name: TABLE totp_secrets; Type: COMMENT; Schema: auth; Owner: postgres
---
-
-COMMENT ON TABLE auth.totp_secrets IS 'Auth: Store of totp secrets used to generate otp once they expire.';
-
-
---
--- Name: totp_secrets_id_seq; Type: SEQUENCE; Schema: auth; Owner: postgres
---
-
-CREATE SEQUENCE auth.totp_secrets_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE auth.totp_secrets_id_seq OWNER TO postgres;
-
---
--- Name: totp_secrets_id_seq; Type: SEQUENCE OWNED BY; Schema: auth; Owner: postgres
---
-
-ALTER SEQUENCE auth.totp_secrets_id_seq OWNED BY auth.totp_secrets.id;
-
-
---
 -- Name: users; Type: TABLE; Schema: auth; Owner: postgres
 --
 
@@ -198,10 +200,11 @@ ALTER TABLE ONLY auth.refresh_tokens ALTER COLUMN id SET DEFAULT nextval('auth.r
 
 
 --
--- Name: totp_secrets id; Type: DEFAULT; Schema: auth; Owner: postgres
+-- Name: audit_log_entries audit_log_entries_pkey; Type: CONSTRAINT; Schema: auth; Owner: postgres
 --
 
-ALTER TABLE ONLY auth.totp_secrets ALTER COLUMN id SET DEFAULT nextval('auth.totp_secrets_id_seq'::regclass);
+ALTER TABLE ONLY auth.audit_log_entries
+    ADD CONSTRAINT audit_log_entries_pkey PRIMARY KEY (id);
 
 
 --
@@ -221,14 +224,6 @@ ALTER TABLE ONLY auth.refresh_tokens
 
 
 --
--- Name: totp_secrets totp_secrets_pkey; Type: CONSTRAINT; Schema: auth; Owner: postgres
---
-
-ALTER TABLE ONLY auth.totp_secrets
-    ADD CONSTRAINT totp_secrets_pkey PRIMARY KEY (id);
-
-
---
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: auth; Owner: postgres
 --
 
@@ -242,6 +237,13 @@ ALTER TABLE ONLY auth.users
 
 ALTER TABLE ONLY auth.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: audit_logs_instance_id_idx; Type: INDEX; Schema: auth; Owner: postgres
+--
+
+CREATE INDEX audit_logs_instance_id_idx ON auth.audit_log_entries USING btree (instance_id);
 
 
 --
@@ -266,20 +268,6 @@ CREATE INDEX refresh_tokens_token_idx ON auth.refresh_tokens USING btree (token)
 
 
 --
--- Name: totp_secrets_instance_id_idx; Type: INDEX; Schema: auth; Owner: postgres
---
-
-CREATE INDEX totp_secrets_instance_id_idx ON auth.totp_secrets USING btree (instance_id);
-
-
---
--- Name: totp_secrets_instance_id_user_id_idx; Type: INDEX; Schema: auth; Owner: postgres
---
-
-CREATE INDEX totp_secrets_instance_id_user_id_idx ON auth.totp_secrets USING btree (instance_id, user_id);
-
-
---
 -- Name: users_instance_id_email_idx; Type: INDEX; Schema: auth; Owner: postgres
 --
 
@@ -298,14 +286,6 @@ CREATE INDEX users_instance_id_idx ON auth.users USING btree (instance_id);
 --
 
 CREATE UNIQUE INDEX schema_migration_version_idx ON public.schema_migration USING btree (version);
-
-
---
--- Name: totp_secrets user_id_fk; Type: FK CONSTRAINT; Schema: auth; Owner: postgres
---
-
-ALTER TABLE ONLY auth.totp_secrets
-    ADD CONSTRAINT user_id_fk FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
 --
