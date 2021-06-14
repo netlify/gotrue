@@ -337,8 +337,12 @@ func (a *API) Provider(ctx context.Context, name string, scopes string) (provide
 	switch name {
 	case "apple":
 		return provider.NewAppleProvider(config.External.Apple)
+	case "azure":
+		return provider.NewAzureProvider(config.External.Azure, scopes)
 	case "bitbucket":
 		return provider.NewBitbucketProvider(config.External.Bitbucket)
+	case "discord":
+		return provider.NewDiscordProvider(config.External.Discord, scopes)
 	case "github":
 		return provider.NewGithubProvider(config.External.Github, scopes)
 	case "gitlab":
@@ -349,8 +353,6 @@ func (a *API) Provider(ctx context.Context, name string, scopes string) (provide
 		return provider.NewFacebookProvider(config.External.Facebook, scopes)
 	case "twitter":
 		return provider.NewTwitterProvider(config.External.Twitter, scopes)
-	case "azure":
-		return provider.NewAzureProvider(config.External.Azure, scopes)
 	case "saml":
 		return provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	default:
