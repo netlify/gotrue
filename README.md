@@ -484,7 +484,8 @@ GoTrue exposes the following endpoints:
   ```json
   {
     "type": "signup",
-    "token": "confirmation-code-delivered-in-email"
+    "token": "confirmation-code-delivered-in-email",
+    "redirect_to": "https://supabase.io"
   }
   ```
 
@@ -512,6 +513,7 @@ GoTrue exposes the following endpoints:
   {
     "type": "signup",
     "token": "confirmation-code-delivered-in-email",
+    "redirect_to": "https://supabase.io"
   }
   ```
 
