@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS auth.totp_secrets (
     instance_id uuid NULL,
     id bigserial NOT NULL,
     user_id uuid NOT NULL UNIQUE,
-    encrypted_secret text NULL,
+    encrypted_secret bytea NULL,
     otp_last_requested_at timestamptz NULL,
     created_at timestamptz NULL,
 	updated_at timestamptz NULL,
