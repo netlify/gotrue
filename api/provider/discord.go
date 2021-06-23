@@ -20,11 +20,12 @@ type discordProvider struct {
 }
 
 type discordUser struct {
-	Avatar   string `json:"avatar"`
-	Email    string `json:"email"`
-	Id       string `json:"id"`
-	Name     string `json:"username"`
-	Verified bool   `json:"verified"`
+	Avatar        string `json:"avatar"`
+	Discriminator int    `json:"discriminator,string"`
+	Email         string `json:"email"`
+	Id            string `json:"id"`
+	Name          string `json:"username"`
+	Verified      bool   `json:"verified"`
 }
 
 // NewDiscordProvider creates a Discord account provider.
@@ -68,18 +69,27 @@ func (g discordProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*U
 		return nil, errors.New("Unable to find email with Discord provider")
 	}
 
-	// https://discord.com/developers/docs/reference#image-formatting:
-	// "In the case of endpoints that support GIFs, the hash will begin with a_
-	// if it is available in GIF format."
+	var avatarURL string
 	extension := "png"
-	if strings.HasPrefix(u.Avatar, "a_") {
-		extension = "gif"
+	// https://discord.com/developers/docs/reference#image-formatting-cdn-endpoints:
+	// In the case of the Default User Avatar endpoint, the value for
+	// user_discriminator in the path should be the user's discriminator modulo 5
+	if u.Avatar == "" {
+		avatarURL = fmt.Sprintf("https://cdn.discordapp.com/embed/avatars/%d.%s", u.Discriminator%5, extension)
+	} else {
+		// https://discord.com/developers/docs/reference#image-formatting:
+		// "In the case of endpoints that support GIFs, the hash will begin with a_
+		// if it is available in GIF format."
+		if strings.HasPrefix(u.Avatar, "a_") {
+			extension = "gif"
+		}
+		avatarURL = fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.%s", u.Id, u.Avatar, extension)
 	}
 
 	return &UserProvidedData{
 		Metadata: map[string]string{
 			nameKey:      u.Name,
-			avatarURLKey: fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.%s", u.Id, u.Avatar, extension),
+			avatarURLKey: avatarURL,
 		},
 		Emails: []Email{{
 			Email:    u.Email,
