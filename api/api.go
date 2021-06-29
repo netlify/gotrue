@@ -170,23 +170,23 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		})
 	})
 
-	if globalConfig.MultiInstanceMode {
-		// Operator microservice API
-		r.WithBypass(logger).With(api.verifyOperatorRequest).Get("/", api.GetAppManifest)
-		r.Route("/instances", func(r *router) {
-			r.UseBypass(logger)
-			r.Use(api.verifyOperatorRequest)
+	// if globalConfig.MultiInstanceMode {
+	// 	// Operator microservice API
+	// 	r.WithBypass(logger).With(api.verifyOperatorRequest).Get("/", api.GetAppManifest)
+	// 	r.Route("/instances", func(r *router) {
+	// 		r.UseBypass(logger)
+	// 		r.Use(api.verifyOperatorRequest)
 
-			r.Post("/", api.CreateInstance)
-			r.Route("/{instance_id}", func(r *router) {
-				r.Use(api.loadInstance)
+	// 		r.Post("/", api.CreateInstance)
+	// 		r.Route("/{instance_id}", func(r *router) {
+	// 			r.Use(api.loadInstance)
 
-				r.Get("/", api.GetInstance)
-				r.Put("/", api.UpdateInstance)
-				r.Delete("/", api.DeleteInstance)
-			})
-		})
-	}
+	// 			r.Get("/", api.GetInstance)
+	// 			r.Put("/", api.UpdateInstance)
+	// 			r.Delete("/", api.DeleteInstance)
+	// 		})
+	// 	})
+	// }
 
 	corsHandler := cors.New(cors.Options{
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
