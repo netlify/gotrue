@@ -116,7 +116,7 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 		return nil, internalServerError("Database error loading instance").WithInternalError(err)
 	}
 
-	config, err := instance.Config()
+	config, err = instance.Config()
 	if err != nil {
 		return nil, internalServerError("Error loading environment config").WithInternalError(err)
 	}
