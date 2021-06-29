@@ -34,6 +34,10 @@ the payload values can be trusted.
 
 When signup is disabled the only way to create new users is through invites. Defaults to `false`, all signups enabled.
 
+`GOTRUE_EXTERNAL_EMAIL_DISABLED` - `bool`
+
+Use this to disable email signups (users can still use external oauth providers to sign up / sign in)
+
 `GOTRUE_RATE_LIMIT_HEADER` - `string`
 
 Header on which to rate limit the `/token` endpoint.
