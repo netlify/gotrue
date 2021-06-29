@@ -1,4 +1,4 @@
--- Supabase super admin
+-- Supabase auth admin
 CREATE USER supabase_auth_admin NOINHERIT CREATEROLE LOGIN NOREPLICATION;
 GRANT ALL PRIVILEGES ON SCHEMA auth TO supabase_auth_admin;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA auth TO supabase_auth_admin;
