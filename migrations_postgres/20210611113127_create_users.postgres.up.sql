@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS auth.users (
 	"role" varchar(255) NULL,
 	email varchar(255) NULL UNIQUE,
 	encrypted_password varchar(255) NULL,
-	confirmed_at timestamptz NULL,
+	email_confirmed_at timestamptz NULL,
 	invited_at timestamptz NULL,
 	confirmation_token varchar(255) NULL,
 	confirmation_sent_at timestamptz NULL,
