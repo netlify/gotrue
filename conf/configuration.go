@@ -101,6 +101,7 @@ type SMTPConfiguration struct {
 	User         string        `json:"user"`
 	Pass         string        `json:"pass,omitempty"`
 	AdminEmail   string        `json:"admin_email" split_words:"true"`
+	SenderName   string        `json:"sender_name" split_words:"true"`
 }
 
 type MailerConfiguration struct {
