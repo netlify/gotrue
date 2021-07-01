@@ -16,7 +16,7 @@ import (
 
 const (
 	requestURL      = "https://api.twitter.com/oauth/request_token"
-	authorizeURL    = "https://api.twitter.com/oauth/authorize"
+	authorizeURL    = "https://api.twitter.com/oauth/authenticate"
 	tokenURL        = "https://api.twitter.com/oauth/access_token"
 	endpointProfile = "https://api.twitter.com/1.1/account/verify_credentials.json"
 )
