@@ -29,10 +29,7 @@ func NewMailer(instanceConfig *conf.Configuration) Mailer {
 	}
 
 	mail := gomail.NewMessage()
-	from := instanceConfig.SMTP.AdminEmail
-	if instanceConfig.SMTP.SenderName != "" {
-		from = mail.FormatAddress(instanceConfig.SMTP.AdminEmail, instanceConfig.SMTP.SenderName)
-	}
+	from := mail.FormatAddress(instanceConfig.SMTP.AdminEmail, instanceConfig.SMTP.SenderName)
 
 	return &TemplateMailer{
 		SiteURL: instanceConfig.SiteURL,
