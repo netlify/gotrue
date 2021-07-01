@@ -32,6 +32,7 @@ type TwitterProvider struct {
 }
 
 type twitterUser struct {
+	UserName  string `json:"screen_name"`
 	Name      string `json:"name"`
 	AvatarURL string `json:"profile_image_url"`
 	Email     string `json:"email"`
@@ -78,6 +79,7 @@ func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessTok
 
 	data := &UserProvidedData{
 		Metadata: map[string]string{
+			userNameKey:  u.UserName,
 			nameKey:      u.Name,
 			avatarURLKey: u.AvatarURL,
 		},
