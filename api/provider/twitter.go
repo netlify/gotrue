@@ -16,7 +16,7 @@ import (
 
 const (
 	requestURL      = "https://api.twitter.com/oauth/request_token"
-	authorizeURL    = "https://api.twitter.com/oauth/authenticate"
+	authenticateURL = "https://api.twitter.com/oauth/authenticate"
 	tokenURL        = "https://api.twitter.com/oauth/access_token"
 	endpointProfile = "https://api.twitter.com/1.1/account/verify_credentials.json"
 )
@@ -109,7 +109,7 @@ func newConsumer(provider *TwitterProvider) *oauth.Consumer {
 		provider.Secret,
 		oauth.ServiceProvider{
 			RequestTokenUrl:   requestURL,
-			AuthorizeTokenUrl: authorizeURL,
+			AuthorizeTokenUrl: authenticateURL,
 			AccessTokenUrl:    tokenURL,
 		})
 	return c
