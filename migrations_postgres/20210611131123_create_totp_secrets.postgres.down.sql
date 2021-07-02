@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS auth.totp_secrets CASCADE;
