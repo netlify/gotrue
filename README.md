@@ -273,6 +273,10 @@ If the mail server requires authentication, the password to use.
 
 Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email. The value is the number of seconds. Defaults to 900 (15 minutes).
 
+`SMTP_SENDER_NAME` - `string`
+
+Sets the name of the sender. Defaults to the `SMTP_ADMIN_EMAIL` if not used.
+
 `MAILER_AUTOCONFIRM` - `bool`
 
 If you do not require email confirmation, you may set this to `true`. Defaults to `false`.
