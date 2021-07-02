@@ -81,13 +81,14 @@ type EmailContentConfiguration struct {
 
 type ProviderConfiguration struct {
 	Apple       OAuthProviderConfiguration `json:"apple"`
+	Azure       OAuthProviderConfiguration `json:"azure"`
 	Bitbucket   OAuthProviderConfiguration `json:"bitbucket"`
+	Discord     OAuthProviderConfiguration `json:"discord"`
 	Github      OAuthProviderConfiguration `json:"github"`
 	Gitlab      OAuthProviderConfiguration `json:"gitlab"`
 	Google      OAuthProviderConfiguration `json:"google"`
 	Facebook    OAuthProviderConfiguration `json:"facebook"`
 	Twitter     OAuthProviderConfiguration `json:"twitter"`
-	Azure       OAuthProviderConfiguration `json:"azure"`
 	Email       EmailProviderConfiguration `json:"email"`
 	Saml        SamlProviderConfiguration  `json:"saml"`
 	RedirectURL string                     `json:"redirect_url"`

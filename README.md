@@ -34,6 +34,10 @@ the payload values can be trusted.
 
 When signup is disabled the only way to create new users is through invites. Defaults to `false`, all signups enabled.
 
+`GOTRUE_EXTERNAL_EMAIL_DISABLED` - `bool`
+
+Use this to disable email signups (users can still use external oauth providers to sign up / sign in)
+
 `GOTRUE_RATE_LIMIT_HEADER` - `string`
 
 Header on which to rate limit the `/token` endpoint.
@@ -168,7 +172,7 @@ The default group to assign all new users to.
 
 ### External Authentication Providers
 
-We support `azure`, `bitbucket`, `github`, `gitlab`, `facebook`, `twitter`, `apple` and `google` for external authentication.
+We support `apple`, `azure`, `bitbucket`, `discord`, `facebook`, `github`, `gitlab`, `google` and `twitter` for external authentication.
 Use the names as the keys underneath `external` to configure each separately.
 
 ```properties
@@ -411,11 +415,15 @@ GoTrue exposes the following endpoints:
   ```json
   {
     "external": {
+      "apple": true,
       "azure": true,
       "bitbucket": true,
+      "discord": true,
+      "facebook": true,
       "github": true,
       "gitlab": true,
-      "google": true
+      "google": true,
+      "twitter": true
     },
     "disable_signup": false,
     "autoconfirm": false
@@ -484,7 +492,8 @@ GoTrue exposes the following endpoints:
   ```json
   {
     "type": "signup",
-    "token": "confirmation-code-delivered-in-email"
+    "token": "confirmation-code-delivered-in-email",
+    "redirect_to": "https://supabase.io"
   }
   ```
 
@@ -512,6 +521,7 @@ GoTrue exposes the following endpoints:
   {
     "type": "signup",
     "token": "confirmation-code-delivered-in-email",
+    "redirect_to": "https://supabase.io"
   }
   ```
 
@@ -671,7 +681,7 @@ GoTrue exposes the following endpoints:
 
   query params:
   ```
-  provider=azure | google | bitbucket | github | gitlab | facebook | twitter | apple
+  provider=apple | azure | bitbucket | discord | facebook | github | gitlab | google | twitter
   scopes=<optional additional scopes depending on the provider (email and name are requested by default)>
   ```
  
