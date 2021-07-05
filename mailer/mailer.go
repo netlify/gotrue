@@ -8,6 +8,7 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/mailme"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/gomail.v2"
 )
 
 // Mailer defines the interface a mailer must implement.
@@ -27,6 +28,9 @@ func NewMailer(instanceConfig *conf.Configuration) Mailer {
 		return &noopMailer{}
 	}
 
+	mail := gomail.NewMessage()
+	from := mail.FormatAddress(instanceConfig.SMTP.AdminEmail, instanceConfig.SMTP.SenderName)
+
 	return &TemplateMailer{
 		SiteURL: instanceConfig.SiteURL,
 		Config:  instanceConfig,
@@ -35,7 +39,7 @@ func NewMailer(instanceConfig *conf.Configuration) Mailer {
 			Port:    instanceConfig.SMTP.Port,
 			User:    instanceConfig.SMTP.User,
 			Pass:    instanceConfig.SMTP.Pass,
-			From:    instanceConfig.SMTP.AdminEmail,
+			From:    from,
 			BaseURL: instanceConfig.SiteURL,
 			Logger:  logrus.New(),
 		},

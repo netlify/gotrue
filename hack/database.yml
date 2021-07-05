@@ -13,3 +13,11 @@ test:
   port: {{ envOr "MYSQL_PORT" "3306"  }}
   user: {{ envOr "MYSQL_USER"  "root"  }}
   password: {{ envOr "MYSQL_PASSWORD"  ""  }}
+
+postgres_development: 
+  dialect: "postgres"
+  database: "gotrue_postgres_development"
+  host: {{ envOr "POSTGRES_HOST" "127.0.0.1"  }}
+  port: {{ envOr "POSTGRES_PORT" "5432"  }}
+  user: {{ envOr "POSTGRES_USER"  "postgres"  }}
+  password: {{ envOr "POSTGRES_PASSWORD"  "root"  }}

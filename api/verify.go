@@ -85,7 +85,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 			var e *HTTPError
 			if errors.As(terr, &e) {
 				if errors.Is(e.InternalError, redirectWithQueryError) {
-					rurl := a.prepErrorRedirectURL(e, r)
+					rurl := a.prepErrorRedirectURL(e, r, params.RedirectTo)
 					http.Redirect(w, r, rurl, http.StatusFound)
 					return nil
 				}
@@ -224,9 +224,7 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 	return user, nil
 }
 
-func (a *API) prepErrorRedirectURL(err *HTTPError, r *http.Request) string {
-	ctx := r.Context()
-	rurl := a.getConfig(ctx).SiteURL
+func (a *API) prepErrorRedirectURL(err *HTTPError, r *http.Request, rurl string) string {
 	q := url.Values{}
 
 	log := getLogEntry(r)
