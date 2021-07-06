@@ -3,12 +3,15 @@ package api
 import "net/http"
 
 type ProviderSettings struct {
+	Apple     bool `json:"apple"`
+	Azure     bool `json:"azure"`
 	Bitbucket bool `json:"bitbucket"`
+	Discord   bool `json:"discord"`
 	GitHub    bool `json:"github"`
 	GitLab    bool `json:"gitlab"`
 	Google    bool `json:"google"`
 	Facebook  bool `json:"facebook"`
-	Azure     bool `json:"azure"`
+	Twitter   bool `json:"twitter"`
 	Email     bool `json:"email"`
 	SAML      bool `json:"saml"`
 }
@@ -29,12 +32,15 @@ func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
 
 	return sendJSON(w, http.StatusOK, &Settings{
 		ExternalProviders: ProviderSettings{
+			Apple:     config.External.Apple.Enabled,
+			Azure:     config.External.Azure.Enabled,
 			Bitbucket: config.External.Bitbucket.Enabled,
+			Discord:   config.External.Discord.Enabled,
 			GitHub:    config.External.Github.Enabled,
 			GitLab:    config.External.Gitlab.Enabled,
 			Google:    config.External.Google.Enabled,
 			Facebook:  config.External.Facebook.Enabled,
-			Azure:     config.External.Azure.Enabled,
+			Twitter:   config.External.Twitter.Enabled,
 			Email:     !config.External.Email.Disabled,
 			SAML:      config.External.Saml.Enabled,
 		},

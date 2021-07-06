@@ -11,10 +11,12 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gofrs/uuid"
+	"github.com/markbates/goth/gothic"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
 )
 
 type ExternalProviderClaims struct {
@@ -37,7 +39,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 	providerType := r.URL.Query().Get("provider")
 	scopes := r.URL.Query().Get("scopes")
 
-	provider, err := a.Provider(ctx, providerType, scopes)
+	p, err := a.Provider(ctx, providerType, scopes)
 	if err != nil {
 		return badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
 	}
@@ -53,10 +55,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		}
 	}
 
-	redirectURL := a.validateRedirectURL(r, r.URL.Query().Get("redirect_to"))
-	if redirectURL == "" {
-		redirectURL = a.getReferrer(r)
-	}
+	redirectURL := a.getRedirectURLOrReferrer(r, r.URL.Query().Get("redirect_to"))
 	log := getLogEntry(r)
 	log.WithField("provider", providerType).Info("Redirecting to external provider")
 
@@ -78,7 +77,29 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		return internalServerError("Error creating state").WithInternalError(err)
 	}
 
-	http.Redirect(w, r, provider.AuthCodeURL(tokenString), http.StatusFound)
+	var authURL string
+	switch externalProvider := p.(type) {
+	case *provider.TwitterProvider:
+		authURL = externalProvider.AuthCodeURL(tokenString)
+		err := gothic.StoreInSession(providerType, externalProvider.Marshal(), r, w)
+		if err != nil {
+			return internalServerError("Error storing request token in session").WithInternalError(err)
+		}
+	case *provider.AppleProvider:
+		opts := make([]oauth2.AuthCodeOption, 0, 1)
+		opts = append(opts, oauth2.SetAuthURLParam("response_mode", "form_post"))
+		authURL = externalProvider.Config.AuthCodeURL(tokenString, opts...)
+		if authURL != "" {
+			if u, err := url.Parse(authURL); err == nil {
+				u.RawQuery = strings.ReplaceAll(u.RawQuery, "+", "%20")
+				authURL = u.String()
+			}
+		}
+	default:
+		authURL = p.AuthCodeURL(tokenString)
+	}
+
+	http.Redirect(w, r, authURL, http.StatusFound)
 	return nil
 }
 
@@ -101,6 +122,14 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			return err
 		}
 		userData = samlUserData
+	} else if providerType == "twitter" {
+		// future OAuth1.0 providers will use this method
+		oAuthResponseData, err := a.oAuth1Callback(ctx, r, providerType)
+		if err != nil {
+			return err
+		}
+		userData = oAuthResponseData.userData
+		providerToken = oAuthResponseData.token
 	} else {
 		oAuthResponseData, err := a.oAuthCallback(ctx, r, providerType)
 		if err != nil {
@@ -306,8 +335,14 @@ func (a *API) Provider(ctx context.Context, name string, scopes string) (provide
 	name = strings.ToLower(name)
 
 	switch name {
+	case "apple":
+		return provider.NewAppleProvider(config.External.Apple)
+	case "azure":
+		return provider.NewAzureProvider(config.External.Azure, scopes)
 	case "bitbucket":
 		return provider.NewBitbucketProvider(config.External.Bitbucket)
+	case "discord":
+		return provider.NewDiscordProvider(config.External.Discord, scopes)
 	case "github":
 		return provider.NewGithubProvider(config.External.Github, scopes)
 	case "gitlab":
@@ -316,8 +351,8 @@ func (a *API) Provider(ctx context.Context, name string, scopes string) (provide
 		return provider.NewGoogleProvider(config.External.Google, scopes)
 	case "facebook":
 		return provider.NewFacebookProvider(config.External.Facebook, scopes)
-	case "azure":
-		return provider.NewAzureProvider(config.External.Azure, scopes)
+	case "twitter":
+		return provider.NewTwitterProvider(config.External.Twitter, scopes)
 	case "saml":
 		return provider.NewSamlProvider(config.External.Saml, a.db, getInstanceID(ctx))
 	default:

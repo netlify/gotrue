@@ -99,6 +99,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 			r.Use(api.loadInstanceConfig)
 		}
 		r.Get("/", api.ExternalProviderCallback)
+		r.Post("/", api.ExternalProviderCallback)
 	})
 
 	r.Route("/", func(r *router) {

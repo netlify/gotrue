@@ -65,7 +65,7 @@ func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[str
 		InstanceID:        instanceID,
 		ID:                id,
 		Aud:               aud,
-		Email:             email,
+		Email:             strings.ToLower(email),
 		UserMetaData:      userData,
 		EncryptedPassword: pw,
 	}
@@ -256,12 +256,16 @@ func findUser(tx *storage.Connection, query string, args ...interface{}) (*User,
 
 // FindUserByConfirmationToken finds users with the matching confirmation token.
 func FindUserByConfirmationToken(tx *storage.Connection, token string) (*User, error) {
-	return findUser(tx, "confirmation_token = ?", token)
+	user, err := findUser(tx, "confirmation_token = ?", token)
+	if err != nil {
+		return nil, ConfirmationTokenNotFoundError{}
+	}
+	return user, nil
 }
 
 // FindUserByEmailAndAudience finds a user with the matching email and audience.
 func FindUserByEmailAndAudience(tx *storage.Connection, instanceID uuid.UUID, email, aud string) (*User, error) {
-	return findUser(tx, "instance_id = ? and email = ? and aud = ?", instanceID, email, aud)
+	return findUser(tx, "instance_id = ? and LOWER(email) = ? and aud = ?", instanceID, strings.ToLower(email), aud)
 }
 
 // FindUserByID finds a user matching the provided ID.

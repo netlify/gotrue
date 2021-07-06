@@ -34,6 +34,10 @@ the payload values can be trusted.
 
 When signup is disabled the only way to create new users is through invites. Defaults to `false`, all signups enabled.
 
+`GOTRUE_EXTERNAL_EMAIL_DISABLED` - `bool`
+
+Use this to disable email signups (users can still use external oauth providers to sign up / sign in)
+
 `GOTRUE_RATE_LIMIT_HEADER` - `string`
 
 Header on which to rate limit the `/token` endpoint.
@@ -168,10 +172,11 @@ The default group to assign all new users to.
 
 ### External Authentication Providers
 
-We support `azure`, `bitbucket`, `github`, `gitlab`, and `google` for external authentication.
+We support `apple`, `azure`, `bitbucket`, `discord`, `facebook`, `github`, `gitlab`, `google` and `twitter` for external authentication.
 Use the names as the keys underneath `external` to configure each separately.
 
 ```properties
+GOTRUE_EXTERNAL_GITHUB_ENABLED=true
 GOTRUE_EXTERNAL_GITHUB_CLIENT_ID=myappclientid
 GOTRUE_EXTERNAL_GITHUB_SECRET=clientsecretvaluessssh
 ```
@@ -197,6 +202,38 @@ The URI a OAuth2 provider will redirect to with the `code` and `state` values.
 `EXTERNAL_X_URL` - `string`
 
 The base URL used for constructing the URLs to request authorization and access tokens. Used by `gitlab` only. Defaults to `https://gitlab.com`.
+
+#### Apple OAuth 
+
+To try out external authentication with Apple locally, you will need to do the following:
+1. Remap localhost to \<my_custom_dns \> in your `/etc/hosts` config.
+2. Configure gotrue to serve HTTPS traffic over localhost by replacing `ListenAndServe` in [api.go](api/api.go) with:
+   ```
+      func (a *API) ListenAndServe(hostAndPort string) {
+        log := logrus.WithField("component", "api")
+        path, err := os.Getwd()
+        if err != nil {
+          log.Println(err)
+        }
+        server := &http.Server{
+          Addr:    hostAndPort,
+          Handler: a.handler,
+        }
+        done := make(chan struct{})
+        defer close(done)
+        go func() {
+          waitForTermination(log, done)
+          ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+          defer cancel()
+          server.Shutdown(ctx)
+        }()
+        if err := server.ListenAndServeTLS("PATH_TO_CRT_FILE", "PATH_TO_KEY_FILE"); err != http.ErrServerClosed {
+          log.WithError(err).Fatal("http server listen failed")
+        }
+    }
+   ```
+3. Generate the crt and key file. See [here](https://www.freecodecamp.org/news/how-to-get-https-working-on-your-local-development-environment-in-5-minutes-7af615770eec/) for more information.
+4. Generate the `GOTRUE_EXTERNAL_APPLE_SECRET` by following this [post](https://medium.com/identity-beyond-borders/how-to-configure-sign-in-with-apple-77c61e336003)!
 
 ### E-Mail
 
@@ -235,6 +272,10 @@ If the mail server requires authentication, the password to use.
 `SMTP_MAX_FREQUENCY` - `number`
 
 Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email. The value is the number of seconds. Defaults to 900 (15 minutes).
+
+`SMTP_SENDER_NAME` - `string`
+
+Sets the name of the sender. Defaults to the `SMTP_ADMIN_EMAIL` if not used.
 
 `MAILER_AUTOCONFIRM` - `bool`
 
@@ -378,11 +419,15 @@ GoTrue exposes the following endpoints:
   ```json
   {
     "external": {
+      "apple": true,
       "azure": true,
       "bitbucket": true,
+      "discord": true,
+      "facebook": true,
       "github": true,
       "gitlab": true,
-      "google": true
+      "google": true,
+      "twitter": true
     },
     "disable_signup": false,
     "autoconfirm": false
@@ -451,7 +496,8 @@ GoTrue exposes the following endpoints:
   ```json
   {
     "type": "signup",
-    "token": "confirmation-code-delivered-in-email"
+    "token": "confirmation-code-delivered-in-email",
+    "redirect_to": "https://supabase.io"
   }
   ```
 
@@ -479,6 +525,7 @@ GoTrue exposes the following endpoints:
   {
     "type": "signup",
     "token": "confirmation-code-delivered-in-email",
+    "redirect_to": "https://supabase.io"
   }
   ```
 
@@ -638,11 +685,13 @@ GoTrue exposes the following endpoints:
 
   query params:
   ```
-  provider=azure | google | bitbucket | github | gitlab | facebook
+  provider=apple | azure | bitbucket | discord | facebook | github | gitlab | google | twitter
   scopes=<optional additional scopes depending on the provider (email and name are requested by default)>
   ```
  
   Redirects to provider and then to `/callback`
+  
+  For apple specific setup see: https://github.com/supabase/gotrue#apple-oauth
   
 ### **GET /callback**
 
@@ -650,4 +699,4 @@ GoTrue exposes the following endpoints:
  
   Redirects to `<GOTRUE_SITE_URL>#access_token=<access_token>&refresh_token=<refresh_token>&provider_token=<provider_oauth_token>&expires_in=3600&provider=<provider_name>`
   If additional scopes were requested then `provider_token` will be populated, you can use this to fetch additional data from the provider or interact with their services 
-  
+

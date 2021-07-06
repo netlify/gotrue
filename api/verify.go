@@ -49,7 +49,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		params.Token = r.FormValue("token")
 		params.Password = ""
 		params.Type = r.FormValue("type")
-		params.RedirectTo = a.validateRedirectURL(r, r.FormValue("redirect_to"))
+		params.RedirectTo = a.getRedirectURLOrReferrer(r, r.FormValue("redirect_to"))
 	case "POST":
 		jsonDecoder := json.NewDecoder(r.Body)
 		if err := jsonDecoder.Decode(params); err != nil {
@@ -88,7 +88,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 			var e *HTTPError
 			if errors.As(terr, &e) {
 				if errors.Is(e.InternalError, redirectWithQueryError) {
-					rurl := a.prepErrorRedirectURL(e, r)
+					rurl := a.prepErrorRedirectURL(e, r, params.RedirectTo)
 					http.Redirect(w, r, rurl, http.StatusFound)
 					return nil
 				}
@@ -116,9 +116,6 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	case "GET":
 		rurl := params.RedirectTo
-		if rurl == "" {
-			rurl = config.SiteURL
-		}
 		if token != nil {
 			q := url.Values{}
 			q.Set("access_token", token.Token)
@@ -143,7 +140,7 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 	user, err := models.FindUserByConfirmationToken(conn, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return nil, notFoundError(err.Error())
+			return nil, notFoundError(err.Error()).WithInternalError(redirectWithQueryError)
 		}
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
@@ -230,9 +227,7 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 	return user, nil
 }
 
-func (a *API) prepErrorRedirectURL(err *HTTPError, r *http.Request) string {
-	ctx := r.Context()
-	rurl := a.getConfig(ctx).SiteURL
+func (a *API) prepErrorRedirectURL(err *HTTPError, r *http.Request, rurl string) string {
 	q := url.Values{}
 
 	log := getLogEntry(r)

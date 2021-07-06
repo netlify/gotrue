@@ -80,12 +80,15 @@ type EmailContentConfiguration struct {
 }
 
 type ProviderConfiguration struct {
+	Apple       OAuthProviderConfiguration `json:"apple"`
+	Azure       OAuthProviderConfiguration `json:"azure"`
 	Bitbucket   OAuthProviderConfiguration `json:"bitbucket"`
+	Discord     OAuthProviderConfiguration `json:"discord"`
 	Github      OAuthProviderConfiguration `json:"github"`
 	Gitlab      OAuthProviderConfiguration `json:"gitlab"`
 	Google      OAuthProviderConfiguration `json:"google"`
 	Facebook    OAuthProviderConfiguration `json:"facebook"`
-	Azure       OAuthProviderConfiguration `json:"azure"`
+	Twitter     OAuthProviderConfiguration `json:"twitter"`
 	Email       EmailProviderConfiguration `json:"email"`
 	Saml        SamlProviderConfiguration  `json:"saml"`
 	RedirectURL string                     `json:"redirect_url"`
@@ -98,6 +101,7 @@ type SMTPConfiguration struct {
 	User         string        `json:"user"`
 	Pass         string        `json:"pass,omitempty"`
 	AdminEmail   string        `json:"admin_email" split_words:"true"`
+	SenderName   string        `json:"sender_name" split_words:"true"`
 }
 
 type MailerConfiguration struct {
@@ -109,8 +113,8 @@ type MailerConfiguration struct {
 
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
-	SiteURL       string                `json:"site_url" split_words:"true" required:"true"`
-	URIAllowList  []string              `json:"uri_allow_list" split_words:"true"`
+	SiteURL           string                `json:"site_url" split_words:"true" required:"true"`
+	URIAllowList      []string              `json:"uri_allow_list" split_words:"true"`
 	PasswordMinLength int                   `json:"password_min_length" default:"6"`
 	JWT               JWTConfiguration      `json:"jwt"`
 	SMTP              SMTPConfiguration     `json:"smtp"`

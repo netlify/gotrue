@@ -235,3 +235,72 @@ func (ts *VerifyTestSuite) TestVerifyNotPermitedCustomUri() {
 	require.NoError(ts.T(), err)
 	assert.True(ts.T(), u.IsConfirmed())
 }
+
+func (ts *VerifyTestSuite) TestVerifySignupWithRedirectUrlContainedPath() {
+	testCases := []struct {
+		desc                string
+		siteURL             string
+		uriAllowList        []string
+		requestRedirectURL  string
+		expectedRedirectURL string
+	}{
+		{
+			desc:                "same site url and redirect url with path",
+			siteURL:             "http://localhost:3000/#/",
+			uriAllowList:        []string{"http://localhost:3000"},
+			requestRedirectURL:  "http://localhost:3000/#/",
+			expectedRedirectURL: "http://localhost:3000/#/",
+		},
+		{
+			desc:                "different site url and redirect url with path",
+			siteURL:             "https://someapp-something.codemagic.app/#/",
+			uriAllowList:        []string{"http://localhost:3000"},
+			requestRedirectURL:  "http://localhost:3000/#/",
+			expectedRedirectURL: "http://localhost:3000/#/",
+		},
+		{
+			desc:                "different site url and redirect url withput path",
+			siteURL:             "https://someapp-something.codemagic.app/#/",
+			uriAllowList:        []string{"http://localhost:3000"},
+			requestRedirectURL:  "http://localhost:3000/",
+			expectedRedirectURL: "http://localhost:3000/",
+		},
+		{
+			desc:                "different site url and not permited redirect url",
+			siteURL:             "https://someapp-something.codemagic.app/#/",
+			uriAllowList:        []string{},
+			requestRedirectURL:  "http://localhost:3000/#/",
+			expectedRedirectURL: "https://someapp-something.codemagic.app/",
+		},
+	}
+
+	for _, tC := range testCases {
+		ts.Run(tC.desc, func() {
+			// prepare test data
+			ts.Config.SiteURL = tC.siteURL
+			redirectURL := tC.requestRedirectURL
+			ts.Config.URIAllowList = tC.uriAllowList
+
+			// set verify token to user as it actual do in magic link method
+			u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+			require.NoError(ts.T(), err)
+			u.ConfirmationToken = "someToken"
+			sendTime := time.Now().Add(time.Hour)
+			u.ConfirmationSentAt = &sendTime
+			require.NoError(ts.T(), ts.API.db.Update(u))
+
+			reqURL := fmt.Sprintf("http://localhost/verify?type=%s&token=%s&redirect_to=%s", "signup", u.ConfirmationToken, redirectURL)
+			req := httptest.NewRequest(http.MethodGet, reqURL, nil)
+
+			w := httptest.NewRecorder()
+			ts.API.handler.ServeHTTP(w, req)
+			assert.Equal(ts.T(), http.StatusSeeOther, w.Code)
+			rUrl, _ := w.Result().Location()
+			assert.Contains(ts.T(), rUrl.String(), tC.expectedRedirectURL) // redirected url starts with per test value
+
+			u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+			require.NoError(ts.T(), err)
+			assert.True(ts.T(), u.IsConfirmed())
+		})
+	}
+}
