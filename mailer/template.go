@@ -109,12 +109,14 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User, referrerURL string)
 
 // EmailChangeMail sends an email change confirmation mail to a user
 func (m *TemplateMailer) EmailChangeMail(user *models.User, referrerURL string) error {
+	globalConfig, err := conf.LoadGlobal(configFile)
+
 	redirectParam := ""
 	if len(referrerURL) > 0 {
 		redirectParam = "&redirect_to=" + referrerURL
 	}
 
-	url, err := getSiteURL(referrerURL, m.Config.SiteURL, m.Config.Mailer.URLPaths.EmailChange, "token="+user.EmailChangeToken+"&type=email_change"+redirectParam)
+	url, err := getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.EmailChange, "token="+user.EmailChangeToken+"&type=email_change"+redirectParam)
 	if err != nil {
 		return err
 	}

@@ -254,15 +254,11 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 
 	nextDay := user.EmailChangeSentAt.Add(24 * time.Hour)
 	if user.EmailChangeSentAt != nil && time.Now().After(nextDay) {
-		return nil, expiredTokenError("Recovery token expired").WithInternalError(redirectWithQueryError)
+		return nil, expiredTokenError("Email change token expired").WithInternalError(redirectWithQueryError)
 	}
 
 	err = a.db.Transaction(func(tx *storage.Connection) error {
 		var terr error
-
-		if params.Token != user.EmailChangeToken {
-			return unauthorizedError("Email Change Token didn't match token on file")
-		}
 
 		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserModifiedAction, nil); terr != nil {
 			return terr
