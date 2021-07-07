@@ -32,3 +32,7 @@ func (m *noopMailer) EmailChangeMail(user *models.User, referrerURL string) erro
 func (m noopMailer) Send(user *models.User, subject, body string, data map[string]interface{}) error {
 	return nil
 }
+
+func (m noopMailer) GetEmailActionLink(user *models.User, actionType, referrerURL string) (string, error) {
+	return "", nil
+}
