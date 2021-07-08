@@ -16,7 +16,7 @@ import (
 
 const (
 	requestURL      = "https://api.twitter.com/oauth/request_token"
-	authorizeURL    = "https://api.twitter.com/oauth/authorize"
+	authenticateURL = "https://api.twitter.com/oauth/authenticate"
 	tokenURL        = "https://api.twitter.com/oauth/access_token"
 	endpointProfile = "https://api.twitter.com/1.1/account/verify_credentials.json"
 )
@@ -32,6 +32,7 @@ type TwitterProvider struct {
 }
 
 type twitterUser struct {
+	UserName  string `json:"screen_name"`
 	Name      string `json:"name"`
 	AvatarURL string `json:"profile_image_url"`
 	Email     string `json:"email"`
@@ -78,6 +79,7 @@ func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessTok
 
 	data := &UserProvidedData{
 		Metadata: map[string]string{
+			userNameKey:  u.UserName,
 			nameKey:      u.Name,
 			avatarURLKey: u.AvatarURL,
 		},
@@ -107,7 +109,7 @@ func newConsumer(provider *TwitterProvider) *oauth.Consumer {
 		provider.Secret,
 		oauth.ServiceProvider{
 			RequestTokenUrl:   requestURL,
-			AuthorizeTokenUrl: authorizeURL,
+			AuthorizeTokenUrl: authenticateURL,
 			AccessTokenUrl:    tokenURL,
 		})
 	return c

@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	userNameKey  = "user_name"
 	avatarURLKey = "avatar_url"
 	nameKey      = "full_name"
 	aliasKey     = "slug"
