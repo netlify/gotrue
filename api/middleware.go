@@ -82,6 +82,7 @@ func (a *API) loadJWSSignatureHeader(w http.ResponseWriter, r *http.Request) (co
 
 func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	ctx := r.Context()
+	config := a.getConfig(ctx)
 
 	signature := getSignature(ctx)
 	if signature == "" {
@@ -91,7 +92,7 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 	claims := NetlifyMicroserviceClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 	_, err := p.ParseWithClaims(signature, &claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(a.config.OperatorToken), nil
+		return []byte(config.JWT.Secret), nil
 	})
 	if err != nil {
 		return nil, badRequestError("Operator microservice signature is invalid: %v", err)
@@ -115,7 +116,7 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 		return nil, internalServerError("Database error loading instance").WithInternalError(err)
 	}
 
-	config, err := instance.Config()
+	config, err = instance.Config()
 	if err != nil {
 		return nil, internalServerError("Error loading environment config").WithInternalError(err)
 	}
@@ -150,38 +151,19 @@ func (a *API) limitHandler(lmt *limiter.Limiter) middlewareHandler {
 	}
 }
 
-func (a *API) verifyOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {
-	c, _, err := a.extractOperatorRequest(w, req)
-	return c, err
-}
-
-func (a *API) extractOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, string, error) {
-	token, err := a.extractBearerToken(w, req)
-	if err != nil {
-		return nil, token, err
-	}
-	if token == "" || token != a.config.OperatorToken {
-		return nil, token, unauthorizedError("Request does not include an Operator token")
-	}
-	return withAdminUser(req.Context(), &models.User{ID: uuid.Nil, Email: "operator@netlify.com"}), token, nil
-}
-
 func (a *API) requireAdminCredentials(w http.ResponseWriter, req *http.Request) (context.Context, error) {
-	c, t, err := a.extractOperatorRequest(w, req)
-	if err == nil {
-		return c, nil
-	}
-
-	if t == "" {
+	ctx := req.Context()
+	t, err := a.extractBearerToken(w, req)
+	if err != nil || t == "" {
 		return nil, err
 	}
 
-	c, err = a.parseJWTClaims(t, req, w)
+	ctx, err = a.parseJWTClaims(t, req, w)
 	if err != nil {
 		return nil, err
 	}
 
-	return a.requireAdmin(c, w, req)
+	return a.requireAdmin(ctx, w, req)
 }
 
 func (a *API) requireEmailProvider(w http.ResponseWriter, req *http.Request) (context.Context, error) {
