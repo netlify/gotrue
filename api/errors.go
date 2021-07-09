@@ -130,6 +130,24 @@ func httpError(code int, fmtString string, args ...interface{}) *HTTPError {
 	}
 }
 
+type OTPError struct {
+	Err             string `json:"error"`
+	Description     string `json:"error_description,omitempty`
+	InternalError   error  `json:"-"`
+	InternalMessage string `json:"-"`
+}
+
+func (e *OTPError) Error() string {
+	if e.InternalMessage != "" {
+		return e.InternalMessage
+	}
+	return fmt.Sprintf("%s: %s", e.Err, e.Description)
+}
+
+func otpError(err string, description string) *OTPError {
+	return &OTPError{Err: err, Description: description}
+}
+
 // Recoverer is a middleware that recovers from panics, logs the panic (and a
 // backtrace), and returns a HTTP 500 (Internal Server Error) status if
 // possible. Recoverer prints a request ID if one is provided.

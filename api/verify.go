@@ -24,6 +24,7 @@ const (
 	recoveryVerification  = "recovery"
 	inviteVerification    = "invite"
 	magicLinkVerification = "magiclink"
+	smsVerification       = "sms"
 )
 
 // VerifyParams are the parameters the Verify endpoint accepts
@@ -31,6 +32,7 @@ type VerifyParams struct {
 	Type       string `json:"type"`
 	Token      string `json:"token"`
 	Password   string `json:"password"`
+	Phone      string `json:"phone"`
 	RedirectTo string `json:"redirect_to"`
 }
 
@@ -77,6 +79,16 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 			user, terr = a.signupVerify(ctx, tx, params)
 		case recoveryVerification, magicLinkVerification:
 			user, terr = a.recoverVerify(ctx, tx, params)
+		case smsVerification:
+			if params.Phone == "" {
+				return unprocessableEntityError("Sms Verification requires a phone number")
+			}
+			params.Phone = a.formatPhoneNumber(params.Phone)
+			if isValid := a.validateE164Format(params.Phone); !isValid {
+				return unprocessableEntityError("Invalid phone number format")
+			}
+			aud := a.requestAud(ctx, r)
+			user, terr = a.smsVerify(ctx, tx, params, aud)
 		default:
 			return unprocessableEntityError("Verify requires a verification type")
 		}
@@ -220,6 +232,45 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 
 	if err != nil {
 		return nil, internalServerError("Database error updating user").WithInternalError(err)
+	}
+	return user, nil
+}
+
+func (a *API) smsVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams, aud string) (*models.User, error) {
+	instanceID := getInstanceID(ctx)
+	config := a.getConfig(ctx)
+	user, err := models.FindUserByPhoneAndAudience(conn, instanceID, params.Phone, aud)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			return nil, notFoundError(err.Error()).WithInternalError(redirectWithQueryError)
+		}
+		return nil, internalServerError("Database error finding user").WithInternalError(err)
+	}
+	now := time.Now()
+	expiresAt := user.ConfirmationSentAt.Add(time.Second * time.Duration(config.Sms.OtpExp))
+
+	// check if token has expired or is invalid
+	if isOtpValid := now.Before(expiresAt) && params.Token == user.ConfirmationToken; !isOtpValid {
+		return nil, expiredTokenError("Otp has expired or is invalid")
+	}
+
+	err = conn.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
+			return terr
+		}
+
+		if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+			return terr
+		}
+
+		if terr = user.ConfirmPhone(tx); terr != nil {
+			return internalServerError("Error confirming user").WithInternalError(terr)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return user, nil
 }

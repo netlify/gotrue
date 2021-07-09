@@ -87,11 +87,11 @@ func (ts *UserTestSuite) TestFindUserByConfirmationToken() {
 func (ts *UserTestSuite) TestFindUserByEmailAndAudience() {
 	u := ts.createUser()
 
-	n, err := FindUserByEmailAndAudience(ts.db, u.InstanceID, u.Email, "test")
+	n, err := FindUserByEmailAndAudience(ts.db, u.InstanceID, u.GetEmail(), "test")
 	require.NoError(ts.T(), err)
 	require.Equal(ts.T(), u.ID, n.ID)
 
-	_, err = FindUserByEmailAndAudience(ts.db, u.InstanceID, u.Email, "invalid")
+	_, err = FindUserByEmailAndAudience(ts.db, u.InstanceID, u.GetEmail(), "invalid")
 	require.EqualError(ts.T(), err, UserNotFoundError{}.Error())
 }
 

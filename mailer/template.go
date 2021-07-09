@@ -69,7 +69,7 @@ func (m *TemplateMailer) InviteMail(user *models.User, referrerURL string) error
 	}
 
 	return m.Mailer.Mail(
-		user.Email,
+		user.GetEmail(),
 		string(withDefault(m.Config.Mailer.Subjects.Invite, "You have been invited")),
 		m.Config.Mailer.Templates.Invite,
 		defaultInviteMail,
@@ -99,7 +99,7 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User, referrerURL string)
 	}
 
 	return m.Mailer.Mail(
-		user.Email,
+		user.GetEmail(),
 		string(withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Signup")),
 		m.Config.Mailer.Templates.Confirmation,
 		defaultConfirmationMail,
@@ -121,7 +121,7 @@ func (m *TemplateMailer) EmailChangeMail(user *models.User, referrerURL string) 
 	data := map[string]interface{}{
 		"SiteURL":         m.Config.SiteURL,
 		"ConfirmationURL": url,
-		"Email":           user.Email,
+		"Email":           user.GetEmail(),
 		"NewEmail":        user.EmailChange,
 		"Token":           user.EmailChangeToken,
 		"Data":            user.UserMetaData,
@@ -158,7 +158,7 @@ func (m *TemplateMailer) RecoveryMail(user *models.User, referrerURL string) err
 	}
 
 	return m.Mailer.Mail(
-		user.Email,
+		user.GetEmail(),
 		string(withDefault(m.Config.Mailer.Subjects.Recovery, "Reset Your Password")),
 		m.Config.Mailer.Templates.Recovery,
 		defaultRecoveryMail,
@@ -188,7 +188,7 @@ func (m *TemplateMailer) MagicLinkMail(user *models.User, referrerURL string) er
 	}
 
 	return m.Mailer.Mail(
-		user.Email,
+		user.GetEmail(),
 		string(withDefault(m.Config.Mailer.Subjects.MagicLink, "Your Magic Link")),
 		m.Config.Mailer.Templates.MagicLink,
 		defaultMagicLinkMail,
@@ -199,7 +199,7 @@ func (m *TemplateMailer) MagicLinkMail(user *models.User, referrerURL string) er
 // Send can be used to send one-off emails to users
 func (m TemplateMailer) Send(user *models.User, subject, body string, data map[string]interface{}) error {
 	return m.Mailer.Mail(
-		user.Email,
+		user.GetEmail(),
 		subject,
 		"",
 		body,

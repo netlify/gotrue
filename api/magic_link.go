@@ -21,6 +21,11 @@ type MagicLinkParams struct {
 func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
+
+	if config.External.Email.Disabled {
+		return badRequestError("Unsupported email provider")
+	}
+
 	instanceID := getInstanceID(ctx)
 	params := &MagicLinkParams{}
 	jsonDecoder := json.NewDecoder(r.Body)

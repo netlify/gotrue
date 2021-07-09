@@ -22,12 +22,15 @@ type User struct {
 	InstanceID uuid.UUID `json:"-" db:"instance_id"`
 	ID         uuid.UUID `json:"id" db:"id"`
 
-	Aud               string     `json:"aud" db:"aud"`
-	Role              string     `json:"role" db:"role"`
-	Email             string     `json:"email" db:"email"`
-	EncryptedPassword string     `json:"-" db:"encrypted_password"`
-	ConfirmedAt       *time.Time `json:"confirmed_at,omitempty" db:"confirmed_at"`
-	InvitedAt         *time.Time `json:"invited_at,omitempty" db:"invited_at"`
+	Aud               string             `json:"aud" db:"aud"`
+	Role              string             `json:"role" db:"role"`
+	Email             storage.NullString `json:"email" db:"email"`
+	EncryptedPassword string             `json:"-" db:"encrypted_password"`
+	EmailConfirmedAt  *time.Time         `json:"email_confirmed_at,omitempty" db:"email_confirmed_at"`
+	InvitedAt         *time.Time         `json:"invited_at,omitempty" db:"invited_at"`
+
+	Phone            storage.NullString `json:"phone" db:"phone"`
+	PhoneConfirmedAt *time.Time         `json:"phone_confirmed_at,omitempty" db:"phone_confirmed_at"`
 
 	ConfirmationToken  string     `json:"-" db:"confirmation_token"`
 	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty" db:"confirmation_sent_at"`
@@ -38,6 +41,10 @@ type User struct {
 	EmailChangeToken  string     `json:"-" db:"email_change_token"`
 	EmailChange       string     `json:"new_email,omitempty" db:"email_change"`
 	EmailChangeSentAt *time.Time `json:"email_change_sent_at,omitempty" db:"email_change_sent_at"`
+
+	PhoneChangeToken  string     `json:"-" db:"phone_change_token"`
+	PhoneChange       string     `json:"new_phone,omitempty" db:"phone_change"`
+	PhoneChangeSentAt *time.Time `json:"phone_change_sent_at,omitempty" db:"phone_change_sent_at"`
 
 	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty" db:"last_sign_in_at"`
 
@@ -51,6 +58,7 @@ type User struct {
 }
 
 // NewUser initializes a new user from an email, password and user data.
+// TODO: Refactor NewUser to take in phone as an arg
 func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[string]interface{}) (*User, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
@@ -65,7 +73,7 @@ func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[str
 		InstanceID:        instanceID,
 		ID:                id,
 		Aud:               aud,
-		Email:             strings.ToLower(email),
+		Email:             storage.NullString(strings.ToLower(email)),
 		UserMetaData:      userData,
 		EncryptedPassword: pw,
 	}
@@ -108,8 +116,8 @@ func (u *User) BeforeSave(tx *pop.Connection) error {
 		return errors.New("Cannot persist system user")
 	}
 
-	if u.ConfirmedAt != nil && u.ConfirmedAt.IsZero() {
-		u.ConfirmedAt = nil
+	if u.EmailConfirmedAt != nil && u.EmailConfirmedAt.IsZero() {
+		u.EmailConfirmedAt = nil
 	}
 	if u.InvitedAt != nil && u.InvitedAt.IsZero() {
 		u.InvitedAt = nil
@@ -123,16 +131,25 @@ func (u *User) BeforeSave(tx *pop.Connection) error {
 	if u.EmailChangeSentAt != nil && u.EmailChangeSentAt.IsZero() {
 		u.EmailChangeSentAt = nil
 	}
+	if u.PhoneChangeSentAt != nil && u.PhoneChangeSentAt.IsZero() {
+		u.PhoneChangeSentAt = nil
+	}
 	if u.LastSignInAt != nil && u.LastSignInAt.IsZero() {
 		u.LastSignInAt = nil
 	}
 	return nil
 }
 
-// IsConfirmed checks if a user has already being
+// IsConfirmed checks if a user has already been
 // registered and confirmed.
 func (u *User) IsConfirmed() bool {
-	return u.ConfirmedAt != nil
+	return u.EmailConfirmedAt != nil
+}
+
+// IsPhoneConfirmed checks if a user's phone has already been
+// registered and confirmed.
+func (u *User) IsPhoneConfirmed() bool {
+	return u.PhoneConfirmedAt != nil
 }
 
 // SetRole sets the users Role to roleName
@@ -144,6 +161,14 @@ func (u *User) SetRole(tx *storage.Connection, roleName string) error {
 // HasRole returns true when the users role is set to roleName
 func (u *User) HasRole(roleName string) bool {
 	return u.Role == roleName
+}
+
+func (u *User) GetEmail() string {
+	return string(u.Email)
+}
+
+func (u *User) GetPhone() string {
+	return string(u.Phone)
 }
 
 // UpdateUserMetaData sets all user data from a map of updates,
@@ -181,8 +206,13 @@ func (u *User) UpdateAppMetaData(tx *storage.Connection, updates map[string]inte
 }
 
 func (u *User) SetEmail(tx *storage.Connection, email string) error {
-	u.Email = email
+	u.Email = storage.NullString(email)
 	return tx.UpdateOnly(u, "email")
+}
+
+func (u *User) SetPhone(tx *storage.Connection, phone string) error {
+	u.Phone = storage.NullString(phone)
+	return tx.UpdateOnly(u, "phone")
 }
 
 // hashPassword generates a hashed password from a plaintext string
@@ -203,18 +233,31 @@ func (u *User) UpdatePassword(tx *storage.Connection, password string) error {
 	return tx.UpdateOnly(u, "encrypted_password")
 }
 
+func (u *User) UpdatePhone(tx *storage.Connection, phone string) error {
+	u.Phone = storage.NullString(phone)
+	return tx.UpdateOnly(u, "phone")
+}
+
 // Authenticate a user from a password
 func (u *User) Authenticate(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.EncryptedPassword), []byte(password))
 	return err == nil
 }
 
-// Confirm resets the confimation token and the confirm timestamp
+// Confirm resets the confimation token and sets the confirm timestamp
 func (u *User) Confirm(tx *storage.Connection) error {
 	u.ConfirmationToken = ""
 	now := time.Now()
-	u.ConfirmedAt = &now
-	return tx.UpdateOnly(u, "confirmation_token", "confirmed_at")
+	u.EmailConfirmedAt = &now
+	return tx.UpdateOnly(u, "confirmation_token", "email_confirmed_at")
+}
+
+// ConfirmPhone resets the confimation token and sets the confirm timestamp
+func (u *User) ConfirmPhone(tx *storage.Connection) error {
+	u.ConfirmationToken = ""
+	now := time.Now()
+	u.PhoneConfirmedAt = &now
+	return tx.UpdateOnly(u, "confirmation_token", "phone_confirmed_at")
 }
 
 // UpdateLastSignInAt update field last_sign_in_at for user according to specified field
@@ -224,10 +267,20 @@ func (u *User) UpdateLastSignInAt(tx *storage.Connection) error {
 
 // ConfirmEmailChange confirm the change of email for a user
 func (u *User) ConfirmEmailChange(tx *storage.Connection) error {
-	u.Email = u.EmailChange
+	u.Email = storage.NullString(u.EmailChange)
 	u.EmailChange = ""
 	u.EmailChangeToken = ""
 	return tx.UpdateOnly(u, "email", "email_change", "email_change_token")
+}
+
+// ConfirmPhoneChange confirms the change of phone for a user
+func (u *User) ConfirmPhoneChange(tx *storage.Connection) error {
+	u.Phone = storage.NullString(u.PhoneChange)
+	u.PhoneChange = ""
+	u.PhoneChangeToken = ""
+	now := time.Now()
+	u.PhoneConfirmedAt = &now
+	return tx.UpdateOnly(u, "phone", "phone_change", "phone_change_token", "phone_confirmed_at")
 }
 
 // Recover resets the recovery token
@@ -266,6 +319,11 @@ func FindUserByConfirmationToken(tx *storage.Connection, token string) (*User, e
 // FindUserByEmailAndAudience finds a user with the matching email and audience.
 func FindUserByEmailAndAudience(tx *storage.Connection, instanceID uuid.UUID, email, aud string) (*User, error) {
 	return findUser(tx, "instance_id = ? and LOWER(email) = ? and aud = ?", instanceID, strings.ToLower(email), aud)
+}
+
+// FindUserByEmailAndAudience finds a user with the matching email and audience.
+func FindUserByPhoneAndAudience(tx *storage.Connection, instanceID uuid.UUID, phone, aud string) (*User, error) {
+	return findUser(tx, "instance_id = ? and phone = ? and aud = ?", instanceID, phone, aud)
 }
 
 // FindUserByID finds a user matching the provided ID.
@@ -329,9 +387,25 @@ func FindUsersInAudience(tx *storage.Connection, instanceID uuid.UUID, aud strin
 	return users, err
 }
 
+// FindUserWithPhoneAndPhoneChangeToken finds a user with the matching phone and phone change token
+func FindUserWithPhoneAndPhoneChangeToken(tx *storage.Connection, phone, token string) (*User, error) {
+	return findUser(tx, "phone = ? and phone_change_token = ?", phone, token)
+}
+
 // IsDuplicatedEmail returns whether a user exists with a matching email and audience.
 func IsDuplicatedEmail(tx *storage.Connection, instanceID uuid.UUID, email, aud string) (bool, error) {
 	_, err := FindUserByEmailAndAudience(tx, instanceID, email, aud)
+	if err != nil {
+		if IsNotFoundError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func IsDuplicatedPhone(tx *storage.Connection, instanceID uuid.UUID, phone, aud string) (bool, error) {
+	_, err := FindUserByPhoneAndAudience(tx, instanceID, phone, aud)
 	if err != nil {
 		if IsNotFoundError(err) {
 			return false, nil

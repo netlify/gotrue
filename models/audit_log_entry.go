@@ -70,15 +70,19 @@ func NewAuditLogEntry(tx *storage.Connection, instanceID uuid.UUID, actor *User,
 	if err != nil {
 		return errors.Wrap(err, "Error generating unique id")
 	}
+	username := actor.GetEmail()
+	if actor.GetPhone() != "" {
+		username = actor.GetPhone()
+	}
 	l := AuditLogEntry{
 		InstanceID: instanceID,
 		ID:         id,
 		Payload: JSONMap{
-			"timestamp":   time.Now().UTC().Format(time.RFC3339),
-			"actor_id":    actor.ID,
-			"actor_email": actor.Email,
-			"action":      action,
-			"log_type":    actionLogTypeMap[action],
+			"timestamp":      time.Now().UTC().Format(time.RFC3339),
+			"actor_id":       actor.ID,
+			"actor_username": username,
+			"action":         action,
+			"log_type":       actionLogTypeMap[action],
 		},
 	}
 

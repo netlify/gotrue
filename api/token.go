@@ -198,7 +198,7 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, secret stri
 			Audience:  user.Aud,
 			ExpiresAt: time.Now().Add(expiresIn).Unix(),
 		},
-		Email:        user.Email,
+		Email:        user.GetEmail(),
 		AppMetaData:  user.AppMetaData,
 		UserMetaData: user.UserMetaData,
 		Role:         user.Role,
