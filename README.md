@@ -429,6 +429,10 @@ Controls the minimum amount of time that must pass before sending another sms ot
 
 Controls the duration an sms otp is valid for. 
 
+`SMS_OTP_LENGTH` - `number`
+
+Controls the number of digits of the sms otp sent. 
+
 `SMS_PROVIDER` - `string`
 
 * twilio
@@ -577,26 +581,6 @@ GoTrue exposes the following endpoints:
 
   Returns:
 
-  ```json
-  {
-    "access_token": "jwt-token-representing-the-user",
-    "token_type": "bearer",
-    "expires_in": 3600,
-    "refresh_token": "a-refresh-token"
-  }
-  ```
-
-  Verify a phone update. Type should be set to `phone_change`. Will update existing phone number to new phone number if successful.
-  ```json
-  {
-    "type": "phone_change",
-    "token": "confirmation-otp-delivered-in-sms",
-    "redirect_to": "https://supabase.io",
-    "phone": "new-phone-number-sms-otp-was-delivered-to"
-  }
-  ```
-
-  Returns:
   ```json
   {
     "access_token": "jwt-token-representing-the-user",
@@ -756,12 +740,11 @@ GoTrue exposes the following endpoints:
 ### **PUT /user**
 
   Update a user (Requires authentication). Apart from changing email/password, this
-  method can be used to set custom user data. Changing the email or phone number will result in a magiclink or sms otp being sent out.
+  method can be used to set custom user data. Changing the email will result in a magiclink being sent out.
 
   ```json
   {
     "email": "new-email@example.com",
-    "phone": "12345678", // follows the E.164 format
     "password": "new-password",
     "data": {
       "key": "value",
@@ -777,9 +760,7 @@ GoTrue exposes the following endpoints:
   {
     "id": "11111111-2222-3333-4444-5555555555555",
     "email": "email@example.com",
-    "phone": "12345678",
     "email_change_sent_at": "2016-05-15T20:49:40.882805774-07:00",
-    "phone_change_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
     "updated_at": "2016-05-15T19:53:12.368652374-07:00"
   }
