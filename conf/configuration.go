@@ -89,6 +89,7 @@ type ProviderConfiguration struct {
 	Google      OAuthProviderConfiguration `json:"google"`
 	Facebook    OAuthProviderConfiguration `json:"facebook"`
 	Twitter     OAuthProviderConfiguration `json:"twitter"`
+	Twitch      OAuthProviderConfiguration `json:"twitch"`
 	Email       EmailProviderConfiguration `json:"email"`
 	Saml        SamlProviderConfiguration  `json:"saml"`
 	RedirectURL string                     `json:"redirect_url"`

@@ -172,7 +172,7 @@ The default group to assign all new users to.
 
 ### External Authentication Providers
 
-We support `apple`, `azure`, `bitbucket`, `discord`, `facebook`, `github`, `gitlab`, `google` and `twitter` for external authentication.
+We support `apple`, `azure`, `bitbucket`, `discord`, `facebook`, `github`, `gitlab`, `google`, `twitch` and `twitter` for external authentication.
 Use the names as the keys underneath `external` to configure each separately.
 
 ```properties
@@ -203,7 +203,7 @@ The URI a OAuth2 provider will redirect to with the `code` and `state` values.
 
 The base URL used for constructing the URLs to request authorization and access tokens. Used by `gitlab` only. Defaults to `https://gitlab.com`.
 
-#### Apple OAuth 
+#### Apple OAuth
 
 To try out external authentication with Apple locally, you will need to do the following:
 1. Remap localhost to \<my_custom_dns \> in your `/etc/hosts` config.
@@ -427,6 +427,7 @@ GoTrue exposes the following endpoints:
       "github": true,
       "gitlab": true,
       "google": true,
+      "twitch": true,
       "twitter": true
     },
     "disable_signup": false,
@@ -544,7 +545,7 @@ GoTrue exposes the following endpoints:
 
   Magic Link. Will deliver a link (e.g. `/verify?type=magiclink&token=fgtyuf68ddqdaDd`) to the user based on
   email address which they can use to redeem an access_token.
-  
+
   By default Magic Links can only be sent once every 60 seconds
 
   ```json
@@ -558,14 +559,14 @@ GoTrue exposes the following endpoints:
   ```json
   {}
   ```
-  
+
   when clicked the magic link will redirect the user to `<SITE_URL>#access_token=x&refresh_token=y&expires_in=z&token_type=bearer&type=magiclink` (see `/verify` above)
 
 ### **POST /recover**
 
   Password recovery. Will deliver a password recovery mail to the user based on
   email address.
-  
+
   By default recovery links can only be sent once every 60 seconds
 
   ```json
@@ -685,18 +686,17 @@ GoTrue exposes the following endpoints:
 
   query params:
   ```
-  provider=apple | azure | bitbucket | discord | facebook | github | gitlab | google | twitter
+  provider=apple | azure | bitbucket | discord | facebook | github | gitlab | google | twitch | twitter
   scopes=<optional additional scopes depending on the provider (email and name are requested by default)>
   ```
- 
+
   Redirects to provider and then to `/callback`
-  
+
   For apple specific setup see: https://github.com/supabase/gotrue#apple-oauth
-  
+
 ### **GET /callback**
 
   External provider should redirect to here
- 
-  Redirects to `<GOTRUE_SITE_URL>#access_token=<access_token>&refresh_token=<refresh_token>&provider_token=<provider_oauth_token>&expires_in=3600&provider=<provider_name>`
-  If additional scopes were requested then `provider_token` will be populated, you can use this to fetch additional data from the provider or interact with their services 
 
+  Redirects to `<GOTRUE_SITE_URL>#access_token=<access_token>&refresh_token=<refresh_token>&provider_token=<provider_oauth_token>&expires_in=3600&provider=<provider_name>`
+  If additional scopes were requested then `provider_token` will be populated, you can use this to fetch additional data from the provider or interact with their services
