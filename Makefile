@@ -26,7 +26,7 @@ migrate_dev: ## Run database migrations for development.
 	hack/migrate.sh development
 
 migrate_supabase: ## Run database migrations for supabase development.
-	hack/migrate_postgres.sh postgres_development
+	hack/migrate_postgres.sh postgres
 
 migrate_test: ## Run database migrations for test.
 	hack/migrate.sh test
