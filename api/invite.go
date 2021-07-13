@@ -37,7 +37,7 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 	if user != nil {
-		return unprocessableEntityError("Email address already registered by another user")
+		return unprocessableEntityError(DuplicateEmailMsg)
 	}
 
 	err = a.db.Transaction(func(tx *storage.Connection) error {

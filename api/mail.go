@@ -79,7 +79,7 @@ func (a *API) GenerateLink(w http.ResponseWriter, r *http.Request) error {
 			terr = errors.Wrap(tx.UpdateOnly(user, "recovery_token", "recovery_sent_at"), "Database error updating user for recovery")
 		case "invite":
 			if user != nil {
-				return unprocessableEntityError("Email address already registered by another user")
+				return unprocessableEntityError(DuplicateEmailMsg)
 			}
 			signupParams := &SignupParams{
 				Email:    params.Email,
@@ -104,7 +104,7 @@ func (a *API) GenerateLink(w http.ResponseWriter, r *http.Request) error {
 		case "signup":
 			if user != nil {
 				if user.IsConfirmed() {
-					return badRequestError("A user with this email address has already been registered")
+					return unprocessableEntityError(DuplicateEmailMsg)
 				}
 				if err := user.UpdateUserMetaData(tx, params.Data); err != nil {
 					return internalServerError("Database error updating user").WithInternalError(err)
