@@ -35,10 +35,8 @@ func migrate(cmd *cobra.Command, args []string) {
 		Dialect: globalConfig.DB.Driver,
 		URL:     globalConfig.DB.URL,
 	}
-	if globalConfig.DB.Namespace != "" {
-		deets.Options = map[string]string{
-			"Namespace": globalConfig.DB.Namespace + "_",
-		}
+	deets.Options = map[string]string{
+		"migration_table_name": "schema_migrations",
 	}
 
 	db, err := pop.NewConnection(deets)
