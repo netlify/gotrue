@@ -106,3 +106,8 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA auth TO supabase_auth_admin;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA auth TO supabase_auth_admin;
 ALTER USER supabase_auth_admin SET search_path = "auth";
 ALTER USER supabase_auth_admin with password 'root';
+ALTER table "auth".users OWNER TO supabase_auth_admin;
+ALTER table "auth".refresh_tokens OWNER TO supabase_auth_admin;
+ALTER table "auth".audit_log_entries OWNER TO supabase_auth_admin;
+ALTER table "auth".instances OWNER TO supabase_auth_admin;
+ALTER table "auth".schema_migrations OWNER TO supabase_auth_admin;
