@@ -8,7 +8,6 @@ import (
 	"github.com/gobuffalo/pop/v5"
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/storage"
-	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -91,11 +90,6 @@ func NewSystemUser(instanceID uuid.UUID, aud string) *User {
 
 func (User) TableName() string {
 	tableName := "users"
-
-	if namespace.GetNamespace() != "" {
-		return namespace.GetNamespace() + "_" + tableName
-	}
-
 	return tableName
 }
 

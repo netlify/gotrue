@@ -7,7 +7,6 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/storage"
-	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
 )
 
@@ -57,11 +56,6 @@ type AuditLogEntry struct {
 
 func (AuditLogEntry) TableName() string {
 	tableName := "audit_log_entries"
-
-	if namespace.GetNamespace() != "" {
-		return namespace.GetNamespace() + "_" + tableName
-	}
-
 	return tableName
 }
 

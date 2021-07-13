@@ -8,7 +8,6 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage"
-	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
 )
 
@@ -27,11 +26,6 @@ type Instance struct {
 
 func (Instance) TableName() string {
 	tableName := "instances"
-
-	if namespace.GetNamespace() != "" {
-		return namespace.GetNamespace() + "_" + tableName
-	}
-
 	return tableName
 }
 
