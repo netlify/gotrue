@@ -21,10 +21,11 @@ var (
 )
 
 type GenerateLinkParams struct {
-	Type     string                 `json:"type"`
-	Email    string                 `json:"email"`
-	Password string                 `json:"password"`
-	Data     map[string]interface{} `json:"data"`
+	Type       string                 `json:"type"`
+	Email      string                 `json:"email"`
+	Password   string                 `json:"password"`
+	Data       map[string]interface{} `json:"data"`
+	RedirectTo string                 `json:"redirect_to"`
 }
 
 func (a *API) GenerateLink(w http.ResponseWriter, r *http.Request) error {
@@ -40,7 +41,6 @@ func (a *API) GenerateLink(w http.ResponseWriter, r *http.Request) error {
 	if err := jsonDecoder.Decode(params); err != nil {
 		return badRequestError("Could not read body: %v", err)
 	}
-	params.Type = r.FormValue("type")
 
 	if err := a.validateEmail(ctx, params.Email); err != nil {
 		return err
@@ -65,7 +65,7 @@ func (a *API) GenerateLink(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var url string
-	referrer := a.getRedirectURLOrReferrer(r, r.URL.Query().Get("redirect_to"))
+	referrer := a.getRedirectURLOrReferrer(r, params.RedirectTo)
 	now := time.Now()
 	err = a.db.Transaction(func(tx *storage.Connection) error {
 		var terr error
