@@ -79,17 +79,20 @@ func (a *API) GenerateLink(w http.ResponseWriter, r *http.Request) error {
 			terr = errors.Wrap(tx.UpdateOnly(user, "recovery_token", "recovery_sent_at"), "Database error updating user for recovery")
 		case "invite":
 			if user != nil {
-				return unprocessableEntityError(DuplicateEmailMsg)
-			}
-			signupParams := &SignupParams{
-				Email:    params.Email,
-				Data:     params.Data,
-				Provider: "email",
-				Aud:      aud,
-			}
-			user, terr = a.signupNewUser(ctx, tx, signupParams)
-			if terr != nil {
-				return terr
+				if user.IsConfirmed() {
+					return unprocessableEntityError(DuplicateEmailMsg)
+				}
+			} else {
+				signupParams := &SignupParams{
+					Email:    params.Email,
+					Data:     params.Data,
+					Provider: "email",
+					Aud:      aud,
+				}
+				user, terr = a.signupNewUser(ctx, tx, signupParams)
+				if terr != nil {
+					return terr
+				}
 			}
 			if terr = models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserInvitedAction, map[string]interface{}{
 				"user_id":    user.ID,
