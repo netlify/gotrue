@@ -443,19 +443,15 @@ GoTrue exposes the following endpoints:
     "Authorization": "Bearer eyJhbGciOiJI...M3A90LCkxxtX9oNP9KZO" // admin role required
   }
 
-  query params:
-  {
-    "type": "signup" or "magiclink" or "recovery" or "invite",
-    "redirect_to": "https://supabase.io"
-  }
-
   body: 
   {
+    "type": "signup" or "magiclink" or "recovery" or "invite",
     "email": "email@example.com",
     "password": "secret", // only if type = signup
     "data": {
       ...
     }, // only if type = signup
+    "redirect_to": "https://supabase.io" // Redirect URL to send the user to after an email action. Defaults to SITE_URL. 
 
   }
   ```
