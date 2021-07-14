@@ -125,7 +125,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 			if exists, terr = models.IsDuplicatedEmail(tx, instanceID, params.Email, user.Aud); terr != nil {
 				return internalServerError("Database error checking email").WithInternalError(terr)
 			} else if exists {
-				return unprocessableEntityError("Email address already registered by another user")
+				return unprocessableEntityError(DuplicateEmailMsg)
 			}
 
 			mailer := a.Mailer(ctx)

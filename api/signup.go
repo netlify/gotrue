@@ -61,7 +61,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		var terr error
 		if user != nil {
 			if user.IsConfirmed() {
-				return badRequestError("A user with this email address has already been registered")
+				return unprocessableEntityError(DuplicateEmailMsg)
 			}
 
 			if err := user.UpdateUserMetaData(tx, params.Data); err != nil {

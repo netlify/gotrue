@@ -1,6 +1,8 @@
 package mailer
 
 import (
+	"fmt"
+
 	"github.com/badoux/checkmail"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
@@ -205,4 +207,34 @@ func (m TemplateMailer) Send(user *models.User, subject, body string, data map[s
 		body,
 		data,
 	)
+}
+
+// GetEmailActionLink returns a magiclink, recovery or invite link based on the actionType passed.
+func (m TemplateMailer) GetEmailActionLink(user *models.User, actionType, referrerURL string) (string, error) {
+	globalConfig, err := conf.LoadGlobal(configFile)
+
+	redirectParam := ""
+	if len(referrerURL) > 0 {
+		redirectParam = "&redirect_to=" + referrerURL
+	}
+
+	var url string
+	switch actionType {
+	case "magiclink":
+		url, err = getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Recovery, "token="+user.RecoveryToken+"&type=magiclink"+redirectParam)
+	case "recovery":
+		url, err = getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Recovery, "token="+user.RecoveryToken+"&type=recovery"+redirectParam)
+	case "invite":
+		url, err = getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Invite, "token="+user.ConfirmationToken+"&type=invite"+redirectParam)
+	case "signup":
+		url, err = getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.Confirmation, "token="+user.ConfirmationToken+"&type=signup"+redirectParam)
+	default:
+		return "", fmt.Errorf("Invalid email action link type: %s", actionType)
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	return url, nil
 }
