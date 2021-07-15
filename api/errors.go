@@ -8,6 +8,11 @@ import (
 	"runtime/debug"
 )
 
+// Common error messages during signup flow
+var (
+	DuplicateEmailMsg = "A user with this email address has already been registered"
+)
+
 var oauthErrorMap = map[int]string{
 	http.StatusBadRequest:          "invalid_request",
 	http.StatusUnauthorized:        "unauthorized_client",

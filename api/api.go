@@ -165,6 +165,8 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 					r.Delete("/", api.adminUserDelete)
 				})
 			})
+
+			r.Post("/generate_link", api.GenerateLink)
 		})
 
 		r.Route("/saml", func(r *router) {

@@ -467,6 +467,35 @@ GoTrue exposes the following endpoints:
   }
   ```
 
+### **POST /admin/generate_link**
+  Returns the corresponding email action link based on the type specified.
+
+  ```json
+  headers: 
+  {
+    "Authorization": "Bearer eyJhbGciOiJI...M3A90LCkxxtX9oNP9KZO" // admin role required
+  }
+
+  body: 
+  {
+    "type": "signup" or "magiclink" or "recovery" or "invite",
+    "email": "email@example.com",
+    "password": "secret", // only if type = signup
+    "data": {
+      ...
+    }, // only if type = signup
+    "redirect_to": "https://supabase.io" // Redirect URL to send the user to after an email action. Defaults to SITE_URL. 
+
+  }
+  ```
+  Returns
+  ```json
+  {
+    "action_link": "http://localhost:9999/verify?token=TOKEN&type=TYPE&redirect_to=REDIRECT_URL",
+    ...
+  }
+  ```
+
 ### **POST /signup**
 
   Register a new user with an email and password.

@@ -36,20 +36,23 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	if err != nil && !models.IsNotFoundError(err) {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
-	if user != nil {
-		return unprocessableEntityError("Email address already registered by another user")
-	}
 
 	err = a.db.Transaction(func(tx *storage.Connection) error {
-		signupParams := SignupParams{
-			Email:    params.Email,
-			Data:     params.Data,
-			Aud:      aud,
-			Provider: "email",
-		}
-		user, err = a.signupNewUser(ctx, tx, &signupParams)
-		if err != nil {
-			return err
+		if user != nil {
+			if user.IsConfirmed() {
+				return unprocessableEntityError(DuplicateEmailMsg)
+			}
+		} else {
+			signupParams := SignupParams{
+				Email:    params.Email,
+				Data:     params.Data,
+				Aud:      aud,
+				Provider: "email",
+			}
+			user, err = a.signupNewUser(ctx, tx, &signupParams)
+			if err != nil {
+				return err
+			}
 		}
 
 		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserInvitedAction, map[string]interface{}{
