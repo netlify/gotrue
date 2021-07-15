@@ -29,6 +29,17 @@ type SmsStatus struct {
 	Body         string `json:"body"`
 }
 
+type twilioErrResponse struct {
+	Code     int    `json:"code"`
+	Message  string `json:"message"`
+	MoreInfo string `json:"more_info"`
+	Status   int    `json:"status"`
+}
+
+func (t twilioErrResponse) Error() string {
+	return fmt.Sprintf("%s More information: %s", t.Message, t.MoreInfo)
+}
+
 // Creates a SmsProvider with the Twilio Config
 func NewTwilioProvider(config conf.TwilioProviderConfiguration) (SmsProvider, error) {
 	apiPath := defaultTwilioApiBase + "/" + apiVersion + "/" + "Accounts" + "/" + config.AccountSid + "/Messages.json"
@@ -55,8 +66,15 @@ func (t TwilioProvider) SendSms(phone string, otp string) error {
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.SetBasicAuth(t.Config.AccountSid, t.Config.AuthToken)
 	res, err := client.Do(r)
-	if res.StatusCode == http.StatusBadRequest || err != nil {
-		return fmt.Errorf("Bad request: %v", err)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode == http.StatusBadRequest || res.StatusCode == http.StatusForbidden {
+		resp := &twilioErrResponse{}
+		if err := json.NewDecoder(res.Body).Decode(resp); err != nil {
+			return err
+		}
+		return resp
 	}
 	defer res.Body.Close()
 

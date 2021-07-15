@@ -94,7 +94,7 @@ func (a *API) SmsOtp(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		if err := a.sendPhoneConfirmation(tx, ctx, user, params.Phone); err != nil {
-			return internalServerError("Error sending confirmation sms").WithInternalError(err)
+			return badRequestError("Error sending sms otp: %v", err)
 		}
 		return nil
 	})

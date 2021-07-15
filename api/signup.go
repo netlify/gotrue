@@ -142,7 +142,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 				}
 			} else {
 				if terr = a.sendPhoneConfirmation(tx, ctx, user, params.Phone); terr != nil {
-					return internalServerError("Error sending confirmation sms").WithInternalError(terr)
+					return badRequestError("Error sending confirmation sms: %v", terr)
 				}
 			}
 		}
