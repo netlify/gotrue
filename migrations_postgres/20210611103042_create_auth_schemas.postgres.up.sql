@@ -1,1 +1,0 @@
-CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION supabase_admin;

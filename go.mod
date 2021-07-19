@@ -33,6 +33,7 @@ require (
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1
+	github.com/pquerna/otp v1.3.0 // indirect
 	github.com/rogpeppe/go-internal v1.7.0 // indirect
 	github.com/rs/cors v1.6.0
 	github.com/russellhaering/gosaml2 v0.6.0

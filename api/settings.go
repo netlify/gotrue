@@ -14,6 +14,7 @@ type ProviderSettings struct {
 	Twitch    bool `json:"twitch"`
 	Twitter   bool `json:"twitter"`
 	Email     bool `json:"email"`
+	Phone     bool `json:"phone"`
 	SAML      bool `json:"saml"`
 }
 
@@ -25,7 +26,9 @@ type Settings struct {
 	ExternalProviders ProviderSettings `json:"external"`
 	ExternalLabels    ProviderLabels   `json:"external_labels"`
 	DisableSignup     bool             `json:"disable_signup"`
-	Autoconfirm       bool             `json:"autoconfirm"`
+	MailerAutoconfirm bool             `json:"mailer_autoconfirm"`
+	PhoneAutoconfirm  bool             `json:"phone_autoconfirm"`
+	SmsProvider       string           `json:"sms_provider"`
 }
 
 func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
@@ -44,12 +47,16 @@ func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
 			Twitch:    config.External.Twitch.Enabled,
 			Twitter:   config.External.Twitter.Enabled,
 			Email:     !config.External.Email.Disabled,
+			Phone:     !config.External.Phone.Disabled,
 			SAML:      config.External.Saml.Enabled,
 		},
 		ExternalLabels: ProviderLabels{
 			SAML: config.External.Saml.Name,
 		},
-		DisableSignup: config.DisableSignup,
-		Autoconfirm:   config.Mailer.Autoconfirm,
+
+		DisableSignup:     config.DisableSignup,
+		MailerAutoconfirm: config.Mailer.Autoconfirm,
+		PhoneAutoconfirm:  config.Sms.Autoconfirm,
+		SmsProvider:       config.Sms.Provider,
 	})
 }

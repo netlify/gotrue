@@ -269,7 +269,7 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 	var emails []string
 	for _, e := range userData.Emails {
 		emails = append(emails, e.Email)
-		if user.Email == e.Email {
+		if user.GetEmail() == e.Email {
 			emailData = &e
 			break
 		}

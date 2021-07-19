@@ -116,9 +116,11 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 		r.With(api.requireAdminCredentials).Post("/invite", api.Invite)
 
-		r.With(api.requireEmailProvider).Post("/signup", api.Signup)
+		r.Post("/signup", api.Signup)
 		r.With(api.requireEmailProvider).Post("/recover", api.Recover)
-		r.With(api.requireEmailProvider).Post("/magiclink", api.MagicLink)
+		r.Post("/magiclink", api.MagicLink)
+		r.Post("/otp", api.Otp)
+
 		r.With(api.requireEmailProvider).With(api.limitHandler(
 			// Allow requests at a rate of 30 per 5 minutes.
 			tollbooth.NewLimiter(30.0/(60*5), &limiter.ExpirableOptions{
@@ -126,7 +128,12 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 			}).SetBurst(30),
 		)).Post("/token", api.Token)
 
-		r.Route("/verify", func(r *router) {
+		r.With(api.limitHandler(
+			// Allow requests at a rate of 30 per 5 minutes.
+			tollbooth.NewLimiter(30.0/(60*5), &limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Hour,
+			}).SetBurst(30),
+		)).Route("/verify", func(r *router) {
 			r.Get("/", api.Verify)
 			r.Post("/", api.Verify)
 		})

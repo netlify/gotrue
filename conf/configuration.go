@@ -37,7 +37,6 @@ type SamlProviderConfiguration struct {
 type DBConfiguration struct {
 	Driver         string `json:"driver" required:"true"`
 	URL            string `json:"url" envconfig:"DATABASE_URL" required:"true"`
-	Namespace      string `json:"namespace"`
 	MigrationsPath string `json:"migrations_path" split_words:"true" default:"./migrations"`
 }
 
@@ -84,13 +83,14 @@ type ProviderConfiguration struct {
 	Azure       OAuthProviderConfiguration `json:"azure"`
 	Bitbucket   OAuthProviderConfiguration `json:"bitbucket"`
 	Discord     OAuthProviderConfiguration `json:"discord"`
+	Facebook    OAuthProviderConfiguration `json:"facebook"`
 	Github      OAuthProviderConfiguration `json:"github"`
 	Gitlab      OAuthProviderConfiguration `json:"gitlab"`
 	Google      OAuthProviderConfiguration `json:"google"`
-	Facebook    OAuthProviderConfiguration `json:"facebook"`
 	Twitter     OAuthProviderConfiguration `json:"twitter"`
 	Twitch      OAuthProviderConfiguration `json:"twitch"`
 	Email       EmailProviderConfiguration `json:"email"`
+	Phone       PhoneProviderConfiguration `json:"phone"`
 	Saml        SamlProviderConfiguration  `json:"saml"`
 	RedirectURL string                     `json:"redirect_url"`
 }
@@ -112,17 +112,37 @@ type MailerConfiguration struct {
 	URLPaths    EmailContentConfiguration `json:"url_paths"`
 }
 
+type PhoneProviderConfiguration struct {
+	Disabled bool `json:"disabled"`
+}
+
+type SmsProviderConfiguration struct {
+	Autoconfirm  bool                        `json:"autoconfirm"`
+	MaxFrequency time.Duration               `json:"max_frequency" split_words:"true"`
+	OtpExp       uint                        `json:"otp_exp" split_words:"true"`
+	OtpLength    int                         `json:"otp_length" split_words:"true"`
+	Provider     string                      `json:"provider"`
+	Twilio       TwilioProviderConfiguration `json:"twilio"`
+}
+
+type TwilioProviderConfiguration struct {
+	AccountSid        string `json:"account_sid" split_words:"true"`
+	AuthToken         string `json:"auth_token" split_words:"true"`
+	MessageServiceSid string `json:"message_service_sid" split_words:"true"`
+}
+
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
-	SiteURL           string                `json:"site_url" split_words:"true" required:"true"`
-	URIAllowList      []string              `json:"uri_allow_list" split_words:"true"`
-	PasswordMinLength int                   `json:"password_min_length" default:"6"`
-	JWT               JWTConfiguration      `json:"jwt"`
-	SMTP              SMTPConfiguration     `json:"smtp"`
-	Mailer            MailerConfiguration   `json:"mailer"`
-	External          ProviderConfiguration `json:"external"`
-	DisableSignup     bool                  `json:"disable_signup" split_words:"true"`
-	Webhook           WebhookConfig         `json:"webhook" split_words:"true"`
+	SiteURL           string                   `json:"site_url" split_words:"true" required:"true"`
+	URIAllowList      []string                 `json:"uri_allow_list" split_words:"true"`
+	PasswordMinLength int                      `json:"password_min_length" default:"6"`
+	JWT               JWTConfiguration         `json:"jwt"`
+	SMTP              SMTPConfiguration        `json:"smtp"`
+	Mailer            MailerConfiguration      `json:"mailer"`
+	External          ProviderConfiguration    `json:"external"`
+	Sms               SmsProviderConfiguration `json:"sms"`
+	DisableSignup     bool                     `json:"disable_signup" split_words:"true"`
+	Webhook           WebhookConfig            `json:"webhook" split_words:"true"`
 	Cookie            struct {
 		Key      string `json:"key"`
 		Duration int    `json:"duration"`
@@ -226,6 +246,19 @@ func (config *Configuration) ApplyDefaults() {
 
 	if config.SMTP.MaxFrequency == 0 {
 		config.SMTP.MaxFrequency = 1 * time.Minute
+	}
+
+	if config.Sms.MaxFrequency == 0 {
+		config.Sms.MaxFrequency = 1 * time.Minute
+	}
+
+	if config.Sms.OtpExp == 0 {
+		config.Sms.OtpExp = 60
+	}
+
+	if config.Sms.OtpLength == 0 || config.Sms.OtpLength < 6 || config.Sms.OtpLength > 10 {
+		// 6-digit otp by default
+		config.Sms.OtpLength = 6
 	}
 
 	if config.Cookie.Key == "" {

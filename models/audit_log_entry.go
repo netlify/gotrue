@@ -7,7 +7,6 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/storage"
-	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
 )
 
@@ -57,11 +56,6 @@ type AuditLogEntry struct {
 
 func (AuditLogEntry) TableName() string {
 	tableName := "audit_log_entries"
-
-	if namespace.GetNamespace() != "" {
-		return namespace.GetNamespace() + "_" + tableName
-	}
-
 	return tableName
 }
 
@@ -70,15 +64,19 @@ func NewAuditLogEntry(tx *storage.Connection, instanceID uuid.UUID, actor *User,
 	if err != nil {
 		return errors.Wrap(err, "Error generating unique id")
 	}
+	username := actor.GetEmail()
+	if actor.GetPhone() != "" {
+		username = actor.GetPhone()
+	}
 	l := AuditLogEntry{
 		InstanceID: instanceID,
 		ID:         id,
 		Payload: JSONMap{
-			"timestamp":   time.Now().UTC().Format(time.RFC3339),
-			"actor_id":    actor.ID,
-			"actor_email": actor.Email,
-			"action":      action,
-			"log_type":    actionLogTypeMap[action],
+			"timestamp":      time.Now().UTC().Format(time.RFC3339),
+			"actor_id":       actor.ID,
+			"actor_username": username,
+			"action":         action,
+			"log_type":       actionLogTypeMap[action],
 		},
 	}
 

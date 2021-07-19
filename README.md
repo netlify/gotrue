@@ -172,7 +172,14 @@ The default group to assign all new users to.
 
 ### External Authentication Providers
 
+`EXTERNAL_EMAIL_DISABLED` - `bool`
+If set to true, disables email signup.
+
+`EXTERNAL_PHONE_DISABLED` - `bool`
+If set to true, disables phone signup.
+
 We support `apple`, `azure`, `bitbucket`, `discord`, `facebook`, `github`, `gitlab`, `google`, `twitch` and `twitter` for external authentication.
+
 Use the names as the keys underneath `external` to configure each separately.
 
 ```properties
@@ -408,6 +415,31 @@ Time between retries (in seconds).
 Which events should trigger a webhook. You can provide a comma separated list.
 For example to listen to all events, provide the values `validate,signup,login`.
 
+### Phone Auth
+
+`SMS_AUTOCONFIRM` - `bool`
+
+If you do not require phone confirmation, you may set this to `true`. Defaults to `false`.
+
+`SMS_MAX_FREQUENCY` - `number`
+
+Controls the minimum amount of time that must pass before sending another sms otp. The value is the number of seconds. Defaults to 60 (1 minute)).
+
+`SMS_OTP_EXP` - `number`
+
+Controls the duration an sms otp is valid for. 
+
+`SMS_OTP_LENGTH` - `number`
+
+Controls the number of digits of the sms otp sent. 
+
+`SMS_PROVIDER` - `string`
+
+* twilio
+  `SMS_TWILIO_ACCOUNT_SID`
+  `SMS_TWILIO_AUTH_TOKEN`
+  `SMS_TWILIO_MESSAGE_SERVICE_SID`
+
 ## Endpoints
 
 GoTrue exposes the following endpoints:
@@ -487,6 +519,27 @@ GoTrue exposes the following endpoints:
   }
   ```
 
+  Register a new user with a phone number and password.
+
+  ```json
+  {
+    "phone": "12345678", // follows the E.164 format
+    "password": "secret"
+  }
+  ```
+
+  Returns:
+
+  ```json
+  {
+    "id": "11111111-2222-3333-4444-5555555555555",
+    "phone": "12345678",
+    "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
+    "created_at": "2016-05-15T19:53:12.368652374-07:00",
+    "updated_at": "2016-05-15T19:53:12.368652374-07:00"
+  }
+  ```
+
 ### **POST /invite**
 
   Invites a new user with an email.
@@ -520,14 +573,13 @@ GoTrue exposes the following endpoints:
 
 ### **POST /verify**
 
-  Verify a registration or a password recovery. Type can be `signup` or `recovery` or `invite`
+  Verify a registration or a password recovery. Type can be `signup` or `recovery` or `invite` 
   and the `token` is a token returned from either `/signup` or `/recover`.
 
   ```json
   {
     "type": "signup",
-    "token": "confirmation-code-delivered-in-email",
-    "redirect_to": "https://supabase.io"
+    "token": "confirmation-code-delivered-in-email"
   }
   ```
 
@@ -542,6 +594,27 @@ GoTrue exposes the following endpoints:
     "expires_in": 3600,
     "refresh_token": "a-refresh-token",
     "type": "signup | recovery | invite"
+  }
+  ```
+
+  Verify a phone signup or sms otp. Type should be set to `sms`.
+  ```json
+  {
+    "type": "sms",
+    "token": "confirmation-otp-delivered-in-sms",
+    "redirect_to": "https://supabase.io",
+    "phone": "phone-number-sms-otp-was-delivered-to"
+  }
+  ```
+
+  Returns:
+
+  ```json
+  {
+    "access_token": "jwt-token-representing-the-user",
+    "token_type": "bearer",
+    "expires_in": 3600,
+    "refresh_token": "a-refresh-token"
   }
   ```
 
@@ -570,7 +643,27 @@ GoTrue exposes the following endpoints:
   You can use the `type` param to redirect the user to a password set form in the case of `invite` or `recovery`,
   or show an account confirmed/welcome message in the case of `signup`, or direct them to some additional onboarding flow
 
-### **POST /magiclink**
+### **POST /otp**
+  One-Time-Password. Will deliver a magiclink or sms otp to the user depending on whether the request body contains an "email" or "phone" key. 
+
+  ```json
+  {
+    "phone": "12345678" // follows the E.164 format
+  }
+
+  OR 
+
+  // exactly the same as /magiclink 
+  {
+    "email": "email@example.com"
+  }
+  ```
+  Returns:
+  ```
+  {}
+  ```
+
+### **POST /magiclink** (recommended to use /otp instead. See above.)
 
   Magic Link. Will deliver a link (e.g. `/verify?type=magiclink&token=fgtyuf68ddqdaDd`) to the user based on
   email address which they can use to redeem an access_token.
@@ -675,7 +768,7 @@ GoTrue exposes the following endpoints:
 ### **PUT /user**
 
   Update a user (Requires authentication). Apart from changing email/password, this
-  method can be used to set custom user data.
+  method can be used to set custom user data. Changing the email will result in a magiclink being sent out.
 
   ```json
   {
@@ -695,7 +788,7 @@ GoTrue exposes the following endpoints:
   {
     "id": "11111111-2222-3333-4444-5555555555555",
     "email": "email@example.com",
-    "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
+    "email_change_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
     "updated_at": "2016-05-15T19:53:12.368652374-07:00"
   }
