@@ -435,10 +435,12 @@ Controls the number of digits of the sms otp sent.
 
 `SMS_PROVIDER` - `string`
 
-* twilio
-  `SMS_TWILIO_ACCOUNT_SID`
-  `SMS_TWILIO_AUTH_TOKEN`
-  `SMS_TWILIO_MESSAGE_SERVICE_SID`
+for now only option is: `twilio`
+
+Then you can use your [twilio credentials](https://www.twilio.com/docs/usage/requests-to-twilio#credentials):
+- `SMS_TWILIO_ACCOUNT_SID`
+- `SMS_TWILIO_AUTH_TOKEN`
+- `SMS_TWILIO_MESSAGE_SERVICE_SID` - can be set to your twilio sender mobile number
 
 ## Endpoints
 
