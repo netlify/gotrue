@@ -61,7 +61,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 
 	switch params.Provider {
 	case "email":
-		if config.External.Email.Disabled {
+		if !config.External.Email.Enabled {
 			return badRequestError("Unsupported email provider")
 		}
 		if err := a.validateEmail(ctx, params.Email); err != nil {
@@ -69,7 +69,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		}
 		user, err = models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, params.Aud)
 	case "phone":
-		if config.External.Phone.Disabled {
+		if !config.External.Phone.Enabled {
 			return badRequestError("Unsupported phone provider")
 		}
 		params.Phone = a.formatPhoneNumber(params.Phone)

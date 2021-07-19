@@ -21,7 +21,7 @@ type OAuthProviderConfiguration struct {
 }
 
 type EmailProviderConfiguration struct {
-	Disabled bool `json:"disabled"`
+	Enabled bool `json:"enabled" default:"true"`
 }
 
 type SamlProviderConfiguration struct {
@@ -113,7 +113,7 @@ type MailerConfiguration struct {
 }
 
 type PhoneProviderConfiguration struct {
-	Disabled bool `json:"disabled"`
+	Enabled bool `json:"enabled"`
 }
 
 type SmsProviderConfiguration struct {
