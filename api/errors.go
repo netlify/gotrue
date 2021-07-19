@@ -137,7 +137,7 @@ func httpError(code int, fmtString string, args ...interface{}) *HTTPError {
 
 type OTPError struct {
 	Err             string `json:"error"`
-	Description     string `json:"error_description,omitempty`
+	Description     string `json:"error_description,omitempty"`
 	InternalError   error  `json:"-"`
 	InternalMessage string `json:"-"`
 }
