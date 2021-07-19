@@ -144,7 +144,7 @@ func (ts *InstanceTestSuite) TestUpdate_DisableEmail() {
 		BaseConfig: &conf.Configuration{
 			External: conf.ProviderConfiguration{
 				Email: conf.EmailProviderConfiguration{
-					Disabled: false,
+					Enabled: true,
 				},
 			},
 		},
@@ -156,7 +156,7 @@ func (ts *InstanceTestSuite) TestUpdate_DisableEmail() {
 		"config": &conf.Configuration{
 			External: conf.ProviderConfiguration{
 				Email: conf.EmailProviderConfiguration{
-					Disabled: true,
+					Enabled: false,
 				},
 			},
 		},
@@ -172,7 +172,7 @@ func (ts *InstanceTestSuite) TestUpdate_DisableEmail() {
 
 	i, err := models.GetInstanceByUUID(ts.API.db, testUUID)
 	require.NoError(ts.T(), err)
-	require.True(ts.T(), i.BaseConfig.External.Email.Disabled)
+	require.False(ts.T(), i.BaseConfig.External.Email.Enabled)
 }
 
 func (ts *InstanceTestSuite) TestUpdate_PreserveSMTPConfig() {
