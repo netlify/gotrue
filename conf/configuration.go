@@ -113,7 +113,7 @@ type MailerConfiguration struct {
 }
 
 type PhoneProviderConfiguration struct {
-	Disabled bool `json:"disabled"`
+	Enabled bool `json:"enabled"`
 }
 
 type SmsProviderConfiguration struct {
