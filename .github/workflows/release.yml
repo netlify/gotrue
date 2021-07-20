@@ -68,9 +68,9 @@ jobs:
           repo: gotrue
           excludes: prerelease, draft
 
-      - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}-x86.tar.gz gotrue
+      - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}-x86.tar.gz gotrue migrations/
       - run: mv gotrue-arm64 gotrue
-      - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}-arm64.tar.gz gotrue
+      - run: tar -czvf gotrue-${{ steps.releases.outputs.release }}-arm64.tar.gz gotrue migrations/
 
       - uses: AButler/upload-release-assets@v2.0
         with:
