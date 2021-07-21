@@ -49,7 +49,7 @@ jobs:
   deploy:
     needs: release
     runs-on: ubuntu-18.04
-    if: success()
+    if: success() && needs.release.outputs.status == 'true'
     steps:
       - uses: actions/checkout@v2
 
