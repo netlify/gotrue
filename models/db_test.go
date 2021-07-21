@@ -13,10 +13,10 @@ func TestTableNameNamespacing(t *testing.T) {
 		expected string
 		value    interface{}
 	}{
-		{expected: "test_audit_log_entries", value: []*models.AuditLogEntry{}},
-		{expected: "test_instances", value: []*models.Instance{}},
-		{expected: "test_refresh_tokens", value: []*models.RefreshToken{}},
-		{expected: "test_users", value: []*models.User{}},
+		{expected: "audit_log_entries", value: []*models.AuditLogEntry{}},
+		{expected: "instances", value: []*models.Instance{}},
+		{expected: "refresh_tokens", value: []*models.RefreshToken{}},
+		{expected: "users", value: []*models.User{}},
 	}
 
 	for _, tc := range cases {
