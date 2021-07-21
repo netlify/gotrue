@@ -34,9 +34,13 @@ the payload values can be trusted.
 
 When signup is disabled the only way to create new users is through invites. Defaults to `false`, all signups enabled.
 
-`GOTRUE_EXTERNAL_EMAIL_DISABLED` - `bool`
+`GOTRUE_EXTERNAL_EMAIL_ENABLED` - `bool`
 
 Use this to disable email signups (users can still use external oauth providers to sign up / sign in)
+
+`GOTRUE_EXTERNAL_PHONE_ENABLED` - `bool`
+
+Use this to disable phone signups (users can still use external oauth providers to sign up / sign in)
 
 `GOTRUE_RATE_LIMIT_HEADER` - `string`
 
@@ -171,12 +175,6 @@ The name of the admin group (if enabled). Defaults to `admin`.
 The default group to assign all new users to.
 
 ### External Authentication Providers
-
-`EXTERNAL_EMAIL_DISABLED` - `bool`
-If set to true, disables email signup.
-
-`EXTERNAL_PHONE_DISABLED` - `bool`
-If set to true, disables phone signup.
 
 We support `apple`, `azure`, `bitbucket`, `discord`, `facebook`, `github`, `gitlab`, `google`, `twitch` and `twitter` for external authentication.
 
@@ -824,4 +822,3 @@ GoTrue exposes the following endpoints:
 
   Redirects to `<GOTRUE_SITE_URL>#access_token=<access_token>&refresh_token=<refresh_token>&provider_token=<provider_oauth_token>&expires_in=3600&provider=<provider_name>`
   If additional scopes were requested then `provider_token` will be populated, you can use this to fetch additional data from the provider or interact with their services
-

@@ -47,7 +47,7 @@ func (a *API) SmsOtp(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
 
-	if config.External.Phone.Disabled {
+	if !config.External.Phone.Enabled {
 		return badRequestError("Unsupported phone provider")
 	}
 

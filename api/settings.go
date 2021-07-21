@@ -46,8 +46,8 @@ func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
 			Facebook:  config.External.Facebook.Enabled,
 			Twitch:    config.External.Twitch.Enabled,
 			Twitter:   config.External.Twitter.Enabled,
-			Email:     !config.External.Email.Disabled,
-			Phone:     !config.External.Phone.Disabled,
+			Email:     config.External.Email.Enabled,
+			Phone:     config.External.Phone.Enabled,
 			SAML:      config.External.Saml.Enabled,
 		},
 		ExternalLabels: ProviderLabels{
