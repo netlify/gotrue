@@ -470,7 +470,7 @@ GoTrue exposes the following endpoints:
 ### **POST /admin/generate_link**
   Returns the corresponding email action link based on the type specified.
 
-  ```json
+  ```js
   headers: 
   {
     "Authorization": "Bearer eyJhbGciOiJI...M3A90LCkxxtX9oNP9KZO" // admin role required
@@ -489,7 +489,7 @@ GoTrue exposes the following endpoints:
   }
   ```
   Returns
-  ```json
+  ```js
   {
     "action_link": "http://localhost:9999/verify?token=TOKEN&type=TYPE&redirect_to=REDIRECT_URL",
     ...
@@ -500,7 +500,7 @@ GoTrue exposes the following endpoints:
 
   Register a new user with an email and password.
 
-  ```json
+  ```js
   {
     "email": "email@example.com",
     "password": "secret"
@@ -521,7 +521,7 @@ GoTrue exposes the following endpoints:
 
   Register a new user with a phone number and password.
 
-  ```json
+  ```js
   {
     "phone": "12345678", // follows the E.164 format
     "password": "secret"
@@ -646,7 +646,7 @@ GoTrue exposes the following endpoints:
 ### **POST /otp**
   One-Time-Password. Will deliver a magiclink or sms otp to the user depending on whether the request body contains an "email" or "phone" key. 
 
-  ```json
+  ```js
   {
     "phone": "12345678" // follows the E.164 format
   }
