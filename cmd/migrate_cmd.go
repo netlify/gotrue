@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/gobuffalo/pop/v5"
+	"github.com/gobuffalo/pop/v5/logging"
 	"github.com/netlify/gotrue/conf"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -31,7 +32,7 @@ func migrate(cmd *cobra.Command, args []string) {
 	}
 
 	log := logrus.New()
-	// Set to true to display query info
+
 	pop.Debug = false
 	if globalConfig.Logging.Level != "" {
 		level, err := logrus.ParseLevel(globalConfig.Logging.Level)
@@ -40,7 +41,15 @@ func migrate(cmd *cobra.Command, args []string) {
 		}
 		log.SetLevel(level)
 		if level == logrus.DebugLevel {
+			// Set to true to display query info
 			pop.Debug = true
+		}
+		if level != logrus.DebugLevel {
+			var noopLogger = func(lvl logging.Level, s string, args ...interface{}) {
+				return
+			}
+			// Hide pop migration logging
+			pop.SetLogger(noopLogger)
 		}
 	}
 
@@ -79,11 +88,9 @@ func migrate(cmd *cobra.Command, args []string) {
 	// turn off schema dump
 	mig.SchemaPath = ""
 
-	if log.Level == logrus.DebugLevel {
-		err = mig.Up()
-		if err != nil {
-			log.Fatalf("%+v", errors.Wrap(err, "running db migrations"))
-		}
+	err = mig.Up()
+	if err != nil {
+		log.Fatalf("%+v", errors.Wrap(err, "running db migrations"))
 	}
 
 	log.Debugf("after status")
