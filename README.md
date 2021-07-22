@@ -715,9 +715,16 @@ GoTrue exposes the following endpoints:
 
   body:
   ```json
+  // Email login
   {
     "email": "name@domain.com",
-    "password": "somepassword",
+    "password": "somepassword"
+  }
+  
+  // Phone login
+  {
+    "phone": "12345678",
+    "password": "somepassword"
   }
   ```
 
