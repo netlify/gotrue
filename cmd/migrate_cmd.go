@@ -30,8 +30,19 @@ func migrate(cmd *cobra.Command, args []string) {
 		globalConfig.DB.Driver = u.Scheme
 	}
 
+	log := logrus.New()
 	// Set to true to display query info
 	pop.Debug = false
+	if globalConfig.Logging.Level != "" {
+		level, err := logrus.ParseLevel(globalConfig.Logging.Level)
+		if err != nil {
+			log.Fatalf("Failed to parse log level: %+v", err)
+		}
+		log.SetLevel(level)
+		if level == logrus.DebugLevel {
+			pop.Debug = true
+		}
+	}
 
 	deets := &pop.ConnectionDetails{
 		Dialect: globalConfig.DB.Driver,
@@ -43,35 +54,44 @@ func migrate(cmd *cobra.Command, args []string) {
 
 	db, err := pop.NewConnection(deets)
 	if err != nil {
-		logrus.Fatalf("%+v", errors.Wrap(err, "opening db connection"))
+		log.Fatalf("%+v", errors.Wrap(err, "opening db connection"))
 	}
 	defer db.Close()
 
 	if err := db.Open(); err != nil {
-		logrus.Fatalf("%+v", errors.Wrap(err, "checking database connection"))
+		log.Fatalf("%+v", errors.Wrap(err, "checking database connection"))
 	}
 
-	logrus.Infof("Reading migrations from %s", globalConfig.DB.MigrationsPath)
+	log.Debugf("Reading migrations from %s", globalConfig.DB.MigrationsPath)
 	mig, err := pop.NewFileMigrator(globalConfig.DB.MigrationsPath, db)
 	if err != nil {
-		logrus.Fatalf("%+v", errors.Wrap(err, "creating db migrator"))
+		log.Fatalf("%+v", errors.Wrap(err, "creating db migrator"))
 	}
-	logrus.Infof("before status")
-	err = mig.Status(os.Stdout)
-	if err != nil {
-		logrus.Fatalf("%+v", errors.Wrap(err, "migration status"))
+	log.Debugf("before status")
+
+	if log.Level == logrus.DebugLevel {
+		err = mig.Status(os.Stdout)
+		if err != nil {
+			log.Fatalf("%+v", errors.Wrap(err, "migration status"))
+		}
 	}
+
 	// turn off schema dump
 	mig.SchemaPath = ""
 
-	err = mig.Up()
-	if err != nil {
-		logrus.Fatalf("%+v", errors.Wrap(err, "running db migrations"))
+	if log.Level == logrus.DebugLevel {
+		err = mig.Up()
+		if err != nil {
+			log.Fatalf("%+v", errors.Wrap(err, "running db migrations"))
+		}
 	}
 
-	logrus.Infof("after status")
-	err = mig.Status(os.Stdout)
-	if err != nil {
-		logrus.Fatalf("%+v", errors.Wrap(err, "migration status"))
+	log.Debugf("after status")
+
+	if log.Level == logrus.DebugLevel {
+		err = mig.Status(os.Stdout)
+		if err != nil {
+			log.Fatalf("%+v", errors.Wrap(err, "migration status"))
+		}
 	}
 }
