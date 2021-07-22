@@ -29,7 +29,9 @@ func migrate(cmd *cobra.Command, args []string) {
 		}
 		globalConfig.DB.Driver = u.Scheme
 	}
-	pop.Debug = true
+
+	// Set to true to display query info
+	pop.Debug = false
 
 	deets := &pop.ConnectionDetails{
 		Dialect: globalConfig.DB.Driver,
