@@ -33,6 +33,7 @@ type User struct {
 
 	ConfirmationToken  string     `json:"-" db:"confirmation_token"`
 	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty" db:"confirmation_sent_at"`
+	ConfirmedAt        *time.Time `json:"confirmed_at,omitempty" db:"confirmed_at"`
 
 	RecoveryToken  string     `json:"-" db:"recovery_token"`
 	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty" db:"recovery_sent_at"`
