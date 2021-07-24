@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -39,6 +40,10 @@ type twitterUser struct {
 }
 
 func NewTwitterProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAuthProvider, error) {
+	if err := ext.Validate(); err != nil {
+		return nil, err
+	}
+
 	p := &TwitterProvider{
 		ClientKey:   ext.ClientID,
 		Secret:      ext.Secret,
@@ -76,6 +81,10 @@ func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessTok
 		return &UserProvidedData{}, nil
 	}
 	err = json.NewDecoder(bytes.NewReader(bits)).Decode(&u)
+
+	if u.Email == "" {
+		return nil, errors.New("Unable to find email with Twitter provider")
+	}
 
 	data := &UserProvidedData{
 		Metadata: map[string]string{
