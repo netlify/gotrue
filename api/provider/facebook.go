@@ -37,6 +37,10 @@ type facebookUser struct {
 
 // NewFacebookProvider creates a Facebook account provider.
 func NewFacebookProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAuthProvider, error) {
+	if err := ext.Validate(); err != nil {
+		return nil, err
+	}
+
 	authHost := chooseHost(ext.URL, defaultFacebookAuthBase)
 	tokenHost := chooseHost(ext.URL, defaultFacebookTokenBase)
 	profileURL := chooseHost(ext.URL, defaultFacebookAPIBase) + "/me?fields=email,first_name,last_name,name,picture"
