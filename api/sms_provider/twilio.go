@@ -42,6 +42,10 @@ func (t twilioErrResponse) Error() string {
 
 // Creates a SmsProvider with the Twilio Config
 func NewTwilioProvider(config conf.TwilioProviderConfiguration) (SmsProvider, error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+
 	apiPath := defaultTwilioApiBase + "/" + apiVersion + "/" + "Accounts" + "/" + config.AccountSid + "/Messages.json"
 	return &TwilioProvider{
 		Config:  &config,
