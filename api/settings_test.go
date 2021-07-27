@@ -38,7 +38,7 @@ func TestSettings_EmailDisabled(t *testing.T) {
 	api, config, instanceID, err := setupAPIForTestForInstance()
 	require.NoError(t, err)
 
-	config.External.Email.Disabled = true
+	config.External.Email.Enabled = false
 
 	// Setup request
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/settings", nil)

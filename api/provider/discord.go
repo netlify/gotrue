@@ -88,8 +88,9 @@ func (g discordProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*U
 
 	return &UserProvidedData{
 		Metadata: map[string]string{
-			nameKey:      u.Name,
-			avatarURLKey: avatarURL,
+			avatarURLKey:  avatarURL,
+			nameKey:       u.Name,
+			providerIdKey: u.Id,
 		},
 		Emails: []Email{{
 			Email:    u.Email,

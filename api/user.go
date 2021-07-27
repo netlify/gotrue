@@ -12,10 +12,12 @@ import (
 
 // UserUpdateParams parameters for updating a user
 type UserUpdateParams struct {
-	Email    string                 `json:"email"`
-	Password string                 `json:"password"`
-	Data     map[string]interface{} `json:"data"`
-	AppData  map[string]interface{} `json:"app_metadata,omitempty"`
+	Email            string                 `json:"email"`
+	Password         string                 `json:"password"`
+	EmailChangeToken string                 `json:"email_change_token"`
+	Data             map[string]interface{} `json:"data"`
+	AppData          map[string]interface{} `json:"app_metadata,omitempty"`
+	Phone            string                 `json:"phone"`
 }
 
 // UserGet returns a user
@@ -105,7 +107,17 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 
-		if params.Email != "" && params.Email != user.Email {
+		if params.EmailChangeToken != "" {
+			log.Debugf("Got change token %v", params.EmailChangeToken)
+
+			if params.EmailChangeToken != user.EmailChangeToken {
+				return unauthorizedError("Email Change Token didn't match token on file")
+			}
+
+			if terr = user.ConfirmEmailChange(tx); terr != nil {
+				return internalServerError("Error updating user").WithInternalError(terr)
+			}
+		} else if params.Email != "" && params.Email != user.GetEmail() {
 			if terr = a.validateEmail(ctx, params.Email); terr != nil {
 				return terr
 			}
@@ -114,7 +126,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 			if exists, terr = models.IsDuplicatedEmail(tx, instanceID, params.Email, user.Aud); terr != nil {
 				return internalServerError("Database error checking email").WithInternalError(terr)
 			} else if exists {
-				return unprocessableEntityError("Email address already registered by another user")
+				return unprocessableEntityError(DuplicateEmailMsg)
 			}
 
 			mailer := a.Mailer(ctx)

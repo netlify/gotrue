@@ -11,6 +11,8 @@ func IsNotFoundError(err error) bool {
 		return true
 	case InstanceNotFoundError:
 		return true
+	case TotpSecretNotFoundError:
+		return true
 	}
 	return false
 }
@@ -41,4 +43,10 @@ type InstanceNotFoundError struct{}
 
 func (e InstanceNotFoundError) Error() string {
 	return "Instance not found"
+}
+
+type TotpSecretNotFoundError struct{}
+
+func (e TotpSecretNotFoundError) Error() string {
+	return "Totp Secret not found"
 }

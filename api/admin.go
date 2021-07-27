@@ -16,8 +16,10 @@ type adminUserParams struct {
 	Aud          string                 `json:"aud"`
 	Role         string                 `json:"role"`
 	Email        string                 `json:"email"`
+	Phone        string                 `json:"phone"`
 	Password     string                 `json:"password"`
-	Confirm      bool                   `json:"confirm"`
+	EmailConfirm bool                   `json:"email_confirm"`
+	PhoneConfirm bool                   `json:"phone_confirm"`
 	UserMetaData map[string]interface{} `json:"user_metadata"`
 	AppMetaData  map[string]interface{} `json:"app_metadata"`
 }
@@ -107,8 +109,14 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 
-		if params.Confirm {
+		if params.EmailConfirm {
 			if terr := user.Confirm(tx); terr != nil {
+				return terr
+			}
+		}
+
+		if params.PhoneConfirm {
+			if terr := user.ConfirmPhone(tx); terr != nil {
 				return terr
 			}
 		}
@@ -129,6 +137,12 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 
+		if params.Phone != "" {
+			if terr := user.SetPhone(tx, params.Phone); terr != nil {
+				return terr
+			}
+		}
+
 		if params.AppMetaData != nil {
 			if terr := user.UpdateAppMetaData(tx, params.AppMetaData); terr != nil {
 				return terr
@@ -144,6 +158,7 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserModifiedAction, map[string]interface{}{
 			"user_id":    user.ID,
 			"user_email": user.Email,
+			"user_phone": user.Phone,
 		}); terr != nil {
 			return terr
 		}
@@ -167,24 +182,44 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	if err := a.validateEmail(ctx, params.Email); err != nil {
-		return err
-	}
-
 	aud := a.requestAud(ctx, r)
 	if params.Aud != "" {
 		aud = params.Aud
 	}
 
-	if exists, err := models.IsDuplicatedEmail(a.db, instanceID, params.Email, aud); err != nil {
-		return internalServerError("Database error checking email").WithInternalError(err)
-	} else if exists {
-		return unprocessableEntityError("Email address already registered by another user")
+	if params.Email == "" && params.Phone == "" {
+		return unprocessableEntityError("Cannot create a user without either an email or phone")
+	}
+
+	if params.Email != "" {
+		if err := a.validateEmail(ctx, params.Email); err != nil {
+			return err
+		}
+		if exists, err := models.IsDuplicatedEmail(a.db, instanceID, params.Email, aud); err != nil {
+			return internalServerError("Database error checking email").WithInternalError(err)
+		} else if exists {
+			return unprocessableEntityError("Email address already registered by another user")
+		}
+	}
+
+	if params.Phone != "" {
+		params.Phone = a.formatPhoneNumber(params.Phone)
+		if isValid := a.validateE164Format(params.Phone); !isValid {
+			return unprocessableEntityError("Invalid phone format")
+		}
+		if exists, err := models.IsDuplicatedPhone(a.db, instanceID, params.Phone, aud); err != nil {
+			return internalServerError("Database error checking phone").WithInternalError(err)
+		} else if exists {
+			return unprocessableEntityError("Phone number already registered by another user")
+		}
 	}
 
 	user, err := models.NewUser(instanceID, params.Email, params.Password, aud, params.UserMetaData)
 	if err != nil {
 		return internalServerError("Error creating user").WithInternalError(err)
+	}
+	if params.Phone != "" {
+		user.Phone = storage.NullString(params.Phone)
 	}
 	if user.AppMetaData == nil {
 		user.AppMetaData = make(map[string]interface{})
@@ -196,6 +231,7 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserSignedUpAction, map[string]interface{}{
 			"user_id":    user.ID,
 			"user_email": user.Email,
+			"user_phone": user.Phone,
 		}); terr != nil {
 			return terr
 		}
@@ -212,8 +248,14 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 			return terr
 		}
 
-		if params.Confirm {
+		if params.EmailConfirm {
 			if terr := user.Confirm(tx); terr != nil {
+				return terr
+			}
+		}
+
+		if params.PhoneConfirm {
+			if terr := user.ConfirmPhone(tx); terr != nil {
 				return terr
 			}
 		}
@@ -239,6 +281,7 @@ func (a *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
 		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserDeletedAction, map[string]interface{}{
 			"user_id":    user.ID,
 			"user_email": user.Email,
+			"user_phone": user.Phone,
 		}); terr != nil {
 			return internalServerError("Error recording audit log entry").WithInternalError(terr)
 		}

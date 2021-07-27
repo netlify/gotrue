@@ -8,6 +8,11 @@ import (
 	"runtime/debug"
 )
 
+// Common error messages during signup flow
+var (
+	DuplicateEmailMsg = "A user with this email address has already been registered"
+)
+
 var oauthErrorMap = map[int]string{
 	http.StatusBadRequest:          "invalid_request",
 	http.StatusUnauthorized:        "unauthorized_client",
@@ -128,6 +133,24 @@ func httpError(code int, fmtString string, args ...interface{}) *HTTPError {
 		Code:    code,
 		Message: fmt.Sprintf(fmtString, args...),
 	}
+}
+
+type OTPError struct {
+	Err             string `json:"error"`
+	Description     string `json:"error_description,omitempty"`
+	InternalError   error  `json:"-"`
+	InternalMessage string `json:"-"`
+}
+
+func (e *OTPError) Error() string {
+	if e.InternalMessage != "" {
+		return e.InternalMessage
+	}
+	return fmt.Sprintf("%s: %s", e.Err, e.Description)
+}
+
+func otpError(err string, description string) *OTPError {
+	return &OTPError{Err: err, Description: description}
 }
 
 // Recoverer is a middleware that recovers from panics, logs the panic (and a

@@ -100,7 +100,7 @@ func performAuthorization(ts *ExternalTestSuite, provider string, code string, i
 
 func assertAuthorizationSuccess(ts *ExternalTestSuite, u *url.URL, tokenCount int, userCount int, email string, name string, avatar string) {
 	// ensure redirect has #access_token=...
-	v, err := url.ParseQuery(u.Fragment)
+	v, err := url.ParseQuery(u.RawQuery)
 	ts.Require().NoError(err)
 	ts.Require().Empty(v.Get("error_description"))
 	ts.Require().Empty(v.Get("error"))
@@ -122,7 +122,7 @@ func assertAuthorizationSuccess(ts *ExternalTestSuite, u *url.URL, tokenCount in
 
 func assertAuthorizationFailure(ts *ExternalTestSuite, u *url.URL, errorDescription string, errorType string, email string) {
 	// ensure new sign ups error
-	v, err := url.ParseQuery(u.Fragment)
+	v, err := url.ParseQuery(u.RawQuery)
 	ts.Require().NoError(err)
 	ts.Require().Equal(errorDescription, v.Get("error_description"))
 	ts.Require().Equal(errorType, v.Get("error"))

@@ -8,7 +8,7 @@ import (
 )
 
 var filterColumnMap = map[string][]string{
-	"author": []string{"actor_email", "actor_name"},
+	"author": []string{"actor_username", "actor_name"},
 	"action": []string{"action"},
 	"type":   []string{"log_type"},
 }

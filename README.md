@@ -34,9 +34,13 @@ the payload values can be trusted.
 
 When signup is disabled the only way to create new users is through invites. Defaults to `false`, all signups enabled.
 
-`GOTRUE_EXTERNAL_EMAIL_DISABLED` - `bool`
+`GOTRUE_EXTERNAL_EMAIL_ENABLED` - `bool`
 
 Use this to disable email signups (users can still use external oauth providers to sign up / sign in)
+
+`GOTRUE_EXTERNAL_PHONE_ENABLED` - `bool`
+
+Use this to disable phone signups (users can still use external oauth providers to sign up / sign in)
 
 `GOTRUE_RATE_LIMIT_HEADER` - `string`
 
@@ -172,7 +176,8 @@ The default group to assign all new users to.
 
 ### External Authentication Providers
 
-We support `apple`, `azure`, `bitbucket`, `discord`, `facebook`, `github`, `gitlab`, `google` and `twitter` for external authentication.
+We support `apple`, `azure`, `bitbucket`, `discord`, `facebook`, `github`, `gitlab`, `google`, `twitch` and `twitter` for external authentication.
+
 Use the names as the keys underneath `external` to configure each separately.
 
 ```properties
@@ -203,7 +208,7 @@ The URI a OAuth2 provider will redirect to with the `code` and `state` values.
 
 The base URL used for constructing the URLs to request authorization and access tokens. Used by `gitlab` only. Defaults to `https://gitlab.com`.
 
-#### Apple OAuth 
+#### Apple OAuth
 
 To try out external authentication with Apple locally, you will need to do the following:
 1. Remap localhost to \<my_custom_dns \> in your `/etc/hosts` config.
@@ -408,6 +413,33 @@ Time between retries (in seconds).
 Which events should trigger a webhook. You can provide a comma separated list.
 For example to listen to all events, provide the values `validate,signup,login`.
 
+### Phone Auth
+
+`SMS_AUTOCONFIRM` - `bool`
+
+If you do not require phone confirmation, you may set this to `true`. Defaults to `false`.
+
+`SMS_MAX_FREQUENCY` - `number`
+
+Controls the minimum amount of time that must pass before sending another sms otp. The value is the number of seconds. Defaults to 60 (1 minute)).
+
+`SMS_OTP_EXP` - `number`
+
+Controls the duration an sms otp is valid for. 
+
+`SMS_OTP_LENGTH` - `number`
+
+Controls the number of digits of the sms otp sent. 
+
+`SMS_PROVIDER` - `string`
+
+for now only option is: `twilio`
+
+Then you can use your [twilio credentials](https://www.twilio.com/docs/usage/requests-to-twilio#credentials):
+- `SMS_TWILIO_ACCOUNT_SID`
+- `SMS_TWILIO_AUTH_TOKEN`
+- `SMS_TWILIO_MESSAGE_SERVICE_SID` - can be set to your twilio sender mobile number
+
 ## Endpoints
 
 GoTrue exposes the following endpoints:
@@ -427,6 +459,7 @@ GoTrue exposes the following endpoints:
       "github": true,
       "gitlab": true,
       "google": true,
+      "twitch": true,
       "twitter": true
     },
     "disable_signup": false,
@@ -434,11 +467,40 @@ GoTrue exposes the following endpoints:
   }
   ```
 
+### **POST /admin/generate_link**
+  Returns the corresponding email action link based on the type specified.
+
+  ```js
+  headers: 
+  {
+    "Authorization": "Bearer eyJhbGciOiJI...M3A90LCkxxtX9oNP9KZO" // admin role required
+  }
+
+  body: 
+  {
+    "type": "signup" or "magiclink" or "recovery" or "invite",
+    "email": "email@example.com",
+    "password": "secret", // only if type = signup
+    "data": {
+      ...
+    }, // only if type = signup
+    "redirect_to": "https://supabase.io" // Redirect URL to send the user to after an email action. Defaults to SITE_URL. 
+
+  }
+  ```
+  Returns
+  ```js
+  {
+    "action_link": "http://localhost:9999/verify?token=TOKEN&type=TYPE&redirect_to=REDIRECT_URL",
+    ...
+  }
+  ```
+
 ### **POST /signup**
 
   Register a new user with an email and password.
 
-  ```json
+  ```js
   {
     "email": "email@example.com",
     "password": "secret"
@@ -451,6 +513,27 @@ GoTrue exposes the following endpoints:
   {
     "id": "11111111-2222-3333-4444-5555555555555",
     "email": "email@example.com",
+    "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
+    "created_at": "2016-05-15T19:53:12.368652374-07:00",
+    "updated_at": "2016-05-15T19:53:12.368652374-07:00"
+  }
+  ```
+
+  Register a new user with a phone number and password.
+
+  ```js
+  {
+    "phone": "12345678", // follows the E.164 format
+    "password": "secret"
+  }
+  ```
+
+  Returns:
+
+  ```json
+  {
+    "id": "11111111-2222-3333-4444-5555555555555",
+    "phone": "12345678",
     "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
     "updated_at": "2016-05-15T19:53:12.368652374-07:00"
@@ -490,14 +573,13 @@ GoTrue exposes the following endpoints:
 
 ### **POST /verify**
 
-  Verify a registration or a password recovery. Type can be `signup` or `recovery` or `invite`
+  Verify a registration or a password recovery. Type can be `signup` or `recovery` or `invite` 
   and the `token` is a token returned from either `/signup` or `/recover`.
 
   ```json
   {
     "type": "signup",
-    "token": "confirmation-code-delivered-in-email",
-    "redirect_to": "https://supabase.io"
+    "token": "confirmation-code-delivered-in-email"
   }
   ```
 
@@ -512,6 +594,27 @@ GoTrue exposes the following endpoints:
     "expires_in": 3600,
     "refresh_token": "a-refresh-token",
     "type": "signup | recovery | invite"
+  }
+  ```
+
+  Verify a phone signup or sms otp. Type should be set to `sms`.
+  ```json
+  {
+    "type": "sms",
+    "token": "confirmation-otp-delivered-in-sms",
+    "redirect_to": "https://supabase.io",
+    "phone": "phone-number-sms-otp-was-delivered-to"
+  }
+  ```
+
+  Returns:
+
+  ```json
+  {
+    "access_token": "jwt-token-representing-the-user",
+    "token_type": "bearer",
+    "expires_in": 3600,
+    "refresh_token": "a-refresh-token"
   }
   ```
 
@@ -540,11 +643,31 @@ GoTrue exposes the following endpoints:
   You can use the `type` param to redirect the user to a password set form in the case of `invite` or `recovery`,
   or show an account confirmed/welcome message in the case of `signup`, or direct them to some additional onboarding flow
 
-### **POST /magiclink**
+### **POST /otp**
+  One-Time-Password. Will deliver a magiclink or sms otp to the user depending on whether the request body contains an "email" or "phone" key. 
+
+  ```js
+  {
+    "phone": "12345678" // follows the E.164 format
+  }
+
+  OR 
+
+  // exactly the same as /magiclink 
+  {
+    "email": "email@example.com"
+  }
+  ```
+  Returns:
+  ```
+  {}
+  ```
+
+### **POST /magiclink** (recommended to use /otp instead. See above.)
 
   Magic Link. Will deliver a link (e.g. `/verify?type=magiclink&token=fgtyuf68ddqdaDd`) to the user based on
   email address which they can use to redeem an access_token.
-  
+
   By default Magic Links can only be sent once every 60 seconds
 
   ```json
@@ -558,14 +681,14 @@ GoTrue exposes the following endpoints:
   ```json
   {}
   ```
-  
+
   when clicked the magic link will redirect the user to `<SITE_URL>#access_token=x&refresh_token=y&expires_in=z&token_type=bearer&type=magiclink` (see `/verify` above)
 
 ### **POST /recover**
 
   Password recovery. Will deliver a password recovery mail to the user based on
   email address.
-  
+
   By default recovery links can only be sent once every 60 seconds
 
   ```json
@@ -592,9 +715,16 @@ GoTrue exposes the following endpoints:
 
   body:
   ```json
+  // Email login
   {
     "email": "name@domain.com",
-    "password": "somepassword",
+    "password": "somepassword"
+  }
+  
+  // Phone login
+  {
+    "phone": "12345678",
+    "password": "somepassword"
   }
   ```
 
@@ -645,7 +775,7 @@ GoTrue exposes the following endpoints:
 ### **PUT /user**
 
   Update a user (Requires authentication). Apart from changing email/password, this
-  method can be used to set custom user data.
+  method can be used to set custom user data. Changing the email will result in a magiclink being sent out.
 
   ```json
   {
@@ -665,7 +795,7 @@ GoTrue exposes the following endpoints:
   {
     "id": "11111111-2222-3333-4444-5555555555555",
     "email": "email@example.com",
-    "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
+    "email_change_sent_at": "2016-05-15T20:49:40.882805774-07:00",
     "created_at": "2016-05-15T19:53:12.368652374-07:00",
     "updated_at": "2016-05-15T19:53:12.368652374-07:00"
   }
@@ -685,18 +815,17 @@ GoTrue exposes the following endpoints:
 
   query params:
   ```
-  provider=apple | azure | bitbucket | discord | facebook | github | gitlab | google | twitter
+  provider=apple | azure | bitbucket | discord | facebook | github | gitlab | google | twitch | twitter
   scopes=<optional additional scopes depending on the provider (email and name are requested by default)>
   ```
- 
+
   Redirects to provider and then to `/callback`
-  
+
   For apple specific setup see: https://github.com/supabase/gotrue#apple-oauth
-  
+
 ### **GET /callback**
 
   External provider should redirect to here
- 
-  Redirects to `<GOTRUE_SITE_URL>#access_token=<access_token>&refresh_token=<refresh_token>&provider_token=<provider_oauth_token>&expires_in=3600&provider=<provider_name>`
-  If additional scopes were requested then `provider_token` will be populated, you can use this to fetch additional data from the provider or interact with their services 
 
+  Redirects to `<GOTRUE_SITE_URL>#access_token=<access_token>&refresh_token=<refresh_token>&provider_token=<provider_oauth_token>&expires_in=3600&provider=<provider_name>`
+  If additional scopes were requested then `provider_token` will be populated, you can use this to fetch additional data from the provider or interact with their services

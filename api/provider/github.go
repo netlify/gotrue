@@ -22,6 +22,7 @@ type githubProvider struct {
 }
 
 type githubUser struct {
+	UserName  string `json:"login"`
 	Email     string `json:"email"`
 	Name      string `json:"name"`
 	AvatarURL string `json:"avatar_url"`
@@ -75,6 +76,7 @@ func (g githubProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 
 	data := &UserProvidedData{
 		Metadata: map[string]string{
+			userNameKey:  u.UserName,
 			nameKey:      u.Name,
 			avatarURLKey: u.AvatarURL,
 		},
