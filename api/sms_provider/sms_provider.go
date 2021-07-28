@@ -7,7 +7,7 @@ import (
 )
 
 type SmsProvider interface {
-	SendSms(phone, otp string) error
+	SendSms(phone, message string) error
 }
 
 func GetSmsProvider(config conf.Configuration) (SmsProvider, error) {

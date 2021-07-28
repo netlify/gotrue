@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -47,7 +48,9 @@ func (a *API) sendPhoneConfirmation(tx *storage.Connection, ctx context.Context,
 		return err
 	}
 
-	if serr := smsProvider.SendSms(phone, user.ConfirmationToken); serr != nil {
+	message := fmt.Sprintf("Your OTP for %s is %v", config.SiteURL, user.ConfirmationToken)
+
+	if serr := smsProvider.SendSms(phone, message); serr != nil {
 		user.ConfirmationToken = oldToken
 		return serr
 	}
