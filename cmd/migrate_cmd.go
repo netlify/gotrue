@@ -90,7 +90,9 @@ func migrate(cmd *cobra.Command, args []string) {
 
 	err = mig.Up()
 	if err != nil {
-		log.Fatalf("%+v", errors.Wrap(err, "running db migrations"))
+		log.Fatalf("%v", errors.Wrap(err, "running db migrations"))
+	} else {
+		log.Infof("GoTrue migrations applied successfully")
 	}
 
 	log.Debugf("after status")

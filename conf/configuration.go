@@ -314,3 +314,16 @@ func (o *OAuthProviderConfiguration) Validate() error {
 	}
 	return nil
 }
+
+func (t *TwilioProviderConfiguration) Validate() error {
+	if t.AccountSid == "" {
+		return errors.New("Missing Twilio account SID")
+	}
+	if t.AuthToken == "" {
+		return errors.New("Missing Twilio auth token")
+	}
+	if t.MessageServiceSid == "" {
+		return errors.New("Missing Twilio message service SID or Twilio phone number")
+	}
+	return nil
+}
