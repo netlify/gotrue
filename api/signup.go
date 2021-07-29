@@ -120,6 +120,9 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 			} else {
 				mailer := a.Mailer(ctx)
 				referrer := a.getReferrer(r)
+				if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserConfirmationRequestedAction, nil); terr != nil {
+					return terr
+				}
 				if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
 					if errors.Is(terr, MaxFrequencyLimitError) {
 						now := time.Now()
@@ -141,6 +144,9 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 					return internalServerError("Database error updating user").WithInternalError(terr)
 				}
 			} else {
+				if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserConfirmationRequestedAction, nil); terr != nil {
+					return terr
+				}
 				if terr = a.sendPhoneConfirmation(tx, ctx, user, params.Phone); terr != nil {
 					return badRequestError("Error sending confirmation sms: %v", terr)
 				}
