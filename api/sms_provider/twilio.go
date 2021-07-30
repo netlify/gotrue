@@ -42,6 +42,10 @@ func (t twilioErrResponse) Error() string {
 
 // Creates a SmsProvider with the Twilio Config
 func NewTwilioProvider(config conf.TwilioProviderConfiguration) (SmsProvider, error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+
 	apiPath := defaultTwilioApiBase + "/" + apiVersion + "/" + "Accounts" + "/" + config.AccountSid + "/Messages.json"
 	return &TwilioProvider{
 		Config:  &config,
@@ -50,12 +54,12 @@ func NewTwilioProvider(config conf.TwilioProviderConfiguration) (SmsProvider, er
 }
 
 // Send an SMS containing the OTP with Twilio's API
-func (t TwilioProvider) SendSms(phone string, otp string) error {
+func (t TwilioProvider) SendSms(phone string, message string) error {
 	body := url.Values{
 		"To":      {"+" + phone}, // twilio api requires "+" extension to be included
 		"Channel": {"sms"},
 		"From":    {t.Config.MessageServiceSid},
-		"Body":    {otp},
+		"Body":    {message},
 	}
 
 	client := &http.Client{}
