@@ -305,7 +305,33 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 
 	nextDay := user.EmailChangeSentAt.Add(24 * time.Hour)
 	if user.EmailChangeSentAt != nil && time.Now().After(nextDay) {
+		err = a.db.Transaction(func(tx *storage.Connection) error {
+			user.EmailChangeConfirmStatus = 0
+			return tx.UpdateOnly(user, "email_change_confirm_status")
+		})
+		if err != nil {
+			return nil, err
+		}
 		return nil, expiredTokenError("Email change token expired").WithInternalError(redirectWithQueryError)
+	}
+
+	if user.EmailChangeConfirmStatus < 1 {
+		err = a.db.Transaction(func(tx *storage.Connection) error {
+			user.EmailChangeConfirmStatus += 1
+			if params.Token == user.EmailChangeTokenCurrent {
+				user.EmailChangeTokenCurrent = ""
+			} else if params.Token == user.EmailChangeTokenNew {
+				user.EmailChangeTokenNew = ""
+			}
+			if terr := tx.UpdateOnly(user, "email_change_confirm_status", "email_change_token_current", "email_change_token_new"); terr != nil {
+				return terr
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		return nil, acceptedTokenError("Email change request accepted")
 	}
 
 	err = a.db.Transaction(func(tx *storage.Connection) error {
