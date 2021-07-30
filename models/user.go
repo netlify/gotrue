@@ -40,9 +40,11 @@ type User struct {
 	RecoveryToken  string     `json:"-" db:"recovery_token"`
 	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty" db:"recovery_sent_at"`
 
-	EmailChangeToken  string     `json:"-" db:"email_change_token"`
-	EmailChange       string     `json:"new_email,omitempty" db:"email_change"`
-	EmailChangeSentAt *time.Time `json:"email_change_sent_at,omitempty" db:"email_change_sent_at"`
+	EmailChangeTokenCurrent  string     `json:"-" db:"email_change_token_current"`
+	EmailChangeTokenNew      string     `json:"-" db:"email_change_token_new"`
+	EmailChange              string     `json:"new_email,omitempty" db:"email_change"`
+	EmailChangeSentAt        *time.Time `json:"email_change_sent_at,omitempty" db:"email_change_sent_at"`
+	EmailChangeConfirmStatus int        `json:"email_change_confirm_status" db:"email_change_confirm_status"`
 
 	PhoneChangeToken  string     `json:"-" db:"phone_change_token"`
 	PhoneChange       string     `json:"new_phone,omitempty" db:"phone_change"`
@@ -269,8 +271,17 @@ func (u *User) UpdateLastSignInAt(tx *storage.Connection) error {
 func (u *User) ConfirmEmailChange(tx *storage.Connection) error {
 	u.Email = storage.NullString(u.EmailChange)
 	u.EmailChange = ""
-	u.EmailChangeToken = ""
-	return tx.UpdateOnly(u, "email", "email_change", "email_change_token")
+	u.EmailChangeTokenCurrent = ""
+	u.EmailChangeTokenNew = ""
+	u.EmailChangeConfirmStatus = 0
+	return tx.UpdateOnly(
+		u,
+		"email",
+		"email_change",
+		"email_change_token_current",
+		"email_change_token_new",
+		"email_change_confirm_status",
+	)
 }
 
 // ConfirmPhoneChange confirms the change of phone for a user
@@ -343,7 +354,7 @@ func FindUserByRecoveryToken(tx *storage.Connection, token string) (*User, error
 
 // FindUserByRecoveryToken finds a user with the matching recovery token.
 func FindUserByEmailChangeToken(tx *storage.Connection, token string) (*User, error) {
-	return findUser(tx, "email_change_token = ?", token)
+	return findUser(tx, "email_change_token_current = ? or email_change_token_new = ?", token, token)
 }
 
 // FindUserWithRefreshToken finds a user from the provided refresh token.

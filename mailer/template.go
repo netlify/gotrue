@@ -112,32 +112,57 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User, referrerURL string)
 // EmailChangeMail sends an email change confirmation mail to a user
 func (m *TemplateMailer) EmailChangeMail(user *models.User, referrerURL string) error {
 	globalConfig, err := conf.LoadGlobal(configFile)
+	if err != nil {
+		return err
+	}
 
 	redirectParam := ""
 	if len(referrerURL) > 0 {
 		redirectParam = "&redirect_to=" + referrerURL
 	}
 
-	url, err := getSiteURL(referrerURL, globalConfig.API.ExternalURL, m.Config.Mailer.URLPaths.EmailChange, "token="+user.EmailChangeToken+"&type=email_change"+redirectParam)
-	if err != nil {
-		return err
+	errors := make(chan error)
+	tokens := map[string]string{
+		user.GetEmail():  user.EmailChangeTokenCurrent,
+		user.EmailChange: user.EmailChangeTokenNew,
 	}
-	data := map[string]interface{}{
-		"SiteURL":         m.Config.SiteURL,
-		"ConfirmationURL": url,
-		"Email":           user.GetEmail(),
-		"NewEmail":        user.EmailChange,
-		"Token":           user.EmailChangeToken,
-		"Data":            user.UserMetaData,
+	for email, token := range tokens {
+		url, err := getSiteURL(
+			referrerURL,
+			globalConfig.API.ExternalURL,
+			m.Config.Mailer.URLPaths.EmailChange,
+			"token="+token+"&type=email_change"+redirectParam,
+		)
+		if err != nil {
+			return err
+		}
+		go func(e, t string) {
+			data := map[string]interface{}{
+				"SiteURL":         m.Config.SiteURL,
+				"ConfirmationURL": url,
+				"Email":           user.GetEmail(),
+				"NewEmail":        user.EmailChange,
+				"Token":           t,
+				"Data":            user.UserMetaData,
+			}
+			errors <- m.Mailer.Mail(
+				e,
+				string(withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change")),
+				m.Config.Mailer.Templates.EmailChange,
+				defaultEmailChangeMail,
+				data,
+			)
+		}(email, token)
 	}
 
-	return m.Mailer.Mail(
-		user.EmailChange,
-		string(withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change")),
-		m.Config.Mailer.Templates.EmailChange,
-		defaultEmailChangeMail,
-		data,
-	)
+	for i := 0; i < len(tokens); i++ {
+		e := <-errors
+		if e != nil {
+			return e
+		}
+	}
+
+	return nil
 }
 
 // RecoveryMail sends a password recovery mail
