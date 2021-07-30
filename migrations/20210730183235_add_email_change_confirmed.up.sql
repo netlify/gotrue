@@ -8,7 +8,7 @@ DO $$
 BEGIN
   IF NOT EXISTS(SELECT *
     FROM information_schema.columns
-    WHERE table_schema = 'auth' and table_name='users' and column_name='email_change_token_new')
+    WHERE table_schema = 'auth' and table_name='users' and column_name='email_change_token')
   THEN
       ALTER TABLE "auth"."users" RENAME COLUMN "email_change_token" TO "email_change_token_new";
   END IF;
