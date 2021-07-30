@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt"
 )
 
 func (ts *ExternalTestSuite) TestSignupExternalTwitch() {
@@ -94,7 +94,6 @@ func (ts *ExternalTestSuite) TestSignupExternalTwitchDisableSignupErrorWhenEmpty
 	TwitchUser := `{"data":[{"id":"1","login":"Twitch user","display_name":"Twitch user","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":""}]}`
 	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, TwitchUser)
 	defer server.Close()
-
 
 	u := performAuthorization(ts, "twitch", code, "")
 
