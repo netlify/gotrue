@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gofrs/uuid"
+	jwt "github.com/golang-jwt/jwt"
 	"github.com/markbates/goth/gothic"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
