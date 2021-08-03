@@ -5,7 +5,6 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/badoux/checkmail v0.0.0-20170203135005-d0a759655d62
 	github.com/beevik/etree v1.1.0
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/didip/tollbooth/v5 v5.1.1
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/go-chi/chi v4.0.2+incompatible
@@ -19,6 +18,7 @@ require (
 	github.com/gobuffalo/pop/v5 v5.3.3
 	github.com/gobuffalo/validate/v3 v3.3.0 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/imdario/mergo v0.0.0-20160216103600-3e95a51e0639
 	github.com/jackc/pgproto3/v2 v2.0.7 // indirect
 	github.com/jmoiron/sqlx v1.3.1 // indirect
@@ -27,13 +27,12 @@ require (
 	github.com/lestrrat-go/jwx v0.9.0
 	github.com/lib/pq v1.9.0 // indirect
 	github.com/markbates/goth v1.67.1
-	github.com/microcosm-cc/bluemonday v1.0.4 // indirect
+	github.com/microcosm-cc/bluemonday v1.0.5 // indirect
 	github.com/mrjones/oauth v0.0.0-20190623134757-126b35219450
 	github.com/netlify/mailme v1.1.1
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/pquerna/otp v1.3.0 // indirect
 	github.com/rogpeppe/go-internal v1.7.0 // indirect
 	github.com/rs/cors v1.6.0
 	github.com/russellhaering/gosaml2 v0.6.0
@@ -52,7 +51,7 @@ require (
 	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.12.1
-	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect
 )
 
