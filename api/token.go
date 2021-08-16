@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/metering"
 	"github.com/netlify/gotrue/models"
@@ -35,6 +35,7 @@ type AccessTokenResponse struct {
 // PasswordGrantParams are the parameters the ResourceOwnerPasswordGrant method accepts
 type PasswordGrantParams struct {
 	Email    string `json:"email"`
+	Phone    string `json:"phone"`
 	Password string `json:"password"`
 }
 
@@ -76,16 +77,31 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 
-	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
+	if params.Email != "" && params.Phone != "" {
+		return unprocessableEntityError("Only an email address or phone number should be provided on login.")
+	}
+	var user *models.User
+	var err error
+	if params.Email != "" {
+		user, err = models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
+	} else if params.Phone != "" {
+		params.Phone = a.formatPhoneNumber(params.Phone)
+		user, err = models.FindUserByPhoneAndAudience(a.db, instanceID, params.Phone, aud)
+	} else {
+		return oauthError("invalid_grant", "Invalid login credentials")
+	}
+
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return oauthError("invalid_grant", "Invalid email or password")
+			return oauthError("invalid_grant", "Invalid login credentials")
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	if !user.IsConfirmed() {
+	if params.Email != "" && !user.IsConfirmed() {
 		return oauthError("invalid_grant", "Email not confirmed")
+	} else if params.Phone != "" && !user.IsPhoneConfirmed() {
+		return oauthError("invalid_grant", "Phone not confirmed")
 	}
 
 	if !user.Authenticate(params.Password) {

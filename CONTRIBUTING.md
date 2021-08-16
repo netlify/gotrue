@@ -77,5 +77,5 @@ We actively welcome your pull requests.
 
 ## License
 
-By contributing to Netlify CMS, you agree that your contributions will be licensed
+By contributing to Gotrue, you agree that your contributions will be licensed
 under its [MIT license](LICENSE).

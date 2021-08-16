@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -79,6 +80,10 @@ func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessTok
 		return &UserProvidedData{}, nil
 	}
 	err = json.NewDecoder(bytes.NewReader(bits)).Decode(&u)
+
+	if u.Email == "" {
+		return nil, errors.New("Unable to find email with Twitter provider")
+	}
 
 	data := &UserProvidedData{
 		Metadata: map[string]string{
