@@ -72,7 +72,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		InviteToken: inviteToken,
 		Referrer:    redirectURL,
 	})
-	tokenString, err := token.SignedString([]byte(a.config.OperatorToken))
+	tokenString, err := token.SignedString([]byte(config.JWT.Secret))
 	if err != nil {
 		return internalServerError("Error creating state").WithInternalError(err)
 	}
@@ -269,7 +269,7 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 	var emails []string
 	for _, e := range userData.Emails {
 		emails = append(emails, e.Email)
-		if user.Email == e.Email {
+		if user.GetEmail() == e.Email {
 			emailData = &e
 			break
 		}
@@ -310,10 +310,11 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 }
 
 func (a *API) loadExternalState(ctx context.Context, state string) (context.Context, error) {
+	config := a.getConfig(ctx)
 	claims := ExternalProviderClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 	_, err := p.ParseWithClaims(state, &claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(a.config.OperatorToken), nil
+		return []byte(config.JWT.Secret), nil
 	})
 	if err != nil || claims.Provider == "" {
 		return nil, badRequestError("OAuth state is invalid: %v", err)
@@ -351,6 +352,8 @@ func (a *API) Provider(ctx context.Context, name string, scopes string) (provide
 		return provider.NewGoogleProvider(config.External.Google, scopes)
 	case "facebook":
 		return provider.NewFacebookProvider(config.External.Facebook, scopes)
+	case "twitch":
+		return provider.NewTwitchProvider(config.External.Twitch, scopes)
 	case "twitter":
 		return provider.NewTwitterProvider(config.External.Twitter, scopes)
 	case "saml":

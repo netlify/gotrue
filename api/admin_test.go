@@ -10,9 +10,9 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gofrs/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -44,7 +44,7 @@ func TestAdmin(t *testing.T) {
 
 func (ts *AdminTestSuite) SetupTest() {
 	models.TruncateAll(ts.API.db)
-	ts.Config.External.Email.Disabled = false
+	ts.Config.External.Email.Enabled = true
 	ts.token = ts.makeSuperAdmin("test@example.com")
 }
 
@@ -53,6 +53,7 @@ func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
 	require.NoError(ts.T(), err, "Error making new user")
 
 	u.IsSuperAdmin = true
+	u.Role = "supabase_admin"
 	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
@@ -69,7 +70,7 @@ func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
 
 func (ts *AdminTestSuite) makeSystemUser() string {
 	u := models.NewSystemUser(uuid.Nil, ts.Config.JWT.Aud)
-
+	u.Role = "service_role"
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
 
@@ -174,8 +175,8 @@ func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	require.Len(ts.T(), data.Users, 2)
-	assert.Equal(ts.T(), "test@example.com", data.Users[0].Email)
-	assert.Equal(ts.T(), "test1@example.com", data.Users[1].Email)
+	assert.Equal(ts.T(), "test@example.com", data.Users[0].GetEmail())
+	assert.Equal(ts.T(), "test1@example.com", data.Users[1].GetEmail())
 }
 
 // TestAdminUsers tests API /admin/users route
@@ -202,8 +203,8 @@ func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	require.Len(ts.T(), data.Users, 2)
-	assert.Equal(ts.T(), "test1@example.com", data.Users[0].Email)
-	assert.Equal(ts.T(), "test@example.com", data.Users[1].Email)
+	assert.Equal(ts.T(), "test1@example.com", data.Users[0].GetEmail())
+	assert.Equal(ts.T(), "test@example.com", data.Users[1].GetEmail())
 }
 
 // TestAdminUsers tests API /admin/users route
@@ -261,6 +262,7 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"email":    "test1@example.com",
+		"phone":    "123456789",
 		"password": "test1",
 	}))
 
@@ -275,7 +277,8 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 
 	data := models.User{}
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-	assert.Equal(ts.T(), "test1@example.com", data.Email)
+	assert.Equal(ts.T(), "test1@example.com", data.GetEmail())
+	assert.Equal(ts.T(), "123456789", data.GetPhone())
 	assert.Equal(ts.T(), "email", data.AppMetaData["provider"])
 }
 
@@ -428,7 +431,7 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithManagementToken() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	assert.NotNil(ts.T(), data.ID)
-	assert.Equal(ts.T(), "test2@example.com", data.Email)
+	assert.Equal(ts.T(), "test2@example.com", data.GetEmail())
 }
 
 func (ts *AdminTestSuite) TestAdminUserCreateWithDisabledEmailLogin() {
@@ -444,7 +447,7 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithDisabledEmailLogin() {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
 
-	ts.Config.External.Email.Disabled = true
+	ts.Config.External.Email.Enabled = false
 
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), http.StatusBadRequest, w.Code)

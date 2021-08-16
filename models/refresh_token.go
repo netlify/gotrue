@@ -7,7 +7,6 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/storage"
-	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
 )
 
@@ -27,11 +26,6 @@ type RefreshToken struct {
 
 func (RefreshToken) TableName() string {
 	tableName := "refresh_tokens"
-
-	if namespace.GetNamespace() != "" {
-		return namespace.GetNamespace() + "_" + tableName
-	}
-
 	return tableName
 }
 

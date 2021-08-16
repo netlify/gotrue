@@ -20,6 +20,7 @@ type Mailer interface {
 	MagicLinkMail(user *models.User, referrerURL string) error
 	EmailChangeMail(user *models.User, referrerURL string) error
 	ValidateEmail(email string) error
+	GetEmailActionLink(user *models.User, actionType, referrerURL string) (string, error)
 }
 
 // NewMailer returns a new gotrue mailer

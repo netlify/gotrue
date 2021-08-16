@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS auth.audit_log_entries CASCADE;

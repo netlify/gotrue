@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/test"
-	"github.com/gofrs/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -96,7 +96,7 @@ func TestEmailEnabledByDefault(t *testing.T) {
 	api, _, err := setupAPIForTest()
 	require.NoError(t, err)
 
-	require.False(t, api.config.External.Email.Disabled)
+	require.True(t, api.config.External.Email.Enabled)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

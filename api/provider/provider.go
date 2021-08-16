@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	avatarURLKey = "avatar_url"
-	nameKey      = "full_name"
-	aliasKey     = "slug"
+	userNameKey   = "user_name"
+	avatarURLKey  = "avatar_url"
+	nameKey       = "full_name"
+	aliasKey      = "slug"
+	providerIdKey = "provider_id"
 )
 
 type Email struct {

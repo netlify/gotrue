@@ -17,6 +17,7 @@ import (
 type GoTrueClaims struct {
 	jwt.StandardClaims
 	Email        string                 `json:"email"`
+	Phone        string                 `json:"phone"`
 	AppMetaData  map[string]interface{} `json:"app_metadata"`
 	UserMetaData map[string]interface{} `json:"user_metadata"`
 	Role         string                 `json:"role"`
@@ -198,7 +199,8 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, secret stri
 			Audience:  user.Aud,
 			ExpiresAt: time.Now().Add(expiresIn).Unix(),
 		},
-		Email:        user.Email,
+		Email:        user.GetEmail(),
+		Phone:        user.GetPhone(),
 		AppMetaData:  user.AppMetaData,
 		UserMetaData: user.UserMetaData,
 		Role:         user.Role,
