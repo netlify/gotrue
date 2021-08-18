@@ -171,7 +171,7 @@ func (a *API) requireEmailProvider(w http.ResponseWriter, req *http.Request) (co
 	config := a.getConfig(ctx)
 
 	if !config.External.Email.Enabled {
-		return nil, badRequestError("Unsupported email provider")
+		return nil, badRequestError("Email logins are disabled")
 	}
 
 	return ctx, nil
