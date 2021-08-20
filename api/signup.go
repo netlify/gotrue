@@ -62,7 +62,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	switch params.Provider {
 	case "email":
 		if !config.External.Email.Enabled {
-			return badRequestError("Unsupported email provider")
+			return badRequestError("Email logins are disabled")
 		}
 		if err := a.validateEmail(ctx, params.Email); err != nil {
 			return err
