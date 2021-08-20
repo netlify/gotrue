@@ -66,7 +66,11 @@ func NewAuditLogEntry(tx *storage.Connection, instanceID uuid.UUID, actor *User,
 	if err != nil {
 		return errors.Wrap(err, "Error generating unique id")
 	}
+
 	username := actor.GetEmail()
+	if actor.Role == "supabase_admin" || actor.Role == "service_role" {
+		username = actor.Role
+	}
 	if actor.GetPhone() != "" {
 		username = actor.GetPhone()
 	}
@@ -103,7 +107,7 @@ func FindAuditLogEntries(tx *storage.Connection, instanceID uuid.UUID, filterCol
 		values := make([]interface{}, len(filterColumns))
 
 		for idx, col := range filterColumns {
-			builder.WriteString(fmt.Sprintf("payload->>'$.%s' COLLATE utf8mb4_unicode_ci LIKE ?", col))
+			builder.WriteString(fmt.Sprintf("payload->>'%s' ILIKE ?", col))
 			values[idx] = lf
 
 			if idx+1 < len(filterColumns) {
