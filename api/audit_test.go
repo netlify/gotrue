@@ -42,14 +42,14 @@ func TestAudit(t *testing.T) {
 
 func (ts *AuditTestSuite) SetupTest() {
 	models.TruncateAll(ts.API.db)
-	ts.token = ts.makeSuperAdmin("test@example.com")
+	ts.token = ts.makeSuperAdmin("")
 }
 
 func (ts *AuditTestSuite) makeSuperAdmin(email string) string {
 	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test User"})
 	require.NoError(ts.T(), err, "Error making new user")
 
-	u.IsSuperAdmin = true
+	u.Role = "supabase_admin"
 	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
@@ -82,8 +82,8 @@ func (ts *AuditTestSuite) TestAuditGet() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&logs))
 
 	require.Len(ts.T(), logs, 1)
-	require.Contains(ts.T(), logs[0].Payload, "actor_email")
-	assert.Equal(ts.T(), "test@example.com", logs[0].Payload["actor_email"])
+	require.Contains(ts.T(), logs[0].Payload, "actor_username")
+	assert.Equal(ts.T(), "supabase_admin", logs[0].Payload["actor_username"])
 	traits, ok := logs[0].Payload["traits"].(map[string]interface{})
 	require.True(ts.T(), ok)
 	require.Contains(ts.T(), traits, "user_email")
@@ -96,8 +96,7 @@ func (ts *AuditTestSuite) TestAuditFilters() {
 	queries := []string{
 		"/admin/audit?query=action:user_deleted",
 		"/admin/audit?query=type:team",
-		"/admin/audit?query=author:user",
-		"/admin/audit?query=author:@example.com",
+		"/admin/audit?query=author:admin",
 	}
 
 	for _, q := range queries {
@@ -112,8 +111,8 @@ func (ts *AuditTestSuite) TestAuditFilters() {
 		require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&logs))
 
 		require.Len(ts.T(), logs, 1)
-		require.Contains(ts.T(), logs[0].Payload, "actor_email")
-		assert.Equal(ts.T(), "test@example.com", logs[0].Payload["actor_email"])
+		require.Contains(ts.T(), logs[0].Payload, "actor_username")
+		assert.Equal(ts.T(), "supabase_admin", logs[0].Payload["actor_username"])
 		traits, ok := logs[0].Payload["traits"].(map[string]interface{})
 		require.True(ts.T(), ok)
 		require.Contains(ts.T(), traits, "user_email")
