@@ -31,6 +31,7 @@ const (
 	gotrueIssuer        = "gotrue"
 	ValidateEvent       = "validate"
 	SignupEvent         = "signup"
+	EmailChangeEvent    = "email_change"
 	LoginEvent          = "login"
 )
 
