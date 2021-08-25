@@ -23,7 +23,7 @@ func (a *API) MagicLink(w http.ResponseWriter, r *http.Request) error {
 	config := a.getConfig(ctx)
 
 	if !config.External.Email.Enabled {
-		return badRequestError("Unsupported email provider")
+		return badRequestError("Email logins are disabled")
 	}
 
 	instanceID := getInstanceID(ctx)

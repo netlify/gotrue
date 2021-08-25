@@ -20,11 +20,12 @@ var (
 )
 
 const (
-	signupVerification    = "signup"
-	recoveryVerification  = "recovery"
-	inviteVerification    = "invite"
-	magicLinkVerification = "magiclink"
-	smsVerification       = "sms"
+	signupVerification      = "signup"
+	recoveryVerification    = "recovery"
+	inviteVerification      = "invite"
+	magicLinkVerification   = "magiclink"
+	emailChangeVerification = "email_change"
+	smsVerification         = "sms"
 )
 
 // VerifyParams are the parameters the Verify endpoint accepts
@@ -79,6 +80,8 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 			user, terr = a.signupVerify(ctx, tx, params)
 		case recoveryVerification, magicLinkVerification:
 			user, terr = a.recoverVerify(ctx, tx, params)
+		case emailChangeVerification:
+			user, terr = a.emailChangeVerify(ctx, tx, params)
 		case smsVerification:
 			if params.Phone == "" {
 				return unprocessableEntityError("Sms Verification requires a phone number")
@@ -287,4 +290,70 @@ func (a *API) prepErrorRedirectURL(err *HTTPError, r *http.Request, rurl string)
 	q.Set("error_code", strconv.Itoa(err.Code))
 	q.Set("error_description", err.Message)
 	return rurl + "#" + q.Encode()
+}
+
+func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {
+	instanceID := getInstanceID(ctx)
+	config := a.getConfig(ctx)
+	user, err := models.FindUserByEmailChangeToken(conn, params.Token)
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			return nil, notFoundError(err.Error()).WithInternalError(redirectWithQueryError)
+		}
+		return nil, internalServerError("Database error finding user").WithInternalError(err)
+	}
+
+	nextDay := user.EmailChangeSentAt.Add(24 * time.Hour)
+	if user.EmailChangeSentAt != nil && time.Now().After(nextDay) {
+		err = a.db.Transaction(func(tx *storage.Connection) error {
+			user.EmailChangeConfirmStatus = 0
+			return tx.UpdateOnly(user, "email_change_confirm_status")
+		})
+		if err != nil {
+			return nil, err
+		}
+		return nil, expiredTokenError("Email change token expired").WithInternalError(redirectWithQueryError)
+	}
+
+	if user.EmailChangeConfirmStatus < 1 {
+		err = a.db.Transaction(func(tx *storage.Connection) error {
+			user.EmailChangeConfirmStatus += 1
+			if params.Token == user.EmailChangeTokenCurrent {
+				user.EmailChangeTokenCurrent = ""
+			} else if params.Token == user.EmailChangeTokenNew {
+				user.EmailChangeTokenNew = ""
+			}
+			if terr := tx.UpdateOnly(user, "email_change_confirm_status", "email_change_token_current", "email_change_token_new"); terr != nil {
+				return terr
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		return nil, acceptedTokenError("Email change request accepted")
+	}
+
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		var terr error
+
+		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserModifiedAction, nil); terr != nil {
+			return terr
+		}
+
+		if terr = triggerEventHooks(ctx, tx, EmailChangeEvent, user, instanceID, config); terr != nil {
+			return terr
+		}
+
+		if terr = user.ConfirmEmailChange(tx); terr != nil {
+			return internalServerError("Error confirm email").WithInternalError(terr)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }

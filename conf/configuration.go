@@ -122,6 +122,7 @@ type SmsProviderConfiguration struct {
 	OtpExp       uint                        `json:"otp_exp" split_words:"true"`
 	OtpLength    int                         `json:"otp_length" split_words:"true"`
 	Provider     string                      `json:"provider"`
+	Template     string                      `json:"template"`
 	Twilio       TwilioProviderConfiguration `json:"twilio"`
 }
 
@@ -259,6 +260,10 @@ func (config *Configuration) ApplyDefaults() {
 	if config.Sms.OtpLength == 0 || config.Sms.OtpLength < 6 || config.Sms.OtpLength > 10 {
 		// 6-digit otp by default
 		config.Sms.OtpLength = 6
+	}
+
+	if len(config.Sms.Template) == 0 {
+		config.Sms.Template = ""
 	}
 
 	if config.Cookie.Key == "" {
