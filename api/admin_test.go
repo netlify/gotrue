@@ -45,16 +45,14 @@ func TestAdmin(t *testing.T) {
 func (ts *AdminTestSuite) SetupTest() {
 	models.TruncateAll(ts.API.db)
 	ts.Config.External.Email.Enabled = true
-	ts.token = ts.makeSuperAdmin("test@example.com")
+	ts.token = ts.makeSuperAdmin("")
 }
 
 func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
 	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test User"})
 	require.NoError(ts.T(), err, "Error making new user")
 
-	u.IsSuperAdmin = true
 	u.Role = "supabase_admin"
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
