@@ -68,12 +68,11 @@ func NewAuditLogEntry(tx *storage.Connection, instanceID uuid.UUID, actor *User,
 	}
 
 	username := actor.GetEmail()
-	if actor.Role == "supabase_admin" || actor.Role == "service_role" {
-		username = actor.Role
-	}
+
 	if actor.GetPhone() != "" {
 		username = actor.GetPhone()
 	}
+
 	l := AuditLogEntry{
 		InstanceID: instanceID,
 		ID:         id,
