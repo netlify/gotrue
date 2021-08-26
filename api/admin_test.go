@@ -228,7 +228,11 @@ func (ts *AdminTestSuite) TestAdminUsers_FilterEmail() {
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers_FilterName() {
-	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
+	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test User"})
+	require.NoError(ts.T(), err, "Error making new user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
+
+	u, err = models.NewUser(ts.instanceID, "test2@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
@@ -248,7 +252,7 @@ func (ts *AdminTestSuite) TestAdminUsers_FilterName() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	require.Len(ts.T(), data.Users, 1)
-	assert.Equal(ts.T(), "test@example.com", data.Users[0].Email)
+	assert.Equal(ts.T(), "test1@example.com", data.Users[0].GetEmail())
 }
 
 // TestAdminUserCreate tests API /admin/user route (POST)
@@ -265,6 +269,7 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 	req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+	ts.Config.External.Phone.Enabled = true
 
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), http.StatusOK, w.Code)
@@ -403,21 +408,44 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 	require.Equal(ts.T(), http.StatusOK, w.Code)
 }
 
-func (ts *AdminTestSuite) TestAdminUserCreateWithDisabledEmailLogin() {
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"email":    "test1@example.com",
-		"password": "test1",
-	}))
+func (ts *AdminTestSuite) TestAdminUserCreateWithDisableLogin() {
+	var cases = []struct {
+		n        *bool
+		userData map[string]interface{}
+		expected int
+	}{
+		{&ts.Config.External.Email.Enabled, map[string]interface{}{
+			"email":    "test1@example.com",
+			"password": "test1",
+		}, http.StatusBadRequest},
+		{&ts.Config.External.Phone.Enabled, map[string]interface{}{
+			"phone":    "123456789",
+			"password": "test1",
+		}, http.StatusBadRequest},
+		{&ts.Config.DisableSignup, map[string]interface{}{
+			"email":    "test1@example.com",
+			"password": "test1",
+		}, http.StatusForbidden},
+	}
 
-	// Setup request
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
+	for i := 0; i < len(cases); i++ {
+		c := cases[i]
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+		// Initialize user data
+		var buffer bytes.Buffer
+		require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(c.userData))
 
-	ts.Config.External.Email.Enabled = false
+		// Setup request
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
 
-	ts.API.handler.ServeHTTP(w, req)
-	require.Equal(ts.T(), http.StatusBadRequest, w.Code)
+		// Set config
+		*c.n = false
+		if i == 2 {
+			*c.n = true
+		}
+		ts.API.handler.ServeHTTP(w, req)
+		require.Equal(ts.T(), c.expected, w.Code)
+	}
 }
