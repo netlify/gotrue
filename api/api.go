@@ -13,7 +13,6 @@ import (
 	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/go-chi/chi"
 	"github.com/gofrs/uuid"
-	"github.com/imdario/mergo"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
@@ -259,17 +258,18 @@ func (a *API) getConfig(ctx context.Context) *conf.Configuration {
 
 	config := obj.(*conf.Configuration)
 
-	extConfig := (*a.config).External
-	if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
-		return nil
-	}
-	config.External = extConfig
+	// Merge global & per-instance external config for multi-instance mode
+	// extConfig := (*a.config).External
+	// if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
+	// 	return nil
+	// }
+	// config.External = extConfig
 
-	smtpConfig := (*a.config).SMTP
-	if err := mergo.MergeWithOverwrite(&smtpConfig, config.SMTP); err != nil {
-		return nil
-	}
-	config.SMTP = smtpConfig
+	// smtpConfig := (*a.config).SMTP
+	// if err := mergo.MergeWithOverwrite(&smtpConfig, config.SMTP); err != nil {
+	// 	return nil
+	// }
+	// config.SMTP = smtpConfig
 
 	return config
 }
