@@ -383,7 +383,7 @@ func FindUsersInAudience(tx *storage.Connection, instanceID uuid.UUID, aud strin
 	if filter != "" {
 		lf := "%" + filter + "%"
 		// we must specify the collation in order to get case insensitive search for the JSON column
-		q = q.Where("(email LIKE ? OR raw_user_meta_data->>'$.full_name' ILIKE ?)", lf, lf)
+		q = q.Where("(email LIKE ? OR raw_user_meta_data->>'full_name' ILIKE ?)", lf, lf)
 	}
 
 	if sortParams != nil && len(sortParams.Fields) > 0 {
