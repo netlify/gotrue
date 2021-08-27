@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gofrs/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -75,7 +75,7 @@ func (ts *RecoverTestSuite) TestRecover_FirstRecovery() {
 }
 
 func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
-	recoveryTime := time.Now().UTC().Add(-5 * time.Minute)
+	recoveryTime := time.Now().UTC().Add(-59 * time.Second)
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	u.RecoverySentAt = &recoveryTime
@@ -94,7 +94,7 @@ func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
 	// Setup response recorder
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), http.StatusOK, w.Code)
+	assert.Equal(ts.T(), http.StatusTooManyRequests, w.Code)
 
 	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
