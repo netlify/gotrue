@@ -304,25 +304,18 @@ func (ts *VerifyTestSuite) TestVerifySignupWithRedirectUrlContainedPath() {
 			expectedRedirectURL: "http://localhost:3000/#/",
 		},
 		{
-			desc:                "different site url and redirect url with path",
+			desc:                "different site url and redirect url in allow list",
 			siteURL:             "https://someapp-something.codemagic.app/#/",
 			uriAllowList:        []string{"http://localhost:3000"},
-			requestRedirectURL:  "http://localhost:3000/#/",
-			expectedRedirectURL: "http://localhost:3000/#/",
+			requestRedirectURL:  "http://localhost:3000",
+			expectedRedirectURL: "http://localhost:3000",
 		},
 		{
-			desc:                "different site url and redirect url withput path",
+			desc:                "different site url and redirect url not in allow list",
 			siteURL:             "https://someapp-something.codemagic.app/#/",
 			uriAllowList:        []string{"http://localhost:3000"},
-			requestRedirectURL:  "http://localhost:3000/",
-			expectedRedirectURL: "http://localhost:3000/",
-		},
-		{
-			desc:                "different site url and not permited redirect url",
-			siteURL:             "https://someapp-something.codemagic.app/#/",
-			uriAllowList:        []string{},
-			requestRedirectURL:  "http://localhost:3000/#/",
-			expectedRedirectURL: "https://someapp-something.codemagic.app/",
+			requestRedirectURL:  "http://localhost:3000/docs",
+			expectedRedirectURL: "https://someapp-something.codemagic.app/#/",
 		},
 	}
 
