@@ -15,7 +15,7 @@ import (
 )
 
 type CaptchaResponse struct {
-	Token string `json:"hcaptchaToken"`
+	Token string `json:"hcaptcha_token"`
 }
 
 type VerificationResponse struct {
@@ -52,13 +52,15 @@ func VerifyRequest(r *http.Request, secretKey string) (VerificationResult, error
 	if err != nil || strings.TrimSpace(res.Token) == "" {
 		return UserRequestFailed, errors.Wrap(err, "couldn't decode captcha info")
 	}
-	return verifyCaptchaCode(res.Token, secretKey)
+	clientIP := strings.Split(r.RemoteAddr, ":")[0]
+	return verifyCaptchaCode(res.Token, secretKey, clientIP)
 }
 
-func verifyCaptchaCode(token string, secretKey string) (VerificationResult, error) {
+func verifyCaptchaCode(token string, secretKey string, clientIP string) (VerificationResult, error) {
 	data := url.Values{}
 	data.Set("secret", secretKey)
 	data.Set("response", token)
+	data.Set("remoteip", clientIP)
 	// TODO (darora): pipe through sitekey
 
 	r, err := http.NewRequest("POST", "https://hcaptcha.com/siteverify", strings.NewReader(data.Encode()))
