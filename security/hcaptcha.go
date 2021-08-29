@@ -30,6 +30,12 @@ const (
 	VerificationProcessFailure
 	SuccessfullyVerified
 )
+var Client *http.Client
+
+func init() {
+	// TODO (darora): make timeout configurable
+	Client = &http.Client{Timeout: 10 * time.Second}
+}
 
 func VerifyRequest(r *http.Request, secretKey string) (VerificationResult, error) {
 	res := CaptchaResponse{}
@@ -55,15 +61,13 @@ func verifyCaptchaCode(token string, secretKey string) (VerificationResult, erro
 	data.Set("response", token)
 	// TODO (darora): pipe through sitekey
 
-	// TODO (darora): make timeout configurable
-	client := &http.Client{Timeout: 10 * time.Second}
 	r, err := http.NewRequest("POST", "https://hcaptcha.com/siteverify", strings.NewReader(data.Encode()))
 	if err != nil {
 		return VerificationProcessFailure, errors.Wrap(err, "couldn't initialize request object for hcaptcha check")
 	}
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
-	res, err := client.Do(r)
+	res, err := Client.Do(r)
 	if err != nil {
 		return VerificationProcessFailure, errors.Wrap(err, "failed to verify hcaptcha token")
 	}
