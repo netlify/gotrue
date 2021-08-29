@@ -132,6 +132,16 @@ type TwilioProviderConfiguration struct {
 	MessageServiceSid string `json:"message_service_sid" split_words:"true"`
 }
 
+type CaptchaConfiguration struct {
+	Enabled  bool   `json:"enabled" default:"false"`
+	Provider string `json:"provider" default:"hcaptcha"`
+	Secret   string `json:"provider_secret"`
+}
+
+type SecurityConfiguration struct {
+	Captcha CaptchaConfiguration `json:"captcha"`
+}
+
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
 	SiteURL           string                   `json:"site_url" split_words:"true" required:"true"`
@@ -144,6 +154,7 @@ type Configuration struct {
 	Sms               SmsProviderConfiguration `json:"sms"`
 	DisableSignup     bool                     `json:"disable_signup" split_words:"true"`
 	Webhook           WebhookConfig            `json:"webhook" split_words:"true"`
+	Security          SecurityConfiguration    `json:"security"`
 	Cookie            struct {
 		Key      string `json:"key"`
 		Duration int    `json:"duration"`

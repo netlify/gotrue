@@ -1,0 +1,81 @@
+package security
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+)
+
+type CaptchaResponse struct {
+	Token string `json:"hcaptchaToken"`
+}
+
+type VerificationResponse struct {
+	Success    bool     `json:"success"`
+	ErrorCodes []string `json:"error-codes"`
+	Hostname   string   `json:"hostname"`
+}
+
+type VerificationResult int
+const (
+	UserRequestFailed VerificationResult = iota
+	VerificationProcessFailure
+	SuccessfullyVerified
+)
+
+func VerifyRequest(r *http.Request, secretKey string) (VerificationResult, error) {
+	res := CaptchaResponse{}
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return UserRequestFailed, err
+	}
+	r.Body.Close()
+	// re-init body so downstream route handlers don't get borked
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	jsonDecoder := json.NewDecoder(bytes.NewBuffer(bodyBytes))
+	err = jsonDecoder.Decode(&res)
+	if err != nil || strings.TrimSpace(res.Token) == "" {
+		return UserRequestFailed, errors.Wrap(err, "couldn't decode captcha info")
+	}
+	return verifyCaptchaCode(res.Token, secretKey)
+}
+
+func verifyCaptchaCode(token string, secretKey string) (VerificationResult, error) {
+	data := url.Values{}
+	data.Set("secret", secretKey)
+	data.Set("response", token)
+	// TODO (darora): pipe through sitekey
+
+	// TODO (darora): make timeout configurable
+	client := &http.Client{Timeout: 10 * time.Second}
+	r, err := http.NewRequest("POST", "https://hcaptcha.com/siteverify", strings.NewReader(data.Encode()))
+	if err != nil {
+		return VerificationProcessFailure, errors.Wrap(err, "couldn't initialize request object for hcaptcha check")
+	}
+	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+	res, err := client.Do(r)
+	if err != nil {
+		return VerificationProcessFailure, errors.Wrap(err, "failed to verify hcaptcha token")
+	}
+	verResult := VerificationResponse{}
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&verResult)
+	if err != nil {
+		return VerificationProcessFailure, errors.Wrap(err, "failed to decode hcaptcha response")
+	}
+	logrus.WithField("result", verResult).Info("obtained hcaptcha verification result")
+	if !verResult.Success {
+		return UserRequestFailed, fmt.Errorf("user request suppressed by hcaptcha")
+	}
+	return SuccessfullyVerified, nil
+}
