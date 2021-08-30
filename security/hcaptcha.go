@@ -74,6 +74,7 @@ func verifyCaptchaCode(token string, secretKey string, clientIP string) (Verific
 		return VerificationProcessFailure, errors.Wrap(err, "failed to verify hcaptcha token")
 	}
 	verResult := VerificationResponse{}
+	defer res.Body.Close()
 	decoder := json.NewDecoder(res.Body)
 	err = decoder.Decode(&verResult)
 	if err != nil {
