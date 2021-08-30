@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	secret   string = "0x0000000000000000000000000000000000000000"
-	response string = "10000000-aaaa-bbbb-cccc-000000000001"
+	HCaptchaSecret   string = "0x0000000000000000000000000000000000000000"
+	HCaptchaResponse string = "10000000-aaaa-bbbb-cccc-000000000001"
 )
 
 type MiddlewareTestSuite struct {
@@ -47,12 +47,12 @@ func (ts *MiddlewareTestSuite) TestVerifyCaptchaValid() {
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"email":          "test@example.com",
 		"password":       "secret",
-		"hcaptcha_token": response,
+		"hcaptcha_token": HCaptchaResponse,
 	}))
 
 	ts.Config.Security.Captcha.Enabled = true
 	ts.Config.Security.Captcha.Provider = "hcaptcha"
-	ts.Config.Security.Captcha.Secret = secret
+	ts.Config.Security.Captcha.Secret = HCaptchaSecret
 
 	req := httptest.NewRequest(http.MethodPost, "http://localhost", &buffer)
 	req.Header.Set("Content-Type", "application/json")
@@ -72,7 +72,7 @@ func (ts *MiddlewareTestSuite) TestVerifyCaptchaValid() {
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 		"email":          "test@example.com",
 		"password":       "secret",
-		"hcaptcha_token": response,
+		"hcaptcha_token": HCaptchaResponse,
 	}))
 
 	// check if body is the same
