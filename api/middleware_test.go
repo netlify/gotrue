@@ -80,6 +80,68 @@ func (ts *MiddlewareTestSuite) TestVerifyCaptchaValid() {
 	require.Equal(ts.T(), afterCtx, beforeCtx)
 }
 
+func (ts *MiddlewareTestSuite) TestVerifyCaptchaInvalid() {
+	cases := []struct {
+		desc         string
+		captchaConf  *conf.CaptchaConfiguration
+		expectedCode int
+		expectedMsg  string
+	}{
+		{
+			"Unsupported provider",
+			&conf.CaptchaConfiguration{
+				Enabled:  true,
+				Provider: "test",
+			},
+			http.StatusInternalServerError,
+			"server misconfigured",
+		},
+		{
+			"Missing secret",
+			&conf.CaptchaConfiguration{
+				Enabled:  true,
+				Provider: "hcaptcha",
+				Secret:   "",
+			},
+			http.StatusInternalServerError,
+			"server misconfigured",
+		},
+		{
+			"Captcha validation failed",
+			&conf.CaptchaConfiguration{
+				Enabled:  true,
+				Provider: "hcaptcha",
+				Secret:   "test",
+			},
+			http.StatusInternalServerError,
+			"request validation failure",
+		},
+	}
+	for _, c := range cases {
+		ts.Run(c.desc, func() {
+			ts.Config.Security.Captcha = *c.captchaConf
+			var buffer bytes.Buffer
+			require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+				"email":          "test@example.com",
+				"password":       "secret",
+				"hcaptcha_token": HCaptchaResponse,
+			}))
+			req := httptest.NewRequest(http.MethodPost, "http://localhost", &buffer)
+			req.Header.Set("Content-Type", "application/json")
+			ctx, err := WithInstanceConfig(req.Context(), ts.Config, ts.instanceID)
+			require.NoError(ts.T(), err)
+
+			req = req.WithContext(ctx)
+
+			w := httptest.NewRecorder()
+
+			_, err = ts.API.verifyCaptcha(w, req)
+			require.Equal(ts.T(), err.(*HTTPError).Code, c.expectedCode)
+			require.Equal(ts.T(), err.(*HTTPError).Message, c.expectedMsg)
+		})
+	}
+}
+
 func TestFunctionHooksUnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		in string
