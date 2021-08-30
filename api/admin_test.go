@@ -410,42 +410,60 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 
 func (ts *AdminTestSuite) TestAdminUserCreateWithDisableLogin() {
 	var cases = []struct {
+		desc     string
 		n        *bool
 		userData map[string]interface{}
 		expected int
 	}{
-		{&ts.Config.External.Email.Enabled, map[string]interface{}{
-			"email":    "test1@example.com",
-			"password": "test1",
-		}, http.StatusBadRequest},
-		{&ts.Config.External.Phone.Enabled, map[string]interface{}{
-			"phone":    "123456789",
-			"password": "test1",
-		}, http.StatusBadRequest},
-		{&ts.Config.DisableSignup, map[string]interface{}{
-			"email":    "test1@example.com",
-			"password": "test1",
-		}, http.StatusForbidden},
+		{
+			"Email Signups Disabled",
+			&ts.Config.External.Email.Enabled,
+			map[string]interface{}{
+				"email":    "test1@example.com",
+				"password": "test1",
+			},
+			http.StatusBadRequest,
+		},
+		{
+			"Phone Signups Disabled",
+			&ts.Config.External.Phone.Enabled,
+			map[string]interface{}{
+				"phone":    "123456789",
+				"password": "test1",
+			},
+			http.StatusBadRequest,
+		},
+		{
+			"All Signups Disabled",
+			&ts.Config.DisableSignup,
+			map[string]interface{}{
+				"email":    "test1@example.com",
+				"password": "test1",
+			},
+			http.StatusForbidden,
+		},
 	}
 
 	for i := 0; i < len(cases); i++ {
 		c := cases[i]
 
-		// Initialize user data
-		var buffer bytes.Buffer
-		require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(c.userData))
+		ts.Run(c.desc, func() {
+			// Initialize user data
+			var buffer bytes.Buffer
+			require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(c.userData))
 
-		// Setup request
-		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+			// Setup request
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
 
-		// Set config
-		*c.n = false
-		if i == 2 {
-			*c.n = true
-		}
-		ts.API.handler.ServeHTTP(w, req)
-		require.Equal(ts.T(), c.expected, w.Code)
+			// Set config
+			*c.n = false
+			if i == 2 {
+				*c.n = true
+			}
+			ts.API.handler.ServeHTTP(w, req)
+			require.Equal(ts.T(), c.expected, w.Code)
+		})
 	}
 }
