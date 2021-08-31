@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
@@ -35,6 +36,14 @@ func NewGitlabProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAut
 		return nil, err
 	}
 
+	oauthScopes := []string{
+		"read_user",
+	}
+
+	if scopes != "" {
+		oauthScopes = append(oauthScopes, strings.Split(scopes, ",")...)
+	}
+
 	host := chooseHost(ext.URL, defaultGitLabAuthBase)
 	return &gitlabProvider{
 		Config: &oauth2.Config{
@@ -45,10 +54,7 @@ func NewGitlabProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAut
 				TokenURL: host + "/oauth/token",
 			},
 			RedirectURL: ext.RedirectURI,
-			Scopes:      []string{
-				"read_user",
-				scopes,
-			},
+			Scopes:      oauthScopes,
 		},
 		Host: host,
 	}, nil
