@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/netlify/gotrue/security"
+	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/didip/tollbooth/v5"
 	"github.com/didip/tollbooth/v5/limiter"
@@ -175,4 +178,34 @@ func (a *API) requireEmailProvider(w http.ResponseWriter, req *http.Request) (co
 	}
 
 	return ctx, nil
+}
+
+func (a *API) verifyCaptcha(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+	ctx := req.Context()
+	config := a.getConfig(ctx)
+	if !config.Security.Captcha.Enabled {
+		return ctx, nil
+	}
+	if config.Security.Captcha.Provider != "hcaptcha" {
+		logrus.WithField("provider", config.Security.Captcha.Provider).Warn("Unsupported captcha provider")
+		return nil, internalServerError("server misconfigured")
+	}
+	secret := strings.TrimSpace(config.Security.Captcha.Secret)
+	if secret == "" {
+		return nil, internalServerError("server misconfigured")
+	}
+	verificationResult, err := security.VerifyRequest(req, secret)
+	if err != nil {
+		logrus.WithField("err", err).Infof("failed to validate result")
+		return nil, internalServerError("request validation failure")
+	}
+	if verificationResult == security.VerificationProcessFailure {
+		return nil, internalServerError("request validation failure")
+	} else if verificationResult == security.UserRequestFailed {
+		return nil, badRequestError("request disallowed")
+	}
+	if verificationResult == security.SuccessfullyVerified {
+		return ctx, nil
+	}
+	return nil, internalServerError("")
 }
