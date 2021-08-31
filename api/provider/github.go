@@ -46,6 +46,14 @@ func NewGithubProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAut
 		apiHost += "/api/v3"
 	}
 
+	oauthScopes := []string{
+		"user:email",
+	}
+
+	if scopes != "" {
+		oauthScopes = append(oauthScopes, strings.Split(scopes, ",")...)
+	}
+
 	return &githubProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
@@ -55,10 +63,7 @@ func NewGithubProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAut
 				TokenURL: authHost + "/login/oauth/access_token",
 			},
 			RedirectURL: ext.RedirectURI,
-			Scopes: []string{
-				"user:email",
-				scopes,
-			},
+			Scopes:      oauthScopes,
 		},
 		APIHost: apiHost,
 	}, nil
