@@ -36,6 +36,15 @@ func NewDiscordProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAu
 
 	apiPath := chooseHost(ext.URL, defaultDiscordAPIBase) + "/api"
 
+	oauthScopes := []string{
+		"email",
+		"identify",
+	}
+
+	if scopes != "" {
+		oauthScopes = append(oauthScopes, strings.Split(scopes, ",")...)
+	}
+
 	return &discordProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
@@ -44,11 +53,7 @@ func NewDiscordProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAu
 				AuthURL:  apiPath + "/oauth2/authorize",
 				TokenURL: apiPath + "/oauth2/token",
 			},
-			Scopes: []string{
-				"email",
-				"identify",
-				scopes,
-			},
+			Scopes:      oauthScopes,
 			RedirectURL: ext.RedirectURI,
 		},
 		APIPath: apiPath,
