@@ -20,12 +20,12 @@ func (ts *ExternalTestSuite) TestSignupExternalAzure() {
 	ts.Equal(ts.Config.External.Azure.RedirectURI, q.Get("redirect_uri"))
 	ts.Equal(ts.Config.External.Azure.ClientID, q.Get("client_id"))
 	ts.Equal("code", q.Get("response_type"))
-	ts.Equal("account email", q.Get("scope"))
+	ts.Equal("openid", q.Get("scope"))
 
 	claims := ExternalProviderClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 	_, err = p.ParseWithClaims(q.Get("state"), &claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(ts.API.config.OperatorToken), nil
+		return []byte(ts.Config.JWT.Secret), nil
 	})
 	ts.Require().NoError(err)
 
@@ -33,10 +33,10 @@ func (ts *ExternalTestSuite) TestSignupExternalAzure() {
 	ts.Equal(ts.Config.SiteURL, claims.SiteURL)
 }
 
-func AzureTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, user string, emails string) *httptest.Server {
+func AzureTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, user string) *httptest.Server {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/site/oauth2/access_token":
+		case "/common/oauth2/v2.0/token":
 			*tokenCount++
 			ts.Equal(code, r.FormValue("code"))
 			ts.Equal("authorization_code", r.FormValue("grant_type"))
@@ -44,13 +44,10 @@ func AzureTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int
 
 			w.Header().Add("Content-Type", "application/json")
 			fmt.Fprint(w, `{"access_token":"azure_token","expires_in":100000}`)
-		case "/2.0/user":
+		case "/oidc/userinfo":
 			*userCount++
 			w.Header().Add("Content-Type", "application/json")
 			fmt.Fprint(w, user)
-		case "/2.0/user/emails":
-			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, emails)
 		default:
 			w.WriteHeader(500)
 			ts.Fail("unknown azure oauth call %s", r.URL.Path)
@@ -64,25 +61,24 @@ func AzureTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int
 
 func (ts *ExternalTestSuite) TestSignupExternalAzure_AuthorizationCode() {
 	ts.Config.DisableSignup = false
+	ts.createUser("azure@example.com", "Azure Test", "", "")
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test","avatar":{"href":"http://example.com/avatar"}}`
-	emails := `{"values":[{"email":"azure@example.com","is_primary":true,"is_confirmed":true}]}`
-	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser, emails)
+	azureUser := `{"name":"Azure Test","email":"azure@example.com"}`
+	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "azure", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalAzureDisableSignupErrorWhenNoUser() {
 	ts.Config.DisableSignup = true
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test","avatar":{"href":"http://example.com/avatar"}}`
-	emails := `{"values":[{"email":"azure@example.com","is_primary":true,"is_confirmed":true}]}`
-	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser, emails)
+	azureUser := `{"name":"Azure Test","email":"azure@example.com"}`
+	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "azure", code, "")
@@ -94,9 +90,8 @@ func (ts *ExternalTestSuite) TestSignupExternalAzureDisableSignupErrorWhenNoEmai
 	ts.Config.DisableSignup = true
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test","avatar":{"href":"http://example.com/avatar"}}`
-	emails := `{"values":[{}]}`
-	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser, emails)
+	azureUser := `{"name":"Azure Test"}`
+	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "azure", code, "")
@@ -108,35 +103,17 @@ func (ts *ExternalTestSuite) TestSignupExternalAzureDisableSignupErrorWhenNoEmai
 func (ts *ExternalTestSuite) TestSignupExternalAzureDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("azure@example.com", "Azure Test", "http://example.com/avatar", "")
+	ts.createUser("azure@example.com", "Azure Test", "", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test","avatar":{"href":"http://example.com/avatar"}}`
-	emails := `{"values":[{"email":"azure@example.com","is_primary":true,"is_confirmed":true}]}`
-	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser, emails)
+	azureUser := `{"name":"Azure Test","email":"azure@example.com"}`
+	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "azure", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "http://example.com/avatar")
-}
-
-func (ts *ExternalTestSuite) TestSignupExternalAzureDisableSignupSuccessWithSecondaryEmail() {
-	ts.Config.DisableSignup = true
-
-	ts.createUser("secondary@example.com", "Azure Test", "http://example.com/avatar", "")
-
-	tokenCount, userCount := 0, 0
-	code := "authcode"
-	azureUser := `{"name":"Azure Test","avatar":{"href":"http://example.com/avatar"}}`
-	emails := `{"values":[{"email":"primary@example.com","is_primary":true,"is_confirmed":true},{"email":"secondary@example.com","is_primary":false,"is_confirmed":true}]}`
-	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser, emails)
-	defer server.Close()
-
-	u := performAuthorization(ts, "azure", code, "")
-
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "Azure Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalAzureSuccessWhenMatchingToken() {
@@ -145,22 +122,20 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalAzureSuccessWhenMatchingToke
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test","avatar":{"href":"http://example.com/avatar"}}`
-	emails := `{"values":[{"email":"azure@example.com","is_primary":true,"is_confirmed":true}]}`
-	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser, emails)
+	azureUser := `{"name":"Azure Test","email":"azure@example.com"}}`
+	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "azure", code, "invite_token")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalAzureErrorWhenNoMatchingToken() {
 	tokenCount, userCount := 0, 0
 	code := "authcode"
 	azureUser := `{"name":"Azure Test","avatar":{"href":"http://example.com/avatar"}}`
-	emails := `{"values":[{"email":"azure@example.com","is_primary":true,"is_confirmed":true}]}`
-	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser, emails)
+	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	w := performAuthorizationRequest(ts, "azure", "invite_token")
@@ -173,8 +148,7 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalAzureErrorWhenWrongToken() {
 	tokenCount, userCount := 0, 0
 	code := "authcode"
 	azureUser := `{"name":"Azure Test","avatar":{"href":"http://example.com/avatar"}}`
-	emails := `{"values":[{"email":"azure@example.com","is_primary":true,"is_confirmed":true}]}`
-	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser, emails)
+	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	w := performAuthorizationRequest(ts, "azure", "wrong_token")
@@ -186,9 +160,8 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalAzureErrorWhenEmailDoesntMat
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test","avatar":{"href":"http://example.com/avatar"}}`
-	emails := `{"values":[{"email":"other@example.com","is_primary":true,"is_confirmed":true}]}`
-	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser, emails)
+	azureUser := `{"name":"Azure Test", "email":"other@example.com", "avatar":{"href":"http://example.com/avatar"}}`
+	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "azure", code, "invite_token")
