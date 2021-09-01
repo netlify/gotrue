@@ -45,6 +45,14 @@ func NewFacebookProvider(ext conf.OAuthProviderConfiguration, scopes string) (OA
 	tokenHost := chooseHost(ext.URL, defaultFacebookTokenBase)
 	profileURL := chooseHost(ext.URL, defaultFacebookAPIBase) + "/me?fields=email,first_name,last_name,name,picture"
 
+	oauthScopes := []string{
+		"email",
+	}
+
+	if scopes != "" {
+		oauthScopes = append(oauthScopes, strings.Split(scopes, ",")...)
+	}
+
 	return &facebookProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
@@ -54,10 +62,7 @@ func NewFacebookProvider(ext conf.OAuthProviderConfiguration, scopes string) (OA
 				AuthURL:  authHost + "/dialog/oauth",
 				TokenURL: tokenHost + "/oauth/access_token",
 			},
-			Scopes: []string{
-				"email",
-				scopes,
-			},
+			Scopes: oauthScopes,
 		},
 		ProfileURL: profileURL,
 	}, nil
