@@ -408,16 +408,23 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 	require.Equal(ts.T(), http.StatusOK, w.Code)
 }
 
-func (ts *AdminTestSuite) TestAdminUserCreateWithDisableLogin() {
+func (ts *AdminTestSuite) TestAdminUserCreateWithDisabledLogin() {
 	var cases = []struct {
-		desc     string
-		n        *bool
-		userData map[string]interface{}
-		expected int
+		desc         string
+		customConfig *conf.Configuration
+		userData     map[string]interface{}
+		expected     int
 	}{
 		{
 			"Email Signups Disabled",
-			&ts.Config.External.Email.Enabled,
+			&conf.Configuration{
+				JWT: ts.Config.JWT,
+				External: conf.ProviderConfiguration{
+					Email: conf.EmailProviderConfiguration{
+						Enabled: false,
+					},
+				},
+			},
 			map[string]interface{}{
 				"email":    "test1@example.com",
 				"password": "test1",
@@ -426,7 +433,14 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithDisableLogin() {
 		},
 		{
 			"Phone Signups Disabled",
-			&ts.Config.External.Phone.Enabled,
+			&conf.Configuration{
+				JWT: ts.Config.JWT,
+				External: conf.ProviderConfiguration{
+					Phone: conf.PhoneProviderConfiguration{
+						Enabled: false,
+					},
+				},
+			},
 			map[string]interface{}{
 				"phone":    "123456789",
 				"password": "test1",
@@ -435,7 +449,10 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithDisableLogin() {
 		},
 		{
 			"All Signups Disabled",
-			&ts.Config.DisableSignup,
+			&conf.Configuration{
+				JWT:           ts.Config.JWT,
+				DisableSignup: true,
+			},
 			map[string]interface{}{
 				"email":    "test1@example.com",
 				"password": "test1",
@@ -444,9 +461,7 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithDisableLogin() {
 		},
 	}
 
-	for i := 0; i < len(cases); i++ {
-		c := cases[i]
-
+	for _, c := range cases {
 		ts.Run(c.desc, func() {
 			// Initialize user data
 			var buffer bytes.Buffer
@@ -457,11 +472,7 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithDisableLogin() {
 			req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
 
-			// Set config
-			*c.n = false
-			if i == 2 {
-				*c.n = true
-			}
+			*ts.Config = *c.customConfig
 			ts.API.handler.ServeHTTP(w, req)
 			require.Equal(ts.T(), c.expected, w.Code)
 		})

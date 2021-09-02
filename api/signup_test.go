@@ -153,7 +153,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
-	// assert.Equal(http.StatusOK, w.Code)
+	assert.Equal(http.StatusOK, w.Code)
 	assert.Equal(1, callCount)
 }
 
