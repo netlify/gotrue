@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	requestURL      = "https://api.twitter.com/oauth/request_token"
-	authenticateURL = "https://api.twitter.com/oauth/authenticate"
-	tokenURL        = "https://api.twitter.com/oauth/access_token"
-	endpointProfile = "https://api.twitter.com/1.1/account/verify_credentials.json"
+	defaultTwitterAPIBase = "api.twitter.com"
+	requestURL            = "/oauth/request_token"
+	authenticateURL       = "/oauth/authenticate"
+	tokenURL              = "/oauth/access_token"
+	endpointProfile       = "/1.1/account/verify_credentials.json"
 )
 
 type TwitterProvider struct {
@@ -30,6 +31,7 @@ type TwitterProvider struct {
 	RequestToken  *oauth.RequestToken
 	OauthVerifier string
 	Consumer      *oauth.Consumer
+	UserInfoURL   string
 }
 
 type twitterUser struct {
@@ -43,12 +45,14 @@ func NewTwitterProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAu
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}
+	authHost := chooseHost(ext.URL, defaultTwitterAPIBase)
 	p := &TwitterProvider{
 		ClientKey:   ext.ClientID,
 		Secret:      ext.Secret,
 		CallbackURL: ext.RedirectURI,
+		UserInfoURL: authHost + endpointProfile,
 	}
-	p.Consumer = newConsumer(p)
+	p.Consumer = newConsumer(p, authHost)
 	return p, nil
 }
 
@@ -65,11 +69,12 @@ func (t TwitterProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*U
 func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessToken) (*UserProvidedData, error) {
 	var u twitterUser
 	resp, err := t.Consumer.Get(
-		endpointProfile,
+		t.UserInfoURL,
 		map[string]string{"include_entities": "false", "skip_status": "true", "include_email": "true"},
-		tok)
+		tok,
+	)
 	if err != nil {
-		return &UserProvidedData{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -77,7 +82,7 @@ func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessTok
 	}
 	bits, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return &UserProvidedData{}, nil
+		return nil, err
 	}
 	err = json.NewDecoder(bytes.NewReader(bits)).Decode(&u)
 
@@ -111,15 +116,16 @@ func (t *TwitterProvider) AuthCodeURL(state string, args ...oauth2.AuthCodeOptio
 	return t.AuthURL
 }
 
-func newConsumer(provider *TwitterProvider) *oauth.Consumer {
+func newConsumer(provider *TwitterProvider, authHost string) *oauth.Consumer {
 	c := oauth.NewConsumer(
 		provider.ClientKey,
 		provider.Secret,
 		oauth.ServiceProvider{
-			RequestTokenUrl:   requestURL,
-			AuthorizeTokenUrl: authenticateURL,
-			AccessTokenUrl:    tokenURL,
-		})
+			RequestTokenUrl:   authHost + requestURL,
+			AuthorizeTokenUrl: authHost + authenticateURL,
+			AccessTokenUrl:    authHost + tokenURL,
+		},
+	)
 	return c
 }
 
