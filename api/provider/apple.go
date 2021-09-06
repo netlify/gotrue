@@ -16,20 +16,21 @@ import (
 )
 
 const (
-	authEndpoint  = "https://appleid.apple.com/auth/authorize"
-	tokenEndpoint = "https://appleid.apple.com/auth/token"
+	defaultAppleAPIBase = "appleid.apple.com"
+	authEndpoint        = "/auth/authorize"
+	tokenEndpoint       = "/auth/token"
 
 	ScopeEmail = "email"
 	ScopeName  = "name"
 
 	appleAudOrIss                  = "https://appleid.apple.com"
-	idTokenVerificationKeyEndpoint = "https://appleid.apple.com/auth/keys"
+	idTokenVerificationKeyEndpoint = "/auth/keys"
 )
 
 type AppleProvider struct {
 	*oauth2.Config
-	APIPath    string
-	httpClient *http.Client
+	httpClient  *http.Client
+	UserInfoURL string
 }
 
 type appleName struct {
@@ -55,13 +56,15 @@ func NewAppleProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error
 		return nil, err
 	}
 
+	authHost := chooseHost(ext.URL, defaultAppleAPIBase)
+
 	return &AppleProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint: oauth2.Endpoint{
-				AuthURL:  authEndpoint,
-				TokenURL: tokenEndpoint,
+				AuthURL:  authHost + authEndpoint,
+				TokenURL: authHost + tokenEndpoint,
 			},
 			Scopes: []string{
 				ScopeEmail,
@@ -69,7 +72,7 @@ func NewAppleProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error
 			},
 			RedirectURL: ext.RedirectURI,
 		},
-		APIPath: "",
+		UserInfoURL: authHost + idTokenVerificationKeyEndpoint,
 	}, nil
 }
 
@@ -114,7 +117,7 @@ func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 			}
 
 			// get the public key for verifying the identity token signature
-			set, err := jwk.FetchHTTP(idTokenVerificationKeyEndpoint, jwk.WithHTTPClient(http.DefaultClient))
+			set, err := jwk.FetchHTTP(p.UserInfoURL, jwk.WithHTTPClient(http.DefaultClient))
 			if err != nil {
 				return nil, err
 			}
@@ -128,7 +131,7 @@ func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 			pubKeyIface, _ := selectedKey.Materialize()
 			pubKey, ok := pubKeyIface.(*rsa.PublicKey)
 			if !ok {
-				return nil, fmt.Errorf(`expected RSA public key from %s`, idTokenVerificationKeyEndpoint)
+				return nil, fmt.Errorf(`expected RSA public key from %s`, p.UserInfoURL)
 			}
 			return pubKey, nil
 		})
