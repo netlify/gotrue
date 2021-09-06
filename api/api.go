@@ -54,7 +54,7 @@ func (a *API) ListenAndServe(hostAndPort string) {
 		server.Shutdown(ctx)
 	}()
 
-	if err := server.ListenAndServe(); err != http.ErrServerClosed {
+	if err := server.ListenAndServeTLS("./api/certs/server.crt", "./api/certs/server.key"); err != http.ErrServerClosed {
 		log.WithError(err).Fatal("http server listen failed")
 	}
 }
@@ -231,6 +231,7 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 	return NewAPIWithVersion(ctx, globalConfig, db, version), config, nil
 }
 
+// HealthCheck endpoint indicates if the gotrue api service is available
 func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 	return sendJSON(w, http.StatusOK, map[string]string{
 		"version":     a.version,
@@ -239,12 +240,14 @@ func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
+// WithInstanceConfig adds the instanceID and tenant config to the context
 func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanceID uuid.UUID) (context.Context, error) {
 	ctx = withConfig(ctx, config)
 	ctx = withInstanceID(ctx, instanceID)
 	return ctx, nil
 }
 
+// Mailer returns NewMailer with the current tenant config
 func (a *API) Mailer(ctx context.Context) mailer.Mailer {
 	config := a.getConfig(ctx)
 	return mailer.NewMailer(config)

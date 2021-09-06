@@ -13,7 +13,7 @@ import (
 
 const (
 	defaultGitHubAuthBase = "github.com"
-	defaultGitHubApiBase  = "api.github.com"
+	defaultGitHubAPIBase  = "api.github.com"
 )
 
 type githubProvider struct {
@@ -41,8 +41,8 @@ func NewGithubProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAut
 	}
 
 	authHost := chooseHost(ext.URL, defaultGitHubAuthBase)
-	apiHost := chooseHost(ext.URL, defaultGitHubApiBase)
-	if !strings.HasSuffix(apiHost, defaultGitHubApiBase) {
+	apiHost := chooseHost(ext.URL, defaultGitHubAPIBase)
+	if !strings.HasSuffix(apiHost, defaultGitHubAPIBase) {
 		apiHost += "/api/v3"
 	}
 

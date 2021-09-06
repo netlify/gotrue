@@ -20,13 +20,14 @@ const (
 	authEndpoint        = "/auth/authorize"
 	tokenEndpoint       = "/auth/token"
 
-	ScopeEmail = "email"
-	ScopeName  = "name"
+	scopeEmail = "email"
+	scopeName  = "name"
 
 	appleAudOrIss                  = "https://appleid.apple.com"
 	idTokenVerificationKeyEndpoint = "/auth/keys"
 )
 
+// AppleProvider stores the custom config for apple provider
 type AppleProvider struct {
 	*oauth2.Config
 	httpClient  *http.Client
@@ -51,6 +52,7 @@ type idTokenClaims struct {
 	IsPrivateEmail  bool   `json:"is_private_email,string"`
 }
 
+// NewAppleProvider creates a Apple account provider.
 func NewAppleProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
@@ -67,8 +69,8 @@ func NewAppleProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error
 				TokenURL: authHost + tokenEndpoint,
 			},
 			Scopes: []string{
-				ScopeEmail,
-				ScopeName,
+				scopeEmail,
+				scopeName,
 			},
 			RedirectURL: ext.RedirectURI,
 		},
@@ -76,6 +78,7 @@ func NewAppleProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error
 	}, nil
 }
 
+// GetOAuthToken returns the apple provider access token
 func (p AppleProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 	opts := []oauth2.AuthCodeOption{
 		oauth2.SetAuthURLParam("client_id", p.ClientID),
@@ -84,6 +87,7 @@ func (p AppleProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 	return p.Exchange(oauth2.NoContext, code, opts...)
 }
 
+// GetUserData returns the user data fetched from the apple provider
 func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
 	var user *UserProvidedData
 	if tok.AccessToken == "" {
@@ -150,6 +154,7 @@ func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 	return user, nil
 }
 
+// ParseUser parses the apple user's info
 func (p AppleProvider) ParseUser(data string) map[string]string {
 	userData := &appleUser{}
 	err := json.Unmarshal([]byte(data), userData)

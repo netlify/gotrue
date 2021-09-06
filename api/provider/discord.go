@@ -23,7 +23,7 @@ type discordUser struct {
 	Avatar        string `json:"avatar"`
 	Discriminator int    `json:"discriminator,string"`
 	Email         string `json:"email"`
-	Id            string `json:"id"`
+	ID            string `json:"id"`
 	Name          string `json:"username"`
 	Verified      bool   `json:"verified"`
 }
@@ -88,14 +88,14 @@ func (g discordProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*U
 		if strings.HasPrefix(u.Avatar, "a_") {
 			extension = "gif"
 		}
-		avatarURL = fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.%s", u.Id, u.Avatar, extension)
+		avatarURL = fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.%s", u.ID, u.Avatar, extension)
 	}
 
 	return &UserProvidedData{
 		Metadata: map[string]string{
 			avatarURLKey:  avatarURL,
 			nameKey:       u.Name,
-			providerIdKey: u.Id,
+			providerIDKey: u.ID,
 		},
 		Emails: []Email{{
 			Email:    u.Email,

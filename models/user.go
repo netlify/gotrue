@@ -84,6 +84,7 @@ func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[str
 	return user, nil
 }
 
+// NewSystemUser returns a user with the id as SystemUserUUID
 func NewSystemUser(instanceID uuid.UUID, aud string) *User {
 	return &User{
 		InstanceID:   instanceID,
@@ -93,15 +94,18 @@ func NewSystemUser(instanceID uuid.UUID, aud string) *User {
 	}
 }
 
+// TableName overrides the table name used by pop
 func (User) TableName() string {
 	tableName := "users"
 	return tableName
 }
 
+// BeforeCreate is invoked before a create operation is ran
 func (u *User) BeforeCreate(tx *pop.Connection) error {
 	return u.BeforeUpdate(tx)
 }
 
+// BeforeUpdate is invoked before an update operation is ran
 func (u *User) BeforeUpdate(tx *pop.Connection) error {
 	if u.ID == SystemUserUUID {
 		return errors.New("Cannot persist system user")
@@ -110,6 +114,7 @@ func (u *User) BeforeUpdate(tx *pop.Connection) error {
 	return nil
 }
 
+// BeforeSave is invoked before the user is saved to the database
 func (u *User) BeforeSave(tx *pop.Connection) error {
 	if u.ID == SystemUserUUID {
 		return errors.New("Cannot persist system user")
@@ -165,10 +170,12 @@ func (u *User) HasRole(roleName string) bool {
 	return u.Role == roleName
 }
 
+// GetEmail returns the user's email as a string
 func (u *User) GetEmail() string {
 	return string(u.Email)
 }
 
+// GetPhone returns the user's phone number as a string
 func (u *User) GetPhone() string {
 	return string(u.Phone)
 }
@@ -207,11 +214,13 @@ func (u *User) UpdateAppMetaData(tx *storage.Connection, updates map[string]inte
 	return tx.UpdateOnly(u, "raw_app_meta_data")
 }
 
+// SetEmail sets the user's email
 func (u *User) SetEmail(tx *storage.Connection, email string) error {
 	u.Email = storage.NullString(email)
 	return tx.UpdateOnly(u, "email")
 }
 
+// SetPhone sets the user's phone
 func (u *User) SetPhone(tx *storage.Connection, phone string) error {
 	u.Phone = storage.NullString(phone)
 	return tx.UpdateOnly(u, "phone")
@@ -226,6 +235,7 @@ func hashPassword(password string) (string, error) {
 	return string(pw), nil
 }
 
+// UpdatePassword updates the user's password
 func (u *User) UpdatePassword(tx *storage.Connection, password string) error {
 	pw, err := hashPassword(password)
 	if err != nil {
@@ -235,6 +245,7 @@ func (u *User) UpdatePassword(tx *storage.Connection, password string) error {
 	return tx.UpdateOnly(u, "encrypted_password")
 }
 
+// UpdatePhone updates the user's phone
 func (u *User) UpdatePhone(tx *storage.Connection, phone string) error {
 	u.Phone = storage.NullString(phone)
 	return tx.UpdateOnly(u, "phone")
@@ -332,7 +343,7 @@ func FindUserByEmailAndAudience(tx *storage.Connection, instanceID uuid.UUID, em
 	return findUser(tx, "instance_id = ? and LOWER(email) = ? and aud = ?", instanceID, strings.ToLower(email), aud)
 }
 
-// FindUserByEmailAndAudience finds a user with the matching email and audience.
+// FindUserByPhoneAndAudience finds a user with the matching email and audience.
 func FindUserByPhoneAndAudience(tx *storage.Connection, instanceID uuid.UUID, phone, aud string) (*User, error) {
 	return findUser(tx, "instance_id = ? and phone = ? and aud = ?", instanceID, phone, aud)
 }
@@ -420,6 +431,7 @@ func IsDuplicatedEmail(tx *storage.Connection, instanceID uuid.UUID, email, aud 
 	return true, nil
 }
 
+// IsDuplicatedPhone checks if the phone number already exists in the users table
 func IsDuplicatedPhone(tx *storage.Connection, instanceID uuid.UUID, phone, aud string) (bool, error) {
 	_, err := FindUserByPhoneAndAudience(tx, instanceID, phone, aud)
 	if err != nil {

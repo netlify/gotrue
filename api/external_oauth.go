@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// OAuthProviderData contains the userData and token returned by the oauth provider
 type OAuthProviderData struct {
 	userData *provider.UserProvidedData
 	token    string
@@ -135,6 +136,7 @@ func (a *API) oAuth1Callback(ctx context.Context, r *http.Request, providerType 
 
 }
 
+// OAuthProvider returns the corresponding oauth provider as an OAuthProvider interface
 func (a *API) OAuthProvider(ctx context.Context, name string) (provider.OAuthProvider, error) {
 	providerCandidate, err := a.Provider(ctx, name, "")
 	if err != nil {
