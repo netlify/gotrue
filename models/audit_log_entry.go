@@ -66,10 +66,13 @@ func NewAuditLogEntry(tx *storage.Connection, instanceID uuid.UUID, actor *User,
 	if err != nil {
 		return errors.Wrap(err, "Error generating unique id")
 	}
+
 	username := actor.GetEmail()
+
 	if actor.GetPhone() != "" {
 		username = actor.GetPhone()
 	}
+
 	l := AuditLogEntry{
 		InstanceID: instanceID,
 		ID:         id,
@@ -103,7 +106,7 @@ func FindAuditLogEntries(tx *storage.Connection, instanceID uuid.UUID, filterCol
 		values := make([]interface{}, len(filterColumns))
 
 		for idx, col := range filterColumns {
-			builder.WriteString(fmt.Sprintf("payload->>'$.%s' COLLATE utf8mb4_unicode_ci LIKE ?", col))
+			builder.WriteString(fmt.Sprintf("payload->>'%s' ILIKE ?", col))
 			values[idx] = lf
 
 			if idx+1 < len(filterColumns) {

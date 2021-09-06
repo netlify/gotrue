@@ -25,7 +25,7 @@ func (ts *ExternalTestSuite) TestSignupExternalTwitch() {
 	claims := ExternalProviderClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 	_, err = p.ParseWithClaims(q.Get("state"), &claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(ts.API.config.OperatorToken), nil
+		return []byte(ts.Config.JWT.Secret), nil
 	})
 	ts.Require().NoError(err)
 
@@ -122,7 +122,7 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalTwitchSuccessWhenMatchingTok
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	TwitchUser := `{"data":[{"id":"1","login":"Twitch user","display_name":"Twitch user","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":"","email":"twitch@example.com"}]}`
+	TwitchUser := `{"data":[{"id":"1","login":"Twitch Test","display_name":"Twitch Test","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":"","email":"twitch@example.com"}]}`
 	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, TwitchUser)
 	defer server.Close()
 

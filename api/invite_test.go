@@ -46,7 +46,7 @@ func (ts *InviteTestSuite) SetupTest() {
 	models.TruncateAll(ts.API.db)
 
 	// Setup response recorder with super admin privileges
-	ts.token = ts.makeSuperAdmin("admin@example.com")
+	ts.token = ts.makeSuperAdmin("")
 }
 
 func (ts *InviteTestSuite) makeSuperAdmin(email string) string {
@@ -58,8 +58,7 @@ func (ts *InviteTestSuite) makeSuperAdmin(email string) string {
 	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test User"})
 	require.NoError(ts.T(), err, "Error making new user")
 
-	u.IsSuperAdmin = true
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
+	u.Role = "supabase_admin"
 
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
@@ -117,68 +116,64 @@ func (ts *InviteTestSuite) TestInvite_WithoutAccess() {
 }
 
 func (ts *InviteTestSuite) TestVerifyInvite() {
-	user, err := models.NewUser(ts.instanceID, "test@example.com", "", ts.Config.JWT.Aud, nil)
-	now := time.Now()
-	user.InvitedAt = &now
-	user.EncryptedPassword = ""
-	user.ConfirmationToken = "asdf"
-	require.NoError(ts.T(), err)
-	require.NoError(ts.T(), ts.API.db.Create(user))
+	cases := []struct {
+		desc        string
+		email       string
+		requestBody map[string]interface{}
+		expected    int
+	}{
+		{
+			"Verify invite with password",
+			"test@example.com",
+			map[string]interface{}{
+				"type":     "invite",
+				"token":    "asdf",
+				"password": "testing",
+			},
+			http.StatusOK,
+		},
+		{
+			"Verify invite with no password",
+			"test1@example.com",
+			map[string]interface{}{
+				"type":  "invite",
+				"token": "asdf",
+			},
+			http.StatusOK,
+		},
+	}
 
-	// Find test user
-	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
-	require.NoError(ts.T(), err)
+	for _, c := range cases {
+		ts.Run(c.desc, func() {
+			user, err := models.NewUser(ts.instanceID, c.email, "", ts.Config.JWT.Aud, nil)
+			now := time.Now()
+			user.InvitedAt = &now
+			user.ConfirmationSentAt = &now
+			user.EncryptedPassword = ""
+			user.ConfirmationToken = c.requestBody["token"].(string)
+			require.NoError(ts.T(), err)
+			require.NoError(ts.T(), ts.API.db.Create(user))
 
-	// Request body
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"type":     "signup",
-		"token":    u.ConfirmationToken,
-		"password": "testing",
-	}))
+			// Find test user
+			_, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, c.email, ts.Config.JWT.Aud)
+			require.NoError(ts.T(), err)
 
-	// Setup request
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
-	req.Header.Set("Content-Type", "application/json")
+			// Request body
+			var buffer bytes.Buffer
+			require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(c.requestBody))
 
-	// Setup response recorder
-	w := httptest.NewRecorder()
+			// Setup request
+			req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
+			req.Header.Set("Content-Type", "application/json")
 
-	ts.API.handler.ServeHTTP(w, req)
+			// Setup response recorder
+			w := httptest.NewRecorder()
 
-	assert.Equal(ts.T(), http.StatusOK, w.Code, w.Body.String())
-}
+			ts.API.handler.ServeHTTP(w, req)
 
-func (ts *InviteTestSuite) TestVerifyInvite_NoPassword() {
-	user, err := models.NewUser(ts.instanceID, "test@example.com", "", ts.Config.JWT.Aud, nil)
-	now := time.Now()
-	user.InvitedAt = &now
-	user.EncryptedPassword = ""
-	user.ConfirmationToken = "asdf2"
-	require.NoError(ts.T(), err)
-	require.NoError(ts.T(), ts.API.db.Create(user))
-
-	// Find test user
-	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
-	require.NoError(ts.T(), err)
-
-	// Request body
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"type":  "signup",
-		"token": u.ConfirmationToken,
-	}))
-
-	// Setup request
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Setup response recorder
-	w := httptest.NewRecorder()
-
-	ts.API.handler.ServeHTTP(w, req)
-
-	assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code)
+			assert.Equal(ts.T(), c.expected, w.Code, w.Body.String())
+		})
+	}
 }
 
 func (ts *InviteTestSuite) TestInviteExternalGitlab() {
@@ -342,8 +337,8 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab_MismatchedEmails() {
 	ts.Require().NoError(err, "redirect url parse failed")
 
 	// ensure redirect has #access_token=...
-	v, err = url.ParseQuery(u.Fragment)
-	ts.Require().NoError(err, u.Fragment)
+	v, err = url.ParseQuery(u.RawQuery)
+	ts.Require().NoError(err, u.RawQuery)
 	ts.Require().NotEmpty(v.Get("error_description"))
 	ts.Require().Equal("invalid_request", v.Get("error"))
 }

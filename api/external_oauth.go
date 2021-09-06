@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// OAuthProviderData contains the userData and token returned by the oauth provider
 type OAuthProviderData struct {
 	userData *provider.UserProvidedData
 	token    string
@@ -105,6 +106,7 @@ func (a *API) oAuth1Callback(ctx context.Context, r *http.Request, providerType 
 	if err != nil {
 		return &OAuthProviderData{}, err
 	}
+	oauthToken := getRequestToken(ctx)
 	oauthVerifier := getOAuthVerifier(ctx)
 	var accessToken *oauth.AccessToken
 	var userData *provider.UserProvidedData
@@ -112,6 +114,9 @@ func (a *API) oAuth1Callback(ctx context.Context, r *http.Request, providerType 
 		requestToken, err := twitterProvider.Unmarshal(value)
 		if err != nil {
 			return &OAuthProviderData{}, err
+		}
+		if requestToken.Token != oauthToken {
+			return nil, internalServerError("Request token doesn't match token in callback")
 		}
 		twitterProvider.OauthVerifier = oauthVerifier
 		accessToken, err = twitterProvider.Consumer.AuthorizeToken(requestToken, oauthVerifier)
@@ -131,6 +136,7 @@ func (a *API) oAuth1Callback(ctx context.Context, r *http.Request, providerType 
 
 }
 
+// OAuthProvider returns the corresponding oauth provider as an OAuthProvider interface
 func (a *API) OAuthProvider(ctx context.Context, name string) (provider.OAuthProvider, error) {
 	providerCandidate, err := a.Provider(ctx, name, "")
 	if err != nil {

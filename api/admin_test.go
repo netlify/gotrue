@@ -45,16 +45,14 @@ func TestAdmin(t *testing.T) {
 func (ts *AdminTestSuite) SetupTest() {
 	models.TruncateAll(ts.API.db)
 	ts.Config.External.Email.Enabled = true
-	ts.token = ts.makeSuperAdmin("test@example.com")
+	ts.token = ts.makeSuperAdmin("")
 }
 
 func (ts *AdminTestSuite) makeSuperAdmin(email string) string {
 	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test User"})
 	require.NoError(ts.T(), err, "Error making new user")
 
-	u.IsSuperAdmin = true
 	u.Role = "supabase_admin"
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
 	require.NoError(ts.T(), err, "Error generating access token")
@@ -103,19 +101,8 @@ func (ts *AdminTestSuite) TestAdminUsers() {
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), http.StatusOK, w.Code)
 
-	assert.Equal(ts.T(), "</admin/users?page=1>; rel=\"last\"", w.HeaderMap.Get("Link"))
-	assert.Equal(ts.T(), "1", w.HeaderMap.Get("X-Total-Count"))
-
-	data := struct {
-		Users []*models.User `json:"users"`
-		Aud   string         `json:"aud"`
-	}{}
-	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-	for _, user := range data.Users {
-		ts.NotNil(user)
-		ts.Require().NotNil(user.UserMetaData)
-		ts.Equal("Test User", user.UserMetaData["full_name"])
-	}
+	assert.Equal(ts.T(), "</admin/users?page=0>; rel=\"last\"", w.HeaderMap.Get("Link"))
+	assert.Equal(ts.T(), "0", w.HeaderMap.Get("X-Total-Count"))
 }
 
 // TestAdminUsers tests API /admin/users route
@@ -137,8 +124,8 @@ func (ts *AdminTestSuite) TestAdminUsers_Pagination() {
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), http.StatusOK, w.Code)
 
-	assert.Equal(ts.T(), "</admin/users?page=2&per_page=1>; rel=\"next\", </admin/users?page=3&per_page=1>; rel=\"last\"", w.HeaderMap.Get("Link"))
-	assert.Equal(ts.T(), "3", w.HeaderMap.Get("X-Total-Count"))
+	assert.Equal(ts.T(), "</admin/users?page=2&per_page=1>; rel=\"next\", </admin/users?page=2&per_page=1>; rel=\"last\"", w.HeaderMap.Get("Link"))
+	assert.Equal(ts.T(), "2", w.HeaderMap.Get("X-Total-Count"))
 
 	data := make(map[string]interface{})
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
@@ -151,9 +138,12 @@ func (ts *AdminTestSuite) TestAdminUsers_Pagination() {
 func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	// if the created_at times are the same, then the sort order is not guaranteed
 	time.Sleep(1 * time.Second)
+	u, err = models.NewUser(ts.instanceID, "test2@example.com", "test", ts.Config.JWT.Aud, nil)
+	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	// Setup request
@@ -175,16 +165,20 @@ func (ts *AdminTestSuite) TestAdminUsers_SortAsc() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	require.Len(ts.T(), data.Users, 2)
-	assert.Equal(ts.T(), "test@example.com", data.Users[0].GetEmail())
-	assert.Equal(ts.T(), "test1@example.com", data.Users[1].GetEmail())
+	assert.Equal(ts.T(), "test1@example.com", data.Users[0].GetEmail())
+	assert.Equal(ts.T(), "test2@example.com", data.Users[1].GetEmail())
 }
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
+
 	// if the created_at times are the same, then the sort order is not guaranteed
 	time.Sleep(1 * time.Second)
+	u, err = models.NewUser(ts.instanceID, "test2@example.com", "test", ts.Config.JWT.Aud, nil)
+	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
 	// Setup request
@@ -203,8 +197,8 @@ func (ts *AdminTestSuite) TestAdminUsers_SortDesc() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	require.Len(ts.T(), data.Users, 2)
-	assert.Equal(ts.T(), "test1@example.com", data.Users[0].GetEmail())
-	assert.Equal(ts.T(), "test@example.com", data.Users[1].GetEmail())
+	assert.Equal(ts.T(), "test2@example.com", data.Users[0].GetEmail())
+	assert.Equal(ts.T(), "test1@example.com", data.Users[1].GetEmail())
 }
 
 // TestAdminUsers tests API /admin/users route
@@ -229,12 +223,16 @@ func (ts *AdminTestSuite) TestAdminUsers_FilterEmail() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	require.Len(ts.T(), data.Users, 1)
-	assert.Equal(ts.T(), "test1@example.com", data.Users[0].Email)
+	assert.Equal(ts.T(), "test1@example.com", data.Users[0].GetEmail())
 }
 
 // TestAdminUsers tests API /admin/users route
 func (ts *AdminTestSuite) TestAdminUsers_FilterName() {
-	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, nil)
+	u, err := models.NewUser(ts.instanceID, "test1@example.com", "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test User"})
+	require.NoError(ts.T(), err, "Error making new user")
+	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
+
+	u, err = models.NewUser(ts.instanceID, "test2@example.com", "test", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error making new user")
 	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
@@ -254,7 +252,7 @@ func (ts *AdminTestSuite) TestAdminUsers_FilterName() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
 	require.Len(ts.T(), data.Users, 1)
-	assert.Equal(ts.T(), "test@example.com", data.Users[0].Email)
+	assert.Equal(ts.T(), "test1@example.com", data.Users[0].GetEmail())
 }
 
 // TestAdminUserCreate tests API /admin/user route (POST)
@@ -271,6 +269,7 @@ func (ts *AdminTestSuite) TestAdminUserCreate() {
 	req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+	ts.Config.External.Phone.Enabled = true
 
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), http.StatusOK, w.Code)
@@ -409,46 +408,73 @@ func (ts *AdminTestSuite) TestAdminUserDelete() {
 	require.Equal(ts.T(), http.StatusOK, w.Code)
 }
 
-// TestAdminUserCreateWithManagementToken tests API /admin/user route using the management token (POST)
-func (ts *AdminTestSuite) TestAdminUserCreateWithManagementToken() {
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"email":    "test2@example.com",
-		"password": "test2",
-	}))
+func (ts *AdminTestSuite) TestAdminUserCreateWithDisabledLogin() {
+	var cases = []struct {
+		desc         string
+		customConfig *conf.Configuration
+		userData     map[string]interface{}
+		expected     int
+	}{
+		{
+			"Email Signups Disabled",
+			&conf.Configuration{
+				JWT: ts.Config.JWT,
+				External: conf.ProviderConfiguration{
+					Email: conf.EmailProviderConfiguration{
+						Enabled: false,
+					},
+				},
+			},
+			map[string]interface{}{
+				"email":    "test1@example.com",
+				"password": "test1",
+			},
+			http.StatusBadRequest,
+		},
+		{
+			"Phone Signups Disabled",
+			&conf.Configuration{
+				JWT: ts.Config.JWT,
+				External: conf.ProviderConfiguration{
+					Phone: conf.PhoneProviderConfiguration{
+						Enabled: false,
+					},
+				},
+			},
+			map[string]interface{}{
+				"phone":    "123456789",
+				"password": "test1",
+			},
+			http.StatusBadRequest,
+		},
+		{
+			"All Signups Disabled",
+			&conf.Configuration{
+				JWT:           ts.Config.JWT,
+				DisableSignup: true,
+			},
+			map[string]interface{}{
+				"email":    "test1@example.com",
+				"password": "test1",
+			},
+			http.StatusForbidden,
+		},
+	}
 
-	// Setup request
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
+	for _, c := range cases {
+		ts.Run(c.desc, func() {
+			// Initialize user data
+			var buffer bytes.Buffer
+			require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(c.userData))
 
-	req.Header.Set("Authorization", "Bearer foobar")
-	req.Header.Set("X-JWT-AUD", "op-test-aud")
+			// Setup request
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
 
-	ts.API.handler.ServeHTTP(w, req)
-	require.Equal(ts.T(), http.StatusOK, w.Code)
-
-	data := models.User{}
-	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-
-	assert.NotNil(ts.T(), data.ID)
-	assert.Equal(ts.T(), "test2@example.com", data.GetEmail())
-}
-
-func (ts *AdminTestSuite) TestAdminUserCreateWithDisabledEmailLogin() {
-	var buffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"email":    "test1@example.com",
-		"password": "test1",
-	}))
-
-	// Setup request
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/admin/users", &buffer)
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
-
-	ts.Config.External.Email.Enabled = false
-
-	ts.API.handler.ServeHTTP(w, req)
-	require.Equal(ts.T(), http.StatusBadRequest, w.Code)
+			*ts.Config = *c.customConfig
+			ts.API.handler.ServeHTTP(w, req)
+			require.Equal(ts.T(), c.expected, w.Code)
+		})
+	}
 }

@@ -20,12 +20,12 @@ func (ts *ExternalTestSuite) TestSignupExternalDiscord() {
 	ts.Equal(ts.Config.External.Discord.RedirectURI, q.Get("redirect_uri"))
 	ts.Equal(ts.Config.External.Discord.ClientID, q.Get("client_id"))
 	ts.Equal("code", q.Get("response_type"))
-	ts.Equal("email identify ", q.Get("scope"))
+	ts.Equal("email identify", q.Get("scope"))
 
 	claims := ExternalProviderClaims{}
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 	_, err = p.ParseWithClaims(q.Get("state"), &claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(ts.API.config.OperatorToken), nil
+		return []byte(ts.Config.JWT.Secret), nil
 	})
 	ts.Require().NoError(err)
 

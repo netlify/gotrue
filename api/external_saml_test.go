@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"encoding/xml"
-	"html/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,14 +12,15 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 
 	"github.com/beevik/etree"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/russellhaering/gosaml2/types"
 	dsig "github.com/russellhaering/goxmldsig"
-	"github.com/gofrs/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -154,6 +154,7 @@ func (ts *ExternalSamlTestSuite) setupSamlSPCert() (string, string) {
 }
 
 func (ts *ExternalSamlTestSuite) TestSignupExternalSaml_Callback() {
+	ts.SetupTest()
 	server, idpKeyStore := ts.setupSamlMetadata()
 	defer server.Close()
 	ts.Config.External.Saml.MetadataURL = server.URL

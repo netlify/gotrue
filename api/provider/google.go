@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
@@ -34,6 +35,15 @@ func NewGoogleProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAut
 	authHost := chooseHost(ext.URL, defaultGoogleAuthBase)
 	apiPath := chooseHost(ext.URL, defaultGoogleAPIBase) + "/userinfo/v2/me"
 
+	oauthScopes := []string{
+		"email",
+		"profile",
+	}
+
+	if scopes != "" {
+		oauthScopes = append(oauthScopes, strings.Split(scopes, ",")...)
+	}
+
 	return &googleProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
@@ -42,11 +52,7 @@ func NewGoogleProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAut
 				AuthURL:  authHost + "/o/oauth2/auth",
 				TokenURL: authHost + "/o/oauth2/token",
 			},
-			Scopes: []string{
-				"email",
-				"profile",
-				scopes,
-			},
+			Scopes:      oauthScopes,
 			RedirectURL: ext.RedirectURI,
 		},
 		APIPath: apiPath,

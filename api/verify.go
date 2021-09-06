@@ -317,7 +317,7 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 
 	if user.EmailChangeConfirmStatus < 1 {
 		err = a.db.Transaction(func(tx *storage.Connection) error {
-			user.EmailChangeConfirmStatus += 1
+			user.EmailChangeConfirmStatus++
 			if params.Token == user.EmailChangeTokenCurrent {
 				user.EmailChangeTokenCurrent = ""
 			} else if params.Token == user.EmailChangeTokenNew {

@@ -105,6 +105,8 @@ func assertAuthorizationSuccess(ts *ExternalTestSuite, u *url.URL, tokenCount in
 	ts.Require().Empty(v.Get("error_description"))
 	ts.Require().Empty(v.Get("error"))
 
+	v, err = url.ParseQuery(u.Fragment)
+	ts.Require().NoError(err)
 	ts.NotEmpty(v.Get("access_token"))
 	ts.NotEmpty(v.Get("refresh_token"))
 	ts.NotEmpty(v.Get("expires_in"))
@@ -127,6 +129,8 @@ func assertAuthorizationFailure(ts *ExternalTestSuite, u *url.URL, errorDescript
 	ts.Require().Equal(errorDescription, v.Get("error_description"))
 	ts.Require().Equal(errorType, v.Get("error"))
 
+	v, err = url.ParseQuery(u.Fragment)
+	ts.Require().NoError(err)
 	ts.Empty(v.Get("access_token"))
 	ts.Empty(v.Get("refresh_token"))
 	ts.Empty(v.Get("expires_in"))
