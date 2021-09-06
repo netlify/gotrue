@@ -139,6 +139,7 @@ func httpError(code int, fmtString string, args ...interface{}) *HTTPError {
 	}
 }
 
+// OTPError is a custom error struct for phone auth errors
 type OTPError struct {
 	Err             string `json:"error"`
 	Description     string `json:"error_description,omitempty"`
@@ -151,6 +152,14 @@ func (e *OTPError) Error() string {
 		return e.InternalMessage
 	}
 	return fmt.Sprintf("%s: %s", e.Err, e.Description)
+}
+
+// Cause returns the root cause error
+func (e *OTPError) Cause() error {
+	if e.InternalError != nil {
+		return e.InternalError
+	}
+	return e
 }
 
 func otpError(err string, description string) *OTPError {
@@ -183,6 +192,7 @@ func recoverer(w http.ResponseWriter, r *http.Request) (context.Context, error) 
 	return nil, nil
 }
 
+// ErrorCause is an error interface that contains the method Cause() for returning root cause errors
 type ErrorCause interface {
 	Cause() error
 }

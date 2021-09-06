@@ -6,6 +6,14 @@ API service for handling user registration and authentication for JAM projects.
 It's based on OAuth2 and JWT and will handle user signup, authentication and custom
 user data.
 
+## Quick Start 
+Create a `.env` file to store your own custom env vars. See [`example.env`](example.env) 
+```sh
+./hack/postgresd.sh
+make build
+./gotrue
+```
+
 ## Configuration
 
 You may configure GoTrue using either a configuration file named `.env`,

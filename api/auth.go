@@ -8,6 +8,7 @@ import (
 
 	jwt "github.com/golang-jwt/jwt"
 	"github.com/netlify/gotrue/models"
+	"github.com/netlify/gotrue/storage"
 )
 
 // requireAuthentication checks incoming requests for tokens presented using the Authorization header
@@ -33,7 +34,7 @@ func (a *API) requireAdmin(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	if isStringInSlice(claims.Role, adminRoles) {
 		// successful authentication
-		return withAdminUser(ctx, &models.User{}), nil
+		return withAdminUser(ctx, &models.User{Role: claims.Role, Email: storage.NullString(claims.Role)}), nil
 	}
 
 	fmt.Printf("[%s] %s %s %d %s\n", time.Now().Format("2006-01-02 15:04:05"), r.Method, r.RequestURI, http.StatusForbidden, "this token needs role 'supabase_admin' or 'service_role'")

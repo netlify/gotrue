@@ -228,16 +228,16 @@ func (ts *VerifyTestSuite) TestVerifyPermitedCustomUri() {
 	assert.WithinDuration(ts.T(), time.Now(), *u.RecoverySentAt, 1*time.Second)
 	assert.False(ts.T(), u.IsConfirmed())
 
-	redirectUrl, _ := url.Parse(ts.Config.URIAllowList[0])
+	redirectURL, _ := url.Parse(ts.Config.URIAllowList[0])
 
-	reqURL := fmt.Sprintf("http://localhost/verify?type=%s&token=%s&redirect_to=%s", "recovery", u.RecoveryToken, redirectUrl.String())
+	reqURL := fmt.Sprintf("http://localhost/verify?type=%s&token=%s&redirect_to=%s", "recovery", u.RecoveryToken, redirectURL.String())
 	req = httptest.NewRequest(http.MethodGet, reqURL, nil)
 
 	w = httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(ts.T(), http.StatusSeeOther, w.Code)
-	rUrl, _ := w.Result().Location()
-	assert.Equal(ts.T(), redirectUrl.Hostname(), rUrl.Hostname())
+	rURL, _ := w.Result().Location()
+	assert.Equal(ts.T(), redirectURL.Hostname(), rURL.Hostname())
 
 	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
@@ -271,58 +271,51 @@ func (ts *VerifyTestSuite) TestVerifyNotPermitedCustomUri() {
 	assert.WithinDuration(ts.T(), time.Now(), *u.RecoverySentAt, 1*time.Second)
 	assert.False(ts.T(), u.IsConfirmed())
 
-	fakeRedirectUrl, _ := url.Parse("http://custom-url.com")
-	siteUrl, _ := url.Parse(ts.Config.SiteURL)
+	fakeredirectURL, _ := url.Parse("http://custom-url.com")
+	siteURL, _ := url.Parse(ts.Config.SiteURL)
 
-	reqURL := fmt.Sprintf("http://localhost/verify?type=%s&token=%s&redirect_to=%s", "recovery", u.RecoveryToken, fakeRedirectUrl.String())
+	reqURL := fmt.Sprintf("http://localhost/verify?type=%s&token=%s&redirect_to=%s", "recovery", u.RecoveryToken, fakeredirectURL.String())
 	req = httptest.NewRequest(http.MethodGet, reqURL, nil)
 
 	w = httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(ts.T(), http.StatusSeeOther, w.Code)
-	rUrl, _ := w.Result().Location()
-	assert.Equal(ts.T(), siteUrl.Hostname(), rUrl.Hostname())
+	rURL, _ := w.Result().Location()
+	assert.Equal(ts.T(), siteURL.Hostname(), rURL.Hostname())
 
 	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	assert.True(ts.T(), u.IsConfirmed())
 }
 
-func (ts *VerifyTestSuite) TestVerifySignupWithRedirectUrlContainedPath() {
+func (ts *VerifyTestSuite) TestVerifySignupWithredirectURLContainedPath() {
 	testCases := []struct {
 		desc                string
 		siteURL             string
 		uriAllowList        []string
-		requestRedirectURL  string
-		expectedRedirectURL string
+		requestredirectURL  string
+		expectedredirectURL string
 	}{
 		{
 			desc:                "same site url and redirect url with path",
 			siteURL:             "http://localhost:3000/#/",
 			uriAllowList:        []string{"http://localhost:3000"},
-			requestRedirectURL:  "http://localhost:3000/#/",
-			expectedRedirectURL: "http://localhost:3000/#/",
+			requestredirectURL:  "http://localhost:3000/#/",
+			expectedredirectURL: "http://localhost:3000/#/",
 		},
 		{
-			desc:                "different site url and redirect url with path",
+			desc:                "different site url and redirect url in allow list",
 			siteURL:             "https://someapp-something.codemagic.app/#/",
 			uriAllowList:        []string{"http://localhost:3000"},
-			requestRedirectURL:  "http://localhost:3000/#/",
-			expectedRedirectURL: "http://localhost:3000/#/",
+			requestredirectURL:  "http://localhost:3000",
+			expectedredirectURL: "http://localhost:3000",
 		},
 		{
-			desc:                "different site url and redirect url withput path",
+			desc:                "different site url and redirect url not in allow list",
 			siteURL:             "https://someapp-something.codemagic.app/#/",
 			uriAllowList:        []string{"http://localhost:3000"},
-			requestRedirectURL:  "http://localhost:3000/",
-			expectedRedirectURL: "http://localhost:3000/",
-		},
-		{
-			desc:                "different site url and not permited redirect url",
-			siteURL:             "https://someapp-something.codemagic.app/#/",
-			uriAllowList:        []string{},
-			requestRedirectURL:  "http://localhost:3000/#/",
-			expectedRedirectURL: "https://someapp-something.codemagic.app/",
+			requestredirectURL:  "http://localhost:3000/docs",
+			expectedredirectURL: "https://someapp-something.codemagic.app/#/",
 		},
 	}
 
@@ -330,7 +323,7 @@ func (ts *VerifyTestSuite) TestVerifySignupWithRedirectUrlContainedPath() {
 		ts.Run(tC.desc, func() {
 			// prepare test data
 			ts.Config.SiteURL = tC.siteURL
-			redirectURL := tC.requestRedirectURL
+			redirectURL := tC.requestredirectURL
 			ts.Config.URIAllowList = tC.uriAllowList
 
 			// set verify token to user as it actual do in magic link method
@@ -347,8 +340,8 @@ func (ts *VerifyTestSuite) TestVerifySignupWithRedirectUrlContainedPath() {
 			w := httptest.NewRecorder()
 			ts.API.handler.ServeHTTP(w, req)
 			assert.Equal(ts.T(), http.StatusSeeOther, w.Code)
-			rUrl, _ := w.Result().Location()
-			assert.Contains(ts.T(), rUrl.String(), tC.expectedRedirectURL) // redirected url starts with per test value
+			rURL, _ := w.Result().Location()
+			assert.Contains(ts.T(), rURL.String(), tC.expectedredirectURL) // redirected url starts with per test value
 
 			u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 			require.NoError(ts.T(), err)

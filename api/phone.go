@@ -29,7 +29,7 @@ func (a *API) formatPhoneNumber(phone string) string {
 	return strings.ReplaceAll(strings.Trim(phone, "+"), " ", "")
 }
 
-func (a *API) sendPhoneConfirmation(tx *storage.Connection, ctx context.Context, user *models.User, phone string) error {
+func (a *API) sendPhoneConfirmation(ctx context.Context, tx *storage.Connection, user *models.User, phone string) error {
 	config := a.getConfig(ctx)
 
 	if user.ConfirmationSentAt != nil && !user.ConfirmationSentAt.Add(config.Sms.MaxFrequency).Before(time.Now()) {

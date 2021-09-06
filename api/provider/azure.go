@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/netlify/gotrue/conf"
 	"golang.org/x/oauth2"
@@ -38,6 +39,12 @@ func NewAzureProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAuth
 	authHost := chooseHost(ext.URL, defaultAzureAuthBase)
 	apiPath := chooseHost(ext.URL, defaultAzureAPIBase)
 
+	oauthScopes := []string{"openid"}
+
+	if scopes != "" {
+		oauthScopes = append(oauthScopes, strings.Split(scopes, ",")...)
+	}
+
 	return &azureProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
@@ -47,10 +54,7 @@ func NewAzureProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAuth
 				TokenURL: authHost + "/common/oauth2/v2.0/token",
 			},
 			RedirectURL: ext.RedirectURI,
-			Scopes:      []string{
-				"openid",
-				scopes,
-			},
+			Scopes:      oauthScopes,
 		},
 		APIPath: apiPath,
 	}, nil

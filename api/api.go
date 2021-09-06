@@ -54,7 +54,7 @@ func (a *API) ListenAndServe(hostAndPort string) {
 		server.Shutdown(ctx)
 	}()
 
-	if err := server.ListenAndServe(); err != http.ErrServerClosed {
+	if err := server.ListenAndServeTLS("./api/certs/server.crt", "./api/certs/server.key"); err != http.ErrServerClosed {
 		log.WithError(err).Fatal("http server listen failed")
 	}
 }
@@ -155,7 +155,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 			r.Route("/users", func(r *router) {
 				r.Get("/", api.adminUsers)
-				r.With(api.requireEmailProvider).Post("/", api.adminUserCreate)
+				r.Post("/", api.adminUserCreate)
 
 				r.Route("/{user_id}", func(r *router) {
 					r.Use(api.loadUser)
@@ -179,23 +179,22 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		})
 	})
 
-	// if globalConfig.MultiInstanceMode {
-	// 	// Operator microservice API
-	// 	r.WithBypass(logger).With(api.verifyOperatorRequest).Get("/", api.GetAppManifest)
-	// 	r.Route("/instances", func(r *router) {
-	// 		r.UseBypass(logger)
-	// 		r.Use(api.verifyOperatorRequest)
+	if globalConfig.MultiInstanceMode {
+		// Operator microservice API
+		r.WithBypass(logger).Get("/", api.GetAppManifest)
+		r.Route("/instances", func(r *router) {
+			r.UseBypass(logger)
 
-	// 		r.Post("/", api.CreateInstance)
-	// 		r.Route("/{instance_id}", func(r *router) {
-	// 			r.Use(api.loadInstance)
+			r.Post("/", api.CreateInstance)
+			r.Route("/{instance_id}", func(r *router) {
+				r.Use(api.loadInstance)
 
-	// 			r.Get("/", api.GetInstance)
-	// 			r.Put("/", api.UpdateInstance)
-	// 			r.Delete("/", api.DeleteInstance)
-	// 		})
-	// 	})
-	// }
+				r.Get("/", api.GetInstance)
+				r.Put("/", api.UpdateInstance)
+				r.Delete("/", api.DeleteInstance)
+			})
+		})
+	}
 
 	corsHandler := cors.New(cors.Options{
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
@@ -232,6 +231,7 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 	return NewAPIWithVersion(ctx, globalConfig, db, version), config, nil
 }
 
+// HealthCheck endpoint indicates if the gotrue api service is available
 func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 	return sendJSON(w, http.StatusOK, map[string]string{
 		"version":     a.version,
@@ -240,12 +240,14 @@ func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
+// WithInstanceConfig adds the instanceID and tenant config to the context
 func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanceID uuid.UUID) (context.Context, error) {
 	ctx = withConfig(ctx, config)
 	ctx = withInstanceID(ctx, instanceID)
 	return ctx, nil
 }
 
+// Mailer returns NewMailer with the current tenant config
 func (a *API) Mailer(ctx context.Context) mailer.Mailer {
 	config := a.getConfig(ctx)
 	return mailer.NewMailer(config)
@@ -259,17 +261,21 @@ func (a *API) getConfig(ctx context.Context) *conf.Configuration {
 
 	config := obj.(*conf.Configuration)
 
-	extConfig := (*a.config).External
-	if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
-		return nil
-	}
-	config.External = extConfig
+	// Merge global & per-instance external config for multi-instance mode
+	if a.config.MultiInstanceMode {
+		extConfig := (*a.config).External
+		if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
+			return nil
+		}
+		config.External = extConfig
 
-	smtpConfig := (*a.config).SMTP
-	if err := mergo.MergeWithOverwrite(&smtpConfig, config.SMTP); err != nil {
-		return nil
+		// Merge global & per-instance smtp config for multi-instance mode
+		smtpConfig := (*a.config).SMTP
+		if err := mergo.MergeWithOverwrite(&smtpConfig, config.SMTP); err != nil {
+			return nil
+		}
+		config.SMTP = smtpConfig
 	}
-	config.SMTP = smtpConfig
 
 	return config
 }

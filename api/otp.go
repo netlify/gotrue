@@ -12,15 +12,18 @@ import (
 	"github.com/sethvargo/go-password/password"
 )
 
+// OtpParams contains the request body params for the otp endpoint
 type OtpParams struct {
 	Email string `json:"email"`
 	Phone string `json:"phone"`
 }
 
+// SmsParams contains the request body params for sms otp
 type SmsParams struct {
 	Phone string `json:"phone"`
 }
 
+// Otp returns the MagicLink or SmsOtp handler based on the request body params
 func (a *API) Otp(w http.ResponseWriter, r *http.Request) error {
 	params := &OtpParams{}
 	body, err := ioutil.ReadAll(r.Body)
@@ -93,7 +96,7 @@ func (a *API) SmsOtp(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 
-		if err := a.sendPhoneConfirmation(tx, ctx, user, params.Phone); err != nil {
+		if err := a.sendPhoneConfirmation(ctx, tx, user, params.Phone); err != nil {
 			return badRequestError("Error sending sms otp: %v", err)
 		}
 		return nil

@@ -16,12 +16,14 @@ import (
 )
 
 const (
-	requestURL      = "https://api.twitter.com/oauth/request_token"
-	authenticateURL = "https://api.twitter.com/oauth/authenticate"
-	tokenURL        = "https://api.twitter.com/oauth/access_token"
-	endpointProfile = "https://api.twitter.com/1.1/account/verify_credentials.json"
+	defaultTwitterAPIBase = "api.twitter.com"
+	requestURL            = "/oauth/request_token"
+	authenticateURL       = "/oauth/authenticate"
+	tokenURL              = "/oauth/access_token"
+	endpointProfile       = "/1.1/account/verify_credentials.json"
 )
 
+// TwitterProvider stores the custom config for twitter provider
 type TwitterProvider struct {
 	ClientKey     string
 	Secret        string
@@ -30,6 +32,7 @@ type TwitterProvider struct {
 	RequestToken  *oauth.RequestToken
 	OauthVerifier string
 	Consumer      *oauth.Consumer
+	UserInfoURL   string
 }
 
 type twitterUser struct {
@@ -39,38 +42,42 @@ type twitterUser struct {
 	Email     string `json:"email"`
 }
 
+// NewTwitterProvider creates a Twitter account provider.
 func NewTwitterProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAuthProvider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}
-
+	authHost := chooseHost(ext.URL, defaultTwitterAPIBase)
 	p := &TwitterProvider{
 		ClientKey:   ext.ClientID,
 		Secret:      ext.Secret,
 		CallbackURL: ext.RedirectURI,
+		UserInfoURL: authHost + endpointProfile,
 	}
-	p.Consumer = newConsumer(p)
+	p.Consumer = newConsumer(p, authHost)
 	return p, nil
 }
 
+// GetOAuthToken is a stub method for OAuthProvider interface, unused in OAuth1.0 protocol
 func (t TwitterProvider) GetOAuthToken(_ string) (*oauth2.Token, error) {
-	// stub method for OAuthProvider interface, unused in OAuth1.0 protocol
 	return &oauth2.Token{}, nil
 }
 
+// GetUserData is a stub method for OAuthProvider interface, unused in OAuth1.0 protocol
 func (t TwitterProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
-	// stub method for OAuthProvider interface, unused in OAuth1.0 protocol
 	return &UserProvidedData{}, nil
 }
 
+// FetchUserData retrieves the user's data from the twitter provider
 func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessToken) (*UserProvidedData, error) {
 	var u twitterUser
 	resp, err := t.Consumer.Get(
-		endpointProfile,
+		t.UserInfoURL,
 		map[string]string{"include_entities": "false", "skip_status": "true", "include_email": "true"},
-		tok)
+		tok,
+	)
 	if err != nil {
-		return &UserProvidedData{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -78,7 +85,7 @@ func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessTok
 	}
 	bits, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return &UserProvidedData{}, nil
+		return nil, err
 	}
 	err = json.NewDecoder(bytes.NewReader(bits)).Decode(&u)
 
@@ -101,6 +108,7 @@ func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessTok
 	return data, nil
 }
 
+// AuthCodeURL fetches the request token from the twitter provider
 func (t *TwitterProvider) AuthCodeURL(state string, args ...oauth2.AuthCodeOption) string {
 	// we do nothing with the state here as the state is passed in the requestURL step
 	requestToken, url, err := t.Consumer.GetRequestTokenAndUrl(t.CallbackURL + "?state=" + state)
@@ -112,23 +120,26 @@ func (t *TwitterProvider) AuthCodeURL(state string, args ...oauth2.AuthCodeOptio
 	return t.AuthURL
 }
 
-func newConsumer(provider *TwitterProvider) *oauth.Consumer {
+func newConsumer(provider *TwitterProvider, authHost string) *oauth.Consumer {
 	c := oauth.NewConsumer(
 		provider.ClientKey,
 		provider.Secret,
 		oauth.ServiceProvider{
-			RequestTokenUrl:   requestURL,
-			AuthorizeTokenUrl: authenticateURL,
-			AccessTokenUrl:    tokenURL,
-		})
+			RequestTokenUrl:   authHost + requestURL,
+			AuthorizeTokenUrl: authHost + authenticateURL,
+			AccessTokenUrl:    authHost + tokenURL,
+		},
+	)
 	return c
 }
 
+// Marshal encodes the twitter request token
 func (t TwitterProvider) Marshal() string {
 	b, _ := json.Marshal(t.RequestToken)
 	return string(b)
 }
 
+// Unmarshal decodes the twitter request token
 func (t TwitterProvider) Unmarshal(data string) (*oauth.RequestToken, error) {
 	requestToken := &oauth.RequestToken{}
 	err := json.NewDecoder(strings.NewReader(data)).Decode(requestToken)

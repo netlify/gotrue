@@ -12,15 +12,17 @@ const (
 	avatarURLKey  = "avatar_url"
 	nameKey       = "full_name"
 	aliasKey      = "slug"
-	providerIdKey = "provider_id"
+	providerIDKey = "provider_id"
 )
 
+// Email is a struct that provides information on whether an email is verified or is the primary email address
 type Email struct {
 	Email    string
 	Verified bool
 	Primary  bool
 }
 
+// UserProvidedData is a struct that contains the user's data returned from the oauth provider
 type UserProvidedData struct {
 	Emails   []Email
 	Metadata map[string]string

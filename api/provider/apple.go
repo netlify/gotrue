@@ -16,20 +16,22 @@ import (
 )
 
 const (
-	authEndpoint  = "https://appleid.apple.com/auth/authorize"
-	tokenEndpoint = "https://appleid.apple.com/auth/token"
+	defaultAppleAPIBase = "appleid.apple.com"
+	authEndpoint        = "/auth/authorize"
+	tokenEndpoint       = "/auth/token"
 
-	ScopeEmail = "email"
-	ScopeName  = "name"
+	scopeEmail = "email"
+	scopeName  = "name"
 
 	appleAudOrIss                  = "https://appleid.apple.com"
-	idTokenVerificationKeyEndpoint = "https://appleid.apple.com/auth/keys"
+	idTokenVerificationKeyEndpoint = "/auth/keys"
 )
 
+// AppleProvider stores the custom config for apple provider
 type AppleProvider struct {
 	*oauth2.Config
-	APIPath    string
-	httpClient *http.Client
+	httpClient  *http.Client
+	UserInfoURL string
 }
 
 type appleName struct {
@@ -50,29 +52,33 @@ type idTokenClaims struct {
 	IsPrivateEmail  bool   `json:"is_private_email,string"`
 }
 
+// NewAppleProvider creates a Apple account provider.
 func NewAppleProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}
+
+	authHost := chooseHost(ext.URL, defaultAppleAPIBase)
 
 	return &AppleProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
 			ClientSecret: ext.Secret,
 			Endpoint: oauth2.Endpoint{
-				AuthURL:  authEndpoint,
-				TokenURL: tokenEndpoint,
+				AuthURL:  authHost + authEndpoint,
+				TokenURL: authHost + tokenEndpoint,
 			},
 			Scopes: []string{
-				ScopeEmail,
-				ScopeName,
+				scopeEmail,
+				scopeName,
 			},
 			RedirectURL: ext.RedirectURI,
 		},
-		APIPath: "",
+		UserInfoURL: authHost + idTokenVerificationKeyEndpoint,
 	}, nil
 }
 
+// GetOAuthToken returns the apple provider access token
 func (p AppleProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 	opts := []oauth2.AuthCodeOption{
 		oauth2.SetAuthURLParam("client_id", p.ClientID),
@@ -81,6 +87,7 @@ func (p AppleProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 	return p.Exchange(oauth2.NoContext, code, opts...)
 }
 
+// GetUserData returns the user data fetched from the apple provider
 func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
 	var user *UserProvidedData
 	if tok.AccessToken == "" {
@@ -114,7 +121,7 @@ func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 			}
 
 			// get the public key for verifying the identity token signature
-			set, err := jwk.FetchHTTP(idTokenVerificationKeyEndpoint, jwk.WithHTTPClient(http.DefaultClient))
+			set, err := jwk.FetchHTTP(p.UserInfoURL, jwk.WithHTTPClient(http.DefaultClient))
 			if err != nil {
 				return nil, err
 			}
@@ -128,7 +135,7 @@ func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 			pubKeyIface, _ := selectedKey.Materialize()
 			pubKey, ok := pubKeyIface.(*rsa.PublicKey)
 			if !ok {
-				return nil, fmt.Errorf(`expected RSA public key from %s`, idTokenVerificationKeyEndpoint)
+				return nil, fmt.Errorf(`expected RSA public key from %s`, p.UserInfoURL)
 			}
 			return pubKey, nil
 		})
@@ -147,6 +154,7 @@ func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 	return user, nil
 }
 
+// ParseUser parses the apple user's info
 func (p AppleProvider) ParseUser(data string) map[string]string {
 	userData := &appleUser{}
 	err := json.Unmarshal([]byte(data), userData)

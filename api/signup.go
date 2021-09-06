@@ -147,7 +147,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 				if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserConfirmationRequestedAction, nil); terr != nil {
 					return terr
 				}
-				if terr = a.sendPhoneConfirmation(tx, ctx, user, params.Phone); terr != nil {
+				if terr = a.sendPhoneConfirmation(ctx, tx, user, params.Phone); terr != nil {
 					return badRequestError("Error sending confirmation sms: %v", terr)
 				}
 			}
