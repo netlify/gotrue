@@ -35,5 +35,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Init Database
         run: psql -f hack/init_postgres.sql postgresql://postgres:root@localhost:5432/postgres
+      - name: Run migrations
+        run: make migrate_dev
       - name: Lint and test
         run: make test
