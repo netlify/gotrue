@@ -23,13 +23,10 @@ lint: ## Lint the code.
 	golint $(CHECK_FILES)
 
 migrate_dev: ## Run database migrations for development.
-	hack/migrate.sh development
-
-migrate_supabase: ## Run database migrations for supabase development.
-	hack/migrate_postgres.sh postgres
+	hack/migrate.sh postgres
 
 migrate_test: ## Run database migrations for test.
-	hack/migrate.sh test
+	hack/migrate.sh postgres
 
 test: ## Run tests.
 	go test -p 1 -v $(CHECK_FILES)

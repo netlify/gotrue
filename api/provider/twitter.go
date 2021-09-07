@@ -38,7 +38,7 @@ type TwitterProvider struct {
 type twitterUser struct {
 	UserName  string `json:"screen_name"`
 	Name      string `json:"name"`
-	AvatarURL string `json:"profile_image_url"`
+	AvatarURL string `json:"profile_image_url_https"`
 	Email     string `json:"email"`
 }
 

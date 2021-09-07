@@ -54,7 +54,7 @@ func (a *API) ListenAndServe(hostAndPort string) {
 		server.Shutdown(ctx)
 	}()
 
-	if err := server.ListenAndServeTLS("./api/certs/server.crt", "./api/certs/server.key"); err != http.ErrServerClosed {
+	if err := server.ListenAndServe(); err != http.ErrServerClosed {
 		log.WithError(err).Fatal("http server listen failed")
 	}
 }
