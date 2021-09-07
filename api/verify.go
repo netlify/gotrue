@@ -28,6 +28,11 @@ const (
 	smsVerification         = "sms"
 )
 
+const (
+	noneConfirmed int = iota
+	oneConfirmed
+)
+
 // VerifyParams are the parameters the Verify endpoint accepts
 type VerifyParams struct {
 	Type       string `json:"type"`
@@ -306,7 +311,7 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 	nextDay := user.EmailChangeSentAt.Add(24 * time.Hour)
 	if user.EmailChangeSentAt != nil && time.Now().After(nextDay) {
 		err = a.db.Transaction(func(tx *storage.Connection) error {
-			user.EmailChangeConfirmStatus = 0
+			user.EmailChangeConfirmStatus = noneConfirmed
 			return tx.UpdateOnly(user, "email_change_confirm_status")
 		})
 		if err != nil {
@@ -315,9 +320,9 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 		return nil, expiredTokenError("Email change token expired").WithInternalError(redirectWithQueryError)
 	}
 
-	if user.EmailChangeConfirmStatus < 1 {
+	if user.EmailChangeConfirmStatus == noneConfirmed {
 		err = a.db.Transaction(func(tx *storage.Connection) error {
-			user.EmailChangeConfirmStatus++
+			user.EmailChangeConfirmStatus = oneConfirmed
 			if params.Token == user.EmailChangeTokenCurrent {
 				user.EmailChangeTokenCurrent = ""
 			} else if params.Token == user.EmailChangeTokenNew {
@@ -331,9 +336,10 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 		if err != nil {
 			return nil, err
 		}
-		return nil, acceptedTokenError("Email change request accepted")
+		return nil, acceptedTokenError("Email change request accepted").WithInternalError(redirectWithQueryError)
 	}
 
+	// one email is confirmed at this point
 	err = a.db.Transaction(func(tx *storage.Connection) error {
 		var terr error
 
@@ -345,7 +351,7 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 			return terr
 		}
 
-		if terr = user.ConfirmEmailChange(tx); terr != nil {
+		if terr = user.ConfirmEmailChange(tx, noneConfirmed); terr != nil {
 			return internalServerError("Error confirm email").WithInternalError(terr)
 		}
 
