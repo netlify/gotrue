@@ -20,6 +20,7 @@ type bitbucketProvider struct {
 
 type bitbucketUser struct {
 	Name   string `json:"display_name"`
+	ID     string `json:"uuid"`
 	Avatar struct {
 		Href string `json:"href"`
 	} `json:"avatar"`
@@ -71,8 +72,9 @@ func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (
 
 	data := &UserProvidedData{
 		Metadata: map[string]string{
-			nameKey:      u.Name,
-			avatarURLKey: u.Avatar.Href,
+			avatarURLKey:  u.Avatar.Href,
+			nameKey:       u.Name,
+			providerIDKey: u.ID,
 		},
 	}
 

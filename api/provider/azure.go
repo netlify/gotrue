@@ -22,6 +22,7 @@ type azureProvider struct {
 type azureUser struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
+	Sub   string `json:"sub"`
 }
 
 type azureEmail struct {
@@ -76,7 +77,8 @@ func (g azureProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 
 	return &UserProvidedData{
 		Metadata: map[string]string{
-			nameKey: u.Name,
+			nameKey:       u.Name,
+			providerIDKey: u.Sub,
 		},
 		Emails: []Email{{
 			Email:    u.Email,

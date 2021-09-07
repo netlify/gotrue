@@ -20,6 +20,7 @@ type googleProvider struct {
 }
 
 type googleUser struct {
+	ID            string `json:"id"`
 	Name          string `json:"name"`
 	AvatarURL     string `json:"picture"`
 	Email         string `json:"email"`
@@ -71,8 +72,9 @@ func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 
 	data := &UserProvidedData{
 		Metadata: map[string]string{
-			nameKey:      u.Name,
-			avatarURLKey: u.AvatarURL,
+			avatarURLKey:  u.AvatarURL,
+			nameKey:       u.Name,
+			providerIDKey: u.ID,
 		},
 	}
 

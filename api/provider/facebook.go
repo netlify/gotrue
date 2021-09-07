@@ -24,6 +24,7 @@ type facebookProvider struct {
 }
 
 type facebookUser struct {
+	ID        string `json:"id"`
 	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
@@ -89,9 +90,10 @@ func (p facebookProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*
 
 	return &UserProvidedData{
 		Metadata: map[string]string{
-			aliasKey:     u.Alias,
-			nameKey:      strings.TrimSpace(u.FirstName + " " + u.LastName),
-			avatarURLKey: u.Avatar.Data.URL,
+			aliasKey:      u.Alias,
+			avatarURLKey:  u.Avatar.Data.URL,
+			nameKey:       strings.TrimSpace(u.FirstName + " " + u.LastName),
+			providerIDKey: u.ID,
 		},
 		Emails: []Email{{
 			Email:    u.Email,

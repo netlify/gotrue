@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/netlify/gotrue/conf"
@@ -23,6 +24,7 @@ type gitlabUser struct {
 	Name        string `json:"name"`
 	AvatarURL   string `json:"avatar_url"`
 	ConfirmedAt string `json:"confirmed_at"`
+	ID          int    `json:"id"`
 }
 
 type gitlabUserEmail struct {
@@ -73,8 +75,9 @@ func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 
 	data := &UserProvidedData{
 		Metadata: map[string]string{
-			nameKey:      u.Name,
-			avatarURLKey: u.AvatarURL,
+			avatarURLKey:  u.AvatarURL,
+			nameKey:       u.Name,
+			providerIDKey: strconv.Itoa(u.ID),
 		},
 	}
 

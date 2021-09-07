@@ -50,6 +50,7 @@ type idTokenClaims struct {
 	AuthTime        int    `json:"auth_time"`
 	Email           string `json:"email"`
 	IsPrivateEmail  bool   `json:"is_private_email,string"`
+	Sub             string `json:"sub"`
 }
 
 // NewAppleProvider creates a Apple account provider.
@@ -148,6 +149,9 @@ func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 				Verified: true,
 				Primary:  true,
 			}},
+			Metadata: map[string]string{
+				providerIDKey: idToken.Claims.(*idTokenClaims).Sub,
+			},
 		}
 
 	}

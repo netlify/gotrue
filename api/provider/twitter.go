@@ -40,6 +40,7 @@ type twitterUser struct {
 	Name      string `json:"name"`
 	AvatarURL string `json:"profile_image_url_https"`
 	Email     string `json:"email"`
+	ID        string `json:"id_str"`
 }
 
 // NewTwitterProvider creates a Twitter account provider.
@@ -95,9 +96,10 @@ func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessTok
 
 	data := &UserProvidedData{
 		Metadata: map[string]string{
-			userNameKey:  u.UserName,
-			nameKey:      u.Name,
-			avatarURLKey: u.AvatarURL,
+			userNameKey:   u.UserName,
+			nameKey:       u.Name,
+			avatarURLKey:  u.AvatarURL,
+			providerIDKey: u.ID,
 		},
 		Emails: []Email{{
 			Email:    u.Email,
