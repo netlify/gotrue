@@ -232,13 +232,21 @@ func (a *API) sendMagicLink(tx *storage.Connection, u *models.User, mailer maile
 func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mailer.Mailer, email string, referrerURL string) error {
 	u.EmailChangeTokenCurrent, u.EmailChangeTokenNew = crypto.SecureToken(), crypto.SecureToken()
 	u.EmailChange = email
+	u.EmailChangeConfirmStatus = noneConfirmed
 	now := time.Now()
 	if err := mailer.EmailChangeMail(u, referrerURL); err != nil {
 		return err
 	}
 
 	u.EmailChangeSentAt = &now
-	return errors.Wrap(tx.UpdateOnly(u, "email_change_token_current", "email_change_token_new", "email_change", "email_change_sent_at"), "Database error updating user for email change")
+	return errors.Wrap(tx.UpdateOnly(
+		u,
+		"email_change_token_current",
+		"email_change_token_new",
+		"email_change",
+		"email_change_sent_at",
+		"email_change_confirm_status",
+	), "Database error updating user for email change")
 }
 
 func (a *API) validateEmail(ctx context.Context, email string) error {
