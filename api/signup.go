@@ -89,7 +89,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		var terr error
 		if user != nil {
 			if params.Provider == "email" && user.IsConfirmed() {
-				return badRequestError("A user with this email address has already been registered")
+				return badRequestError("Thanks for registering, now check your email to complete the process.")
 			}
 
 			if params.Provider == "phone" && user.IsPhoneConfirmed() {
