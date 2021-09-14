@@ -32,15 +32,15 @@ type SortField struct {
 
 func TruncateAll(conn *storage.Connection) error {
 	return conn.Transaction(func(tx *storage.Connection) error {
-		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: User{}}).TableName()).Exec(); err != nil {
+		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: User{}}).TableName() + " CASCADE").Exec(); err != nil {
 			return err
 		}
-		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: RefreshToken{}}).TableName()).Exec(); err != nil {
+		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: RefreshToken{}}).TableName() + " CASCADE").Exec(); err != nil {
 			return err
 		}
-		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: AuditLogEntry{}}).TableName()).Exec(); err != nil {
+		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: AuditLogEntry{}}).TableName() + " CASCADE").Exec(); err != nil {
 			return err
 		}
-		return tx.RawQuery("TRUNCATE " + (&pop.Model{Value: Instance{}}).TableName()).Exec()
+		return tx.RawQuery("TRUNCATE " + (&pop.Model{Value: Instance{}}).TableName() + " CASCADE").Exec()
 	})
 }
