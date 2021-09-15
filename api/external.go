@@ -170,6 +170,14 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				}
 			}
 
+			var identityData map[string]interface{}
+			if userData.Metadata != nil {
+				identityData, terr = userData.Metadata.ToMap()
+				if terr != nil {
+					return terr
+				}
+			}
+
 			if user == nil {
 				if config.DisableSignup {
 					return forbiddenError("Signups not allowed for this instance")
@@ -188,12 +196,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					Provider: providerType,
 					Email:    emailData.Email,
 					Aud:      aud,
-					Data:     make(map[string]interface{}),
-				}
-				for k, v := range userData.Metadata {
-					if v != "" {
-						params.Data[k] = v
-					}
+					Data:     identityData,
 				}
 
 				user, terr = a.signupNewUser(ctx, tx, params)

@@ -87,8 +87,9 @@ func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType s
 		// apple only returns user info the first time
 		oauthUser := rq.Get("user")
 		if oauthUser != "" {
-			for k, v := range externalProvider.ParseUser(oauthUser) {
-				userData.Metadata[k] = v
+			err := externalProvider.ParseUser(oauthUser, userData)
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
