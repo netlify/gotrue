@@ -81,11 +81,17 @@ func (g githubProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 	}
 
 	data := &UserProvidedData{
-		Metadata: map[string]string{
-			avatarURLKey:  u.AvatarURL,
-			nameKey:       u.Name,
-			providerIDKey: u.ID,
-			userNameKey:   u.UserName,
+		Metadata: &Claims{
+			Issuer:            g.APIHost,
+			Subject:           u.ID,
+			Name:              u.Name,
+			PreferredUsername: u.UserName,
+
+			// To be deprecated
+			AvatarURL:   u.AvatarURL,
+			FullName:    u.Name,
+			ProviderId:  u.ID,
+			UserNameKey: u.UserName,
 		},
 	}
 
@@ -97,6 +103,11 @@ func (g githubProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 	for _, e := range emails {
 		if e.Email != "" {
 			data.Emails = append(data.Emails, Email{Email: e.Email, Verified: e.Verified, Primary: e.Primary})
+		}
+
+		if e.Primary {
+			data.Metadata.Email = e.Email
+			data.Metadata.EmailVerified = e.Verified
 		}
 	}
 

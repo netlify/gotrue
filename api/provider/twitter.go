@@ -95,11 +95,20 @@ func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessTok
 	}
 
 	data := &UserProvidedData{
-		Metadata: map[string]string{
-			userNameKey:   u.UserName,
-			nameKey:       u.Name,
-			avatarURLKey:  u.AvatarURL,
-			providerIDKey: u.ID,
+		Metadata: &Claims{
+			Issuer:            t.UserInfoURL,
+			Subject:           u.ID,
+			Name:              u.Name,
+			Picture:           u.AvatarURL,
+			PreferredUsername: u.UserName,
+			Email:             u.Email,
+			EmailVerified:     true,
+
+			// To be deprecated
+			UserNameKey: u.UserName,
+			FullName:    u.Name,
+			AvatarURL:   u.AvatarURL,
+			ProviderId:  u.ID,
 		},
 		Emails: []Email{{
 			Email:    u.Email,
@@ -107,6 +116,7 @@ func (t TwitterProvider) FetchUserData(ctx context.Context, tok *oauth.AccessTok
 			Primary:  true,
 		}},
 	}
+
 	return data, nil
 }
 

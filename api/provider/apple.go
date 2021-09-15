@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -149,25 +150,29 @@ func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 				Verified: true,
 				Primary:  true,
 			}},
-			Metadata: map[string]string{
-				providerIDKey: idToken.Claims.(*idTokenClaims).Sub,
+			Metadata: &Claims{
+				Issuer:        p.UserInfoURL,
+				Subject:       idToken.Claims.(*idTokenClaims).Sub,
+				Email:         idToken.Claims.(*idTokenClaims).Email,
+				EmailVerified: true,
+
+				// To be deprecated
+				ProviderId: idToken.Claims.(*idTokenClaims).Sub,
 			},
 		}
-
 	}
 	return user, nil
 }
 
 // ParseUser parses the apple user's info
-func (p AppleProvider) ParseUser(data string) map[string]string {
-	userData := &appleUser{}
-	err := json.Unmarshal([]byte(data), userData)
+func (p AppleProvider) ParseUser(data string, userData *UserProvidedData) error {
+	u := &appleUser{}
+	err := json.Unmarshal([]byte(data), u)
 	if err != nil {
-		return nil
+		return err
 	}
-	return map[string]string{
-		"firstName": userData.Name.FirstName,
-		"lastName":  userData.Name.LastName,
-		"email":     userData.Email,
-	}
+
+	userData.Metadata.Name = strings.TrimSpace(u.Name.FirstName + " " + u.Name.LastName)
+	userData.Metadata.FullName = strings.TrimSpace(u.Name.FirstName + " " + u.Name.LastName)
+	return nil
 }

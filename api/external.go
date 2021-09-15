@@ -288,12 +288,11 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 		return nil, internalServerError("Database error updating user").WithInternalError(err)
 	}
 
-	updates := make(map[string]interface{})
-	for k, v := range userData.Metadata {
-		if v != "" {
-			updates[k] = v
-		}
+	updates, err := userData.Metadata.ToMap()
+	if err != nil {
+		return nil, internalServerError("Error serialising user metadata").WithInternalError(err)
 	}
+
 	if err := user.UpdateUserMetaData(tx, updates); err != nil {
 		return nil, internalServerError("Database error updating user").WithInternalError(err)
 	}

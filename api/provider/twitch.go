@@ -113,11 +113,27 @@ func (t twitchProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 	}
 
 	data := &UserProvidedData{
-		Metadata: map[string]string{
-			aliasKey:      user.DisplayName,
-			avatarURLKey:  user.ProfileImageURL,
-			nameKey:       user.Login,
-			providerIDKey: user.ID,
+		Metadata: &Claims{
+			Issuer:        t.APIHost,
+			Subject:       user.ID,
+			Picture:       user.ProfileImageURL,
+			Name:          user.Login,
+			NickName:      user.DisplayName,
+			Email:         user.Email,
+			EmailVerified: true,
+			CustomClaims: map[string]interface{}{
+				"broadcaster_type":  user.BroadcasterType,
+				"description":       user.Description,
+				"type":              user.Type,
+				"offline_image_url": user.OfflineImageURL,
+				"view_count":        user.ViewCount,
+			},
+
+			// To be deprecated
+			Slug:       user.DisplayName,
+			AvatarURL:  user.ProfileImageURL,
+			FullName:   user.Login,
+			ProviderId: user.ID,
 		},
 		Emails: []Email{{
 			Email:    user.Email,

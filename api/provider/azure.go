@@ -76,9 +76,16 @@ func (g azureProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 	}
 
 	return &UserProvidedData{
-		Metadata: map[string]string{
-			nameKey:       u.Name,
-			providerIDKey: u.Sub,
+		Metadata: &Claims{
+			Issuer:        g.APIPath,
+			Subject:       u.Sub,
+			Name:          u.Name,
+			Email:         u.Email,
+			EmailVerified: true,
+
+			// To be deprecated
+			FullName:   u.Name,
+			ProviderId: u.Sub,
 		},
 		Emails: []Email{{
 			Email:    u.Email,
