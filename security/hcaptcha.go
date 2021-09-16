@@ -4,17 +4,22 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
-type CaptchaResponse struct {
+type GotrueRequest struct {
+	Security GotrueSecurity `json:"gotrue_meta_security"`
+}
+
+type GotrueSecurity struct {
 	Token string `json:"hcaptcha_token"`
 }
 
@@ -25,11 +30,13 @@ type VerificationResponse struct {
 }
 
 type VerificationResult int
+
 const (
 	UserRequestFailed VerificationResult = iota
 	VerificationProcessFailure
 	SuccessfullyVerified
 )
+
 var Client *http.Client
 
 func init() {
@@ -38,7 +45,7 @@ func init() {
 }
 
 func VerifyRequest(r *http.Request, secretKey string) (VerificationResult, error) {
-	res := CaptchaResponse{}
+	res := GotrueRequest{}
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return UserRequestFailed, err
@@ -49,11 +56,11 @@ func VerifyRequest(r *http.Request, secretKey string) (VerificationResult, error
 
 	jsonDecoder := json.NewDecoder(bytes.NewBuffer(bodyBytes))
 	err = jsonDecoder.Decode(&res)
-	if err != nil || strings.TrimSpace(res.Token) == "" {
+	if err != nil || strings.TrimSpace(res.Security.Token) == "" {
 		return UserRequestFailed, errors.Wrap(err, "couldn't decode captcha info")
 	}
 	clientIP := strings.Split(r.RemoteAddr, ":")[0]
-	return verifyCaptchaCode(res.Token, secretKey, clientIP)
+	return verifyCaptchaCode(res.Security.Token, secretKey, clientIP)
 }
 
 func verifyCaptchaCode(token string, secretKey string, clientIP string) (VerificationResult, error) {

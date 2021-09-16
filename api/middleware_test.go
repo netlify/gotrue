@@ -45,9 +45,11 @@ func TestHCaptcha(t *testing.T) {
 func (ts *MiddlewareTestSuite) TestVerifyCaptchaValid() {
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"email":          "test@example.com",
-		"password":       "secret",
-		"hcaptcha_token": HCaptchaResponse,
+		"email":    "test@example.com",
+		"password": "secret",
+		"gotrue_meta_security": map[string]interface{}{
+			"hcaptcha_token": HCaptchaResponse,
+		},
 	}))
 
 	ts.Config.Security.Captcha.Enabled = true
@@ -70,9 +72,11 @@ func (ts *MiddlewareTestSuite) TestVerifyCaptchaValid() {
 
 	// re-initialize buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-		"email":          "test@example.com",
-		"password":       "secret",
-		"hcaptcha_token": HCaptchaResponse,
+		"email":    "test@example.com",
+		"password": "secret",
+		"gotrue_meta_security": map[string]interface{}{
+			"hcaptcha_token": HCaptchaResponse,
+		},
 	}))
 
 	// check if body is the same
@@ -122,9 +126,11 @@ func (ts *MiddlewareTestSuite) TestVerifyCaptchaInvalid() {
 			ts.Config.Security.Captcha = *c.captchaConf
 			var buffer bytes.Buffer
 			require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
-				"email":          "test@example.com",
-				"password":       "secret",
-				"hcaptcha_token": HCaptchaResponse,
+				"email":    "test@example.com",
+				"password": "secret",
+				"gotrue_meta_security": map[string]interface{}{
+					"hcaptcha_token": HCaptchaResponse,
+				},
 			}))
 			req := httptest.NewRequest(http.MethodPost, "http://localhost", &buffer)
 			req.Header.Set("Content-Type", "application/json")
@@ -136,8 +142,8 @@ func (ts *MiddlewareTestSuite) TestVerifyCaptchaInvalid() {
 			w := httptest.NewRecorder()
 
 			_, err = ts.API.verifyCaptcha(w, req)
-			require.Equal(ts.T(), err.(*HTTPError).Code, c.expectedCode)
-			require.Equal(ts.T(), err.(*HTTPError).Message, c.expectedMsg)
+			require.Equal(ts.T(), c.expectedCode, err.(*HTTPError).Code)
+			require.Equal(ts.T(), c.expectedMsg, err.(*HTTPError).Message)
 		})
 	}
 }
