@@ -11,7 +11,6 @@ import (
 
 	"github.com/gofrs/uuid"
 	jwt "github.com/golang-jwt/jwt"
-	"github.com/markbates/goth/gothic"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -83,7 +82,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 	switch externalProvider := p.(type) {
 	case *provider.TwitterProvider:
 		authURL = externalProvider.AuthCodeURL(tokenString)
-		err := gothic.StoreInSession(providerType, externalProvider.Marshal(), r, w)
+		err := storage.StoreInSession(providerType, externalProvider.Marshal(), r, w)
 		if err != nil {
 			return internalServerError("Error storing request token in session").WithInternalError(err)
 		}

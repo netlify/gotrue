@@ -1,6 +1,7 @@
 module github.com/netlify/gotrue
 
 require (
+	cloud.google.com/go v0.67.0 // indirect
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20170623214735-571947b0f240
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/badoux/checkmail v0.0.0-20170203135005-d0a759655d62
@@ -19,6 +20,8 @@ require (
 	github.com/gobuffalo/validate/v3 v3.3.0 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang-jwt/jwt v3.2.1+incompatible
+	github.com/gorilla/securecookie v1.1.1 // indirect
+	github.com/gorilla/sessions v1.1.1
 	github.com/imdario/mergo v0.0.0-20160216103600-3e95a51e0639
 	github.com/jackc/pgproto3/v2 v2.0.7 // indirect
 	github.com/jmoiron/sqlx v1.3.1 // indirect
@@ -26,7 +29,6 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/lestrrat-go/jwx v0.9.0
 	github.com/lib/pq v1.9.0 // indirect
-	github.com/markbates/goth v1.67.1
 	github.com/microcosm-cc/bluemonday v1.0.5 // indirect
 	github.com/mrjones/oauth v0.0.0-20190623134757-126b35219450
 	github.com/netlify/mailme v1.1.1
