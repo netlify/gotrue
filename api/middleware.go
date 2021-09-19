@@ -185,7 +185,7 @@ func (a *API) limitEmailSentHandler() middlewareHandler {
 					return c, nil
 				}
 
-				if err := tollbooth.LimitByRequest(lmt, w, req); err != nil {
+				if err := tollbooth.LimitByKeys(lmt, []string{"email_functions"}); err != nil {
 					return c, httpError(http.StatusTooManyRequests, "Rate limit exceeded")
 				}
 			}
