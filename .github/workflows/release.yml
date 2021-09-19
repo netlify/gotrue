@@ -9,7 +9,7 @@ jobs:
   release:
     strategy:
       matrix:
-        node: ["12"]
+        node: ["16"]
 
     outputs:
       status: ${{ steps.pre-release.outputs.release != steps.post-release.outputs.release }}
@@ -26,7 +26,7 @@ jobs:
           excludes: prerelease, draft
 
       - name: Set up Node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node }}
 
