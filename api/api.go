@@ -114,12 +114,12 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 		r.Get("/authorize", api.ExternalProviderRedirect)
 
-		r.With(api.requireAdminCredentials).Post("/invite", api.Invite)
+		r.With(api.limitEmailSentHandler()).With(api.requireAdminCredentials).Post("/invite", api.Invite)
+		r.With(api.limitEmailSentHandler()).With(api.verifyCaptcha).Post("/signup", api.Signup)
+		r.With(api.limitEmailSentHandler()).With(api.verifyCaptcha).With(api.requireEmailProvider).Post("/recover", api.Recover)
+		r.With(api.limitEmailSentHandler()).With(api.verifyCaptcha).Post("/magiclink", api.MagicLink)
 
-		r.With(api.verifyCaptcha).Post("/signup", api.Signup)
-		r.With(api.verifyCaptcha).With(api.requireEmailProvider).Post("/recover", api.Recover)
-		r.With(api.verifyCaptcha).Post("/magiclink", api.MagicLink)
-		r.With(api.verifyCaptcha).Post("/otp", api.Otp)
+		r.With(api.limitEmailSentHandler()).With(api.verifyCaptcha).Post("/otp", api.Otp)
 
 		r.With(api.requireEmailProvider).With(api.limitHandler(
 			// Allow requests at a rate of 30 per 5 minutes.
@@ -143,7 +143,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		r.Route("/user", func(r *router) {
 			r.Use(api.requireAuthentication)
 			r.Get("/", api.UserGet)
-			r.Put("/", api.UserUpdate)
+			r.With(api.limitEmailSentHandler()).Put("/", api.UserUpdate)
 		})
 
 		r.Route("/admin", func(r *router) {
