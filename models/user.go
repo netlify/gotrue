@@ -279,12 +279,12 @@ func (u *User) UpdateLastSignInAt(tx *storage.Connection) error {
 }
 
 // ConfirmEmailChange confirm the change of email for a user
-func (u *User) ConfirmEmailChange(tx *storage.Connection) error {
+func (u *User) ConfirmEmailChange(tx *storage.Connection, status int) error {
 	u.Email = storage.NullString(u.EmailChange)
 	u.EmailChange = ""
 	u.EmailChangeTokenCurrent = ""
 	u.EmailChangeTokenNew = ""
-	u.EmailChangeConfirmStatus = 0
+	u.EmailChangeConfirmStatus = status
 	return tx.UpdateOnly(
 		u,
 		"email",
