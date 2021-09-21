@@ -52,6 +52,9 @@ func (a *API) samlCallback(ctx context.Context, r *http.Request) (*provider.User
 			Email:    assertionInfo.NameID,
 			Verified: true,
 		}},
+		Metadata: &provider.Claims{
+			Subject: assertionInfo.NameID,
+		},
 	}
 	return userData, nil
 }
