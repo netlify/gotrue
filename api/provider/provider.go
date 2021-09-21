@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"database/sql/driver"
 	"encoding/json"
+	"errors"
 
 	"golang.org/x/oauth2"
 )
@@ -44,6 +46,30 @@ type Claims struct {
 	Slug        string `json:"slug,omitempty"`
 	ProviderId  string `json:"provider_id,omitempty"`
 	UserNameKey string `json:"user_name,omitempty"`
+}
+
+func (c *Claims) Value() (driver.Value, error) {
+	data, err := json.Marshal(c)
+	if err != nil {
+		return driver.Value(""), err
+	}
+	return driver.Value(string(data)), nil
+}
+
+func (c *Claims) Scan(src interface{}) error {
+	var source []byte
+	switch v := src.(type) {
+	case string:
+		source = []byte(v)
+	case []byte:
+		source = v
+	default:
+		return errors.New("Invalid data type for Claims")
+	}
+	if len(source) == 0 {
+		source = []byte("{}")
+	}
+	return json.Unmarshal(source, c)
 }
 
 // ToMap converts the Claims struct to a map[string]interface{}
