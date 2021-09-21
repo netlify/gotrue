@@ -7,14 +7,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const (
-	userNameKey   = "user_name"
-	avatarURLKey  = "avatar_url"
-	nameKey       = "full_name"
-	aliasKey      = "slug"
-	providerIDKey = "provider_id"
-)
-
 type Claims struct {
 	// Reserved claims
 	Issuer  string `json:"iss,omitempty"`
