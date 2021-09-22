@@ -54,3 +54,14 @@ func FindIdentityByIdAndProvider(tx *storage.Connection, providerId, provider st
 	}
 	return identity, nil
 }
+
+func FindIdentitiesByUser(tx *storage.Connection, user *User) ([]Identity, error) {
+	var identities []Identity
+	if err := tx.Q().Where("user_id = ?", user.ID).All(&identities); err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return identities, nil
+		}
+		return nil, errors.Wrap(err, "error finding identities")
+	}
+	return identities, nil
+}
