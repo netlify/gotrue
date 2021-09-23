@@ -29,8 +29,8 @@ const (
 )
 
 const (
-	noneConfirmed int = iota
-	oneConfirmed
+	zeroConfirmation int = iota
+	singleConfirmation
 )
 
 // VerifyParams are the parameters the Verify endpoint accepts
@@ -88,6 +88,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		case emailChangeVerification:
 			user, terr = a.emailChangeVerify(ctx, tx, params)
 			if user == nil && terr == nil {
+				// when double confirmation is required
 				rurl := a.prepRedirectURL("Confirmation link accepted. Please proceed to confirm link sent to the other email", params.RedirectTo)
 				http.Redirect(w, r, rurl, http.StatusFound)
 				return nil
@@ -322,7 +323,7 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 	nextDay := user.EmailChangeSentAt.Add(24 * time.Hour)
 	if user.EmailChangeSentAt != nil && time.Now().After(nextDay) {
 		err = a.db.Transaction(func(tx *storage.Connection) error {
-			user.EmailChangeConfirmStatus = noneConfirmed
+			user.EmailChangeConfirmStatus = zeroConfirmation
 			return tx.UpdateOnly(user, "email_change_confirm_status")
 		})
 		if err != nil {
@@ -332,9 +333,9 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 	}
 
 	if config.Mailer.SecureEmailChangeEnabled {
-		if user.EmailChangeConfirmStatus == noneConfirmed {
+		if user.EmailChangeConfirmStatus == zeroConfirmation {
 			err = a.db.Transaction(func(tx *storage.Connection) error {
-				user.EmailChangeConfirmStatus = oneConfirmed
+				user.EmailChangeConfirmStatus = singleConfirmation
 				if params.Token == user.EmailChangeTokenCurrent {
 					user.EmailChangeTokenCurrent = ""
 				} else if params.Token == user.EmailChangeTokenNew {
@@ -364,7 +365,7 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 			return terr
 		}
 
-		if terr = user.ConfirmEmailChange(tx, noneConfirmed); terr != nil {
+		if terr = user.ConfirmEmailChange(tx, zeroConfirmation); terr != nil {
 			return internalServerError("Error confirm email").WithInternalError(terr)
 		}
 

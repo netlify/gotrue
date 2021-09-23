@@ -233,7 +233,7 @@ func (a *API) sendMagicLink(tx *storage.Connection, u *models.User, mailer maile
 func (a *API) sendSecureEmailChange(tx *storage.Connection, u *models.User, mailer mailer.Mailer, email string, referrerURL string) error {
 	u.EmailChangeTokenCurrent, u.EmailChangeTokenNew = crypto.SecureToken(), crypto.SecureToken()
 	u.EmailChange = email
-	u.EmailChangeConfirmStatus = noneConfirmed
+	u.EmailChangeConfirmStatus = zeroConfirmation
 	now := time.Now()
 	if err := mailer.EmailChangeMail(u, referrerURL); err != nil {
 		return err
@@ -254,7 +254,7 @@ func (a *API) sendSecureEmailChange(tx *storage.Connection, u *models.User, mail
 func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mailer.Mailer, email string, referrerURL string) error {
 	u.EmailChangeTokenNew = crypto.SecureToken()
 	u.EmailChange = email
-	u.EmailChangeConfirmStatus = noneConfirmed
+	u.EmailChangeConfirmStatus = zeroConfirmation
 	now := time.Now()
 	if err := mailer.EmailChangeMail(u, referrerURL); err != nil {
 		return err
