@@ -87,6 +87,11 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 			user, terr = a.recoverVerify(ctx, tx, params)
 		case emailChangeVerification:
 			user, terr = a.emailChangeVerify(ctx, tx, params)
+			if user == nil && terr == nil {
+				rurl := a.prepRedirectURL("Confirmation link accepted. Please proceed to confirm link sent to the other email", params.RedirectTo)
+				http.Redirect(w, r, rurl, http.StatusFound)
+				return nil
+			}
 		case smsVerification:
 			if params.Phone == "" {
 				return unprocessableEntityError("Sms Verification requires a phone number")
@@ -297,6 +302,12 @@ func (a *API) prepErrorRedirectURL(err *HTTPError, r *http.Request, rurl string)
 	return rurl + "#" + q.Encode()
 }
 
+func (a *API) prepRedirectURL(message string, rurl string) string {
+	q := url.Values{}
+	q.Set("message", message)
+	return rurl + "#" + q.Encode()
+}
+
 func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
@@ -337,7 +348,7 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 			if err != nil {
 				return nil, err
 			}
-			return nil, acceptedTokenError("Email change request accepted").WithInternalError(redirectWithQueryError)
+			return nil, nil
 		}
 	}
 
