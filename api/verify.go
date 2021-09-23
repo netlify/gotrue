@@ -320,23 +320,25 @@ func (a *API) emailChangeVerify(ctx context.Context, conn *storage.Connection, p
 		return nil, expiredTokenError("Email change token expired").WithInternalError(redirectWithQueryError)
 	}
 
-	if user.EmailChangeConfirmStatus == noneConfirmed {
-		err = a.db.Transaction(func(tx *storage.Connection) error {
-			user.EmailChangeConfirmStatus = oneConfirmed
-			if params.Token == user.EmailChangeTokenCurrent {
-				user.EmailChangeTokenCurrent = ""
-			} else if params.Token == user.EmailChangeTokenNew {
-				user.EmailChangeTokenNew = ""
+	if config.Mailer.SecureEmailChangeEnabled {
+		if user.EmailChangeConfirmStatus == noneConfirmed {
+			err = a.db.Transaction(func(tx *storage.Connection) error {
+				user.EmailChangeConfirmStatus = oneConfirmed
+				if params.Token == user.EmailChangeTokenCurrent {
+					user.EmailChangeTokenCurrent = ""
+				} else if params.Token == user.EmailChangeTokenNew {
+					user.EmailChangeTokenNew = ""
+				}
+				if terr := tx.UpdateOnly(user, "email_change_confirm_status", "email_change_token_current", "email_change_token_new"); terr != nil {
+					return terr
+				}
+				return nil
+			})
+			if err != nil {
+				return nil, err
 			}
-			if terr := tx.UpdateOnly(user, "email_change_confirm_status", "email_change_token_current", "email_change_token_new"); terr != nil {
-				return terr
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
+			return nil, acceptedTokenError("Email change request accepted").WithInternalError(redirectWithQueryError)
 		}
-		return nil, acceptedTokenError("Email change request accepted").WithInternalError(redirectWithQueryError)
 	}
 
 	// one email is confirmed at this point
