@@ -23,9 +23,9 @@ const defaultInviteMail = `<h2>You have been invited</h2>
 <p>You have been invited to create a user on {{ .SiteURL }}. Follow this link to accept the invite:</p>
 <p><a href="{{ .ConfirmationURL }}">Accept the invite</a></p>`
 
-const defaultConfirmationMail = `<h2>Confirm your signup</h2>
+const defaultConfirmationMail = `<h2>Confirm your email</h2>
 
-<p>Follow this link to confirm your user:</p>
+<p>Follow this link to confirm your email:</p>
 <p><a href="{{ .ConfirmationURL }}">Confirm your email address</a></p>`
 
 const defaultRecoveryMail = `<h2>Reset password</h2>
@@ -102,7 +102,7 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User, referrerURL string)
 
 	return m.Mailer.Mail(
 		user.GetEmail(),
-		string(withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Signup")),
+		string(withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Email")),
 		m.Config.Mailer.Templates.Confirmation,
 		defaultConfirmationMail,
 		data,
