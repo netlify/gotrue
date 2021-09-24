@@ -107,10 +107,11 @@ type SMTPConfiguration struct {
 }
 
 type MailerConfiguration struct {
-	Autoconfirm bool                      `json:"autoconfirm"`
-	Subjects    EmailContentConfiguration `json:"subjects"`
-	Templates   EmailContentConfiguration `json:"templates"`
-	URLPaths    EmailContentConfiguration `json:"url_paths"`
+	Autoconfirm              bool                      `json:"autoconfirm"`
+	Subjects                 EmailContentConfiguration `json:"subjects"`
+	Templates                EmailContentConfiguration `json:"templates"`
+	URLPaths                 EmailContentConfiguration `json:"url_paths"`
+	SecureEmailChangeEnabled bool                      `json:"secure_email_change_enabled" split_words:"true" default:"true"`
 }
 
 type PhoneProviderConfiguration struct {
