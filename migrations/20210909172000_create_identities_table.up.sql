@@ -1,4 +1,4 @@
--- adds email_change_confirmed
+-- adds identities table 
 
 CREATE TABLE IF NOT EXISTS auth.identities (
     id text NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS auth.identities (
     provider text NOT NULL,
     last_sign_in_at timestamptz NULL,
     created_at timestamptz NULL,
-	updated_at timestamptz NULL,
+    updated_at timestamptz NULL,
     CONSTRAINT identities_pkey PRIMARY KEY (provider, id),
     CONSTRAINT identities_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
