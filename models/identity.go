@@ -55,6 +55,7 @@ func FindIdentityByIdAndProvider(tx *storage.Connection, providerId, provider st
 	return identity, nil
 }
 
+// FindIdentitiesByUser returns all identities associated to a user
 func FindIdentitiesByUser(tx *storage.Connection, user *User) ([]*Identity, error) {
 	identities := []*Identity{}
 	if err := tx.Q().Where("user_id = ?", user.ID).All(&identities); err != nil {
@@ -64,4 +65,20 @@ func FindIdentitiesByUser(tx *storage.Connection, user *User) ([]*Identity, erro
 		return nil, errors.Wrap(err, "error finding identities")
 	}
 	return identities, nil
+}
+
+// FindProvidersByUser returns all providers associated to a user
+func FindProvidersByUser(tx *storage.Connection, user *User) ([]string, error) {
+	identities := []Identity{}
+	providers := make([]string, 0)
+	if err := tx.Q().Select("provider").Where("user_id = ?", user.ID).All(&identities); err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return providers, nil
+		}
+		return nil, errors.Wrap(err, "error finding providers")
+	}
+	for _, identity := range identities {
+		providers = append(providers, identity.Provider)
+	}
+	return providers, nil
 }

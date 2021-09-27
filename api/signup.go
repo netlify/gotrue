@@ -221,7 +221,7 @@ func (a *API) signupNewUser(ctx context.Context, conn *storage.Connection, param
 	if user.AppMetaData == nil {
 		user.AppMetaData = make(map[string]interface{})
 	}
-	user.AppMetaData["provider"] = params.Provider
+	user.AppMetaData["provider"] = []string{params.Provider}
 
 	if params.Password == "" {
 		user.EncryptedPassword = ""

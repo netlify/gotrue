@@ -133,7 +133,6 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 
 	var user *models.User
 	var token *AccessTokenResponse
-	var identity *models.Identity
 	err := a.db.Transaction(func(tx *storage.Connection) error {
 		var terr error
 		inviteToken := getInviteToken(ctx)
@@ -152,6 +151,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				}
 			}
 
+			var identity *models.Identity
 			// check if identity exists
 			if identity, terr = models.FindIdentityByIdAndProvider(tx, userData.Metadata.Subject, providerType); terr != nil {
 				if models.IsNotFoundError(terr) {
@@ -170,6 +170,9 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					}
 					if user != nil {
 						if identity, terr = a.createNewIdentity(tx, user, providerType, identityData); terr != nil {
+							return terr
+						}
+						if terr = user.UpdateAppMetaDataProvider(tx); terr != nil {
 							return terr
 						}
 					} else {
@@ -214,6 +217,9 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					return terr
 				}
 				if terr = tx.UpdateOnly(identity, "identity_data", "last_sign_in_at"); terr != nil {
+					return terr
+				}
+				if terr = user.UpdateAppMetaDataProvider(tx); terr != nil {
 					return terr
 				}
 			}
@@ -298,17 +304,20 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 		return nil, badRequestError("Invited email does not match emails from external provider").WithInternalMessage("invited=%s external=%s", user.Email, strings.Join(emails, ", "))
 	}
 
-	if err := user.UpdateAppMetaData(tx, map[string]interface{}{
-		"provider": providerType,
-	}); err != nil {
-		return nil, internalServerError("Database error updating user").WithInternalError(err)
+	var identityData map[string]interface{}
+	if userData.Metadata != nil {
+		identityData, err = userData.Metadata.ToMap()
+		if err != nil {
+			return nil, internalServerError("Error serialising user metadata").WithInternalError(err)
+		}
 	}
-
-	updates, err := userData.Metadata.ToMap()
-	if err != nil {
-		return nil, internalServerError("Error serialising user metadata").WithInternalError(err)
+	if _, err := a.createNewIdentity(tx, user, providerType, identityData); err != nil {
+		return nil, err
 	}
-	if err := user.UpdateUserMetaData(tx, updates); err != nil {
+	if err = user.UpdateAppMetaDataProvider(tx); err != nil {
+		return nil, err
+	}
+	if err := user.UpdateUserMetaData(tx, identityData); err != nil {
 		return nil, internalServerError("Database error updating user").WithInternalError(err)
 	}
 
