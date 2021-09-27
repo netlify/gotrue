@@ -59,14 +59,15 @@ type GlobalConfiguration struct {
 		RequestIDHeader string `envconfig:"REQUEST_ID_HEADER"`
 		ExternalURL     string `json:"external_url" envconfig:"API_EXTERNAL_URL"`
 	}
-	DB                DBConfiguration
-	External          ProviderConfiguration
-	Logging           LoggingConfig `envconfig:"LOG"`
-	OperatorToken     string        `split_words:"true" required:"false"`
-	MultiInstanceMode bool
-	Tracing           TracingConfig
-	SMTP              SMTPConfiguration
-	RateLimitHeader   string `split_words:"true"`
+	DB                 DBConfiguration
+	External           ProviderConfiguration
+	Logging            LoggingConfig `envconfig:"LOG"`
+	OperatorToken      string        `split_words:"true" required:"false"`
+	MultiInstanceMode  bool
+	Tracing            TracingConfig
+	SMTP               SMTPConfiguration
+	RateLimitHeader    string  `split_words:"true"`
+	RateLimitEmailSent float64 `split_words:"true" default:"30"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.
@@ -106,10 +107,11 @@ type SMTPConfiguration struct {
 }
 
 type MailerConfiguration struct {
-	Autoconfirm bool                      `json:"autoconfirm"`
-	Subjects    EmailContentConfiguration `json:"subjects"`
-	Templates   EmailContentConfiguration `json:"templates"`
-	URLPaths    EmailContentConfiguration `json:"url_paths"`
+	Autoconfirm              bool                      `json:"autoconfirm"`
+	Subjects                 EmailContentConfiguration `json:"subjects"`
+	Templates                EmailContentConfiguration `json:"templates"`
+	URLPaths                 EmailContentConfiguration `json:"url_paths"`
+	SecureEmailChangeEnabled bool                      `json:"secure_email_change_enabled" split_words:"true" default:"true"`
 }
 
 type PhoneProviderConfiguration struct {

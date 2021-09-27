@@ -54,6 +54,10 @@ Use this to disable phone signups (users can still use external oauth providers 
 
 Header on which to rate limit the `/token` endpoint.
 
+`GOTRUE_RATE_LIMIT_EMAIL_SENT` - `string`
+
+Rate limit the number of emails sent per hr on the following endpoints: `/signup`, `/invite`, `/magiclink`, `/recover`, `/otp`, & `/user`. 
+
 `PASSWORD_MIN_LENGTH` - `int`
 
 Minimum password length, defaults to 6.

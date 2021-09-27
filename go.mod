@@ -20,7 +20,7 @@ require (
 	github.com/gobuffalo/validate/v3 v3.3.0 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang-jwt/jwt v3.2.1+incompatible
-	github.com/gorilla/securecookie v1.1.1 // indirect
+	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.1.1
 	github.com/imdario/mergo v0.0.0-20160216103600-3e95a51e0639
 	github.com/jackc/pgproto3/v2 v2.0.7 // indirect
@@ -29,16 +29,16 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/lestrrat-go/jwx v0.9.0
 	github.com/lib/pq v1.9.0 // indirect
+	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.5 // indirect
 	github.com/mrjones/oauth v0.0.0-20190623134757-126b35219450
 	github.com/netlify/mailme v1.1.1
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/rogpeppe/go-internal v1.7.0 // indirect
 	github.com/rs/cors v1.6.0
 	github.com/russellhaering/gosaml2 v0.6.0
-	github.com/russellhaering/goxmldsig v1.1.0
+	github.com/russellhaering/goxmldsig v1.1.1
 	github.com/sebest/xff v0.0.0-20160910043805-6c115e0ffa35
 	github.com/sethvargo/go-password v0.2.0
 	github.com/sirupsen/logrus v1.7.0

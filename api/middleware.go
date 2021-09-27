@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/netlify/gotrue/security"
-	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/netlify/gotrue/security"
+	"github.com/sirupsen/logrus"
 
 	"github.com/didip/tollbooth/v5"
 	"github.com/didip/tollbooth/v5/limiter"
@@ -148,6 +150,44 @@ func (a *API) limitHandler(lmt *limiter.Limiter) middlewareHandler {
 			err := tollbooth.LimitByKeys(lmt, []string{key})
 			if err != nil {
 				return c, httpError(http.StatusTooManyRequests, "Rate limit exceeded")
+			}
+		}
+		return c, nil
+	}
+}
+
+func (a *API) limitEmailSentHandler() middlewareHandler {
+	// limit per hour
+	freq := a.config.RateLimitEmailSent / (60 * 60)
+	lmt := tollbooth.NewLimiter(freq, &limiter.ExpirableOptions{
+		DefaultExpirationTTL: time.Hour,
+	}).SetBurst(int(a.config.RateLimitEmailSent)).SetMethods([]string{"PUT", "POST"})
+	return func(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+		c := req.Context()
+		config := a.getConfig(c)
+		if config.External.Email.Enabled && !config.Mailer.Autoconfirm {
+			if req.Method == "PUT" || req.Method == "POST" {
+				res := make(map[string]interface{})
+				bodyBytes, err := ioutil.ReadAll(req.Body)
+				if err != nil {
+					return c, internalServerError("Error invalid request body").WithInternalError(err)
+				}
+				req.Body.Close()
+				req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+				jsonDecoder := json.NewDecoder(bytes.NewBuffer(bodyBytes))
+				if err := jsonDecoder.Decode(&res); err != nil {
+					return c, badRequestError("Error invalid request body").WithInternalError(err)
+				}
+
+				if _, ok := res["email"]; !ok {
+					// email not in POST body
+					return c, nil
+				}
+
+				if err := tollbooth.LimitByKeys(lmt, []string{"email_functions"}); err != nil {
+					return c, httpError(http.StatusTooManyRequests, "Rate limit exceeded")
+				}
 			}
 		}
 		return c, nil
