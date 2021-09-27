@@ -16,7 +16,6 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/oauth2"
 )
 
 // ExternalProviderClaims are the JWT claims sent as the state in the external oauth provider signup flow
@@ -86,16 +85,6 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		err := gothic.StoreInSession(providerType, externalProvider.Marshal(), r, w)
 		if err != nil {
 			return internalServerError("Error storing request token in session").WithInternalError(err)
-		}
-	case *provider.AppleProvider:
-		opts := make([]oauth2.AuthCodeOption, 0, 1)
-		opts = append(opts, oauth2.SetAuthURLParam("response_mode", "form_post"))
-		authURL = externalProvider.Config.AuthCodeURL(tokenString, opts...)
-		if authURL != "" {
-			if u, err := url.Parse(authURL); err == nil {
-				u.RawQuery = strings.ReplaceAll(u.RawQuery, "+", "%20")
-				authURL = u.String()
-			}
 		}
 	default:
 		authURL = p.AuthCodeURL(tokenString)

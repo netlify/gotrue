@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/golang-jwt/jwt"
@@ -87,6 +88,19 @@ func (p AppleProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 		oauth2.SetAuthURLParam("secret", p.ClientSecret),
 	}
 	return p.Exchange(oauth2.NoContext, code, opts...)
+}
+
+func (p AppleProvider) AuthCodeURL(state string, args ...oauth2.AuthCodeOption) string {
+	opts := make([]oauth2.AuthCodeOption, 0, 1)
+	opts = append(opts, oauth2.SetAuthURLParam("response_mode", "form_post"))
+	authURL := p.Config.AuthCodeURL(state, opts...)
+	if authURL != "" {
+		if u, err := url.Parse(authURL); err != nil {
+			u.RawQuery = strings.ReplaceAll(u.RawQuery, "+", "%20")
+			authURL = u.String()
+		}
+	}
+	return authURL
 }
 
 // GetUserData returns the user data fetched from the apple provider
