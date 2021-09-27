@@ -11,12 +11,12 @@ import (
 
 type Identity struct {
 	ID           string     `json:"id" db:"id"`
-	UserID       uuid.UUID  `db:"user_id"`
-	IdentityData JSONMap    `db:"identity_data"`
-	Provider     string     `db:"provider"`
-	LastSignInAt *time.Time `db:"last_sign_in_at"`
-	CreatedAt    time.Time  `db:"created_at"`
-	UpdatedAt    time.Time  `db:"updated_at"`
+	UserID       uuid.UUID  `json:"user_id" db:"user_id"`
+	IdentityData JSONMap    `json:"identity_data,omitempty" db:"identity_data"`
+	Provider     string     `json:"provider" db:"provider"`
+	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty" db:"last_sign_in_at"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 func (Identity) TableName() string {
@@ -55,8 +55,8 @@ func FindIdentityByIdAndProvider(tx *storage.Connection, providerId, provider st
 	return identity, nil
 }
 
-func FindIdentitiesByUser(tx *storage.Connection, user *User) ([]Identity, error) {
-	var identities []Identity
+func FindIdentitiesByUser(tx *storage.Connection, user *User) ([]*Identity, error) {
+	identities := []*Identity{}
 	if err := tx.Q().Where("user_id = ?", user.ID).All(&identities); err != nil {
 		if errors.Cause(err) == sql.ErrNoRows {
 			return identities, nil
