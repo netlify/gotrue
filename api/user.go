@@ -120,8 +120,14 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 
 			mailer := a.Mailer(ctx)
 			referrer := a.getReferrer(r)
-			if terr = a.sendEmailChange(tx, user, mailer, params.Email, referrer); terr != nil {
-				return internalServerError("Error sending change email").WithInternalError(terr)
+			if config.Mailer.SecureEmailChangeEnabled {
+				if terr = a.sendSecureEmailChange(tx, user, mailer, params.Email, referrer); terr != nil {
+					return internalServerError("Error sending change email").WithInternalError(terr)
+				}
+			} else {
+				if terr = a.sendEmailChange(tx, user, mailer, params.Email, referrer); terr != nil {
+					return internalServerError("Error sending change email").WithInternalError(terr)
+				}
 			}
 		}
 

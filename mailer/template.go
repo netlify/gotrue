@@ -23,9 +23,9 @@ const defaultInviteMail = `<h2>You have been invited</h2>
 <p>You have been invited to create a user on {{ .SiteURL }}. Follow this link to accept the invite:</p>
 <p><a href="{{ .ConfirmationURL }}">Accept the invite</a></p>`
 
-const defaultConfirmationMail = `<h2>Confirm your signup</h2>
+const defaultConfirmationMail = `<h2>Confirm your email</h2>
 
-<p>Follow this link to confirm your user:</p>
+<p>Follow this link to confirm your email:</p>
 <p><a href="{{ .ConfirmationURL }}">Confirm your email address</a></p>`
 
 const defaultRecoveryMail = `<h2>Reset password</h2>
@@ -102,7 +102,7 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User, referrerURL string)
 
 	return m.Mailer.Mail(
 		user.GetEmail(),
-		string(withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Signup")),
+		string(withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Your Email")),
 		m.Config.Mailer.Templates.Confirmation,
 		defaultConfirmationMail,
 		data,
@@ -111,6 +111,30 @@ func (m *TemplateMailer) ConfirmationMail(user *models.User, referrerURL string)
 
 // EmailChangeMail sends an email change confirmation mail to a user
 func (m *TemplateMailer) EmailChangeMail(user *models.User, referrerURL string) error {
+	type Email struct {
+		Address  string
+		Token    string
+		Subject  string
+		Template string
+	}
+	emails := []Email{
+		{
+			Address:  user.EmailChange,
+			Token:    user.EmailChangeTokenNew,
+			Subject:  string(withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change")),
+			Template: m.Config.Mailer.Templates.Confirmation,
+		},
+	}
+
+	if m.Config.Mailer.SecureEmailChangeEnabled {
+		emails = append(emails, Email{
+			Address:  user.GetEmail(),
+			Token:    user.EmailChangeTokenCurrent,
+			Subject:  string(withDefault(m.Config.Mailer.Subjects.Confirmation, "Confirm Email Address")),
+			Template: m.Config.Mailer.Templates.EmailChange,
+		})
+	}
+
 	globalConfig, err := conf.LoadGlobal(configFile)
 	if err != nil {
 		return err
@@ -120,42 +144,37 @@ func (m *TemplateMailer) EmailChangeMail(user *models.User, referrerURL string) 
 	if len(referrerURL) > 0 {
 		redirectParam = "&redirect_to=" + referrerURL
 	}
-
 	errors := make(chan error)
-	tokens := map[string]string{
-		user.GetEmail():  user.EmailChangeTokenCurrent,
-		user.EmailChange: user.EmailChangeTokenNew,
-	}
-	for email, token := range tokens {
+	for _, email := range emails {
 		url, err := getSiteURL(
 			referrerURL,
 			globalConfig.API.ExternalURL,
 			m.Config.Mailer.URLPaths.EmailChange,
-			"token="+token+"&type=email_change"+redirectParam,
+			"token="+email.Token+"&type=email_change"+redirectParam,
 		)
 		if err != nil {
 			return err
 		}
-		go func(e, t string) {
+		go func(address, token, template string) {
 			data := map[string]interface{}{
 				"SiteURL":         m.Config.SiteURL,
 				"ConfirmationURL": url,
 				"Email":           user.GetEmail(),
 				"NewEmail":        user.EmailChange,
-				"Token":           t,
+				"Token":           token,
 				"Data":            user.UserMetaData,
 			}
 			errors <- m.Mailer.Mail(
-				e,
+				address,
 				string(withDefault(m.Config.Mailer.Subjects.EmailChange, "Confirm Email Change")),
-				m.Config.Mailer.Templates.EmailChange,
+				template,
 				defaultEmailChangeMail,
 				data,
 			)
-		}(email, token)
+		}(email.Address, email.Token, email.Template)
 	}
 
-	for i := 0; i < len(tokens); i++ {
+	for i := 0; i < len(emails); i++ {
 		e := <-errors
 		if e != nil {
 			return e
