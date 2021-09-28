@@ -3,7 +3,6 @@ on:
     branches: [master]
     tags: ['*']
   pull_request:
-    types: [opened, synchronize, reopened]
 name: Test
 jobs:
   test:
