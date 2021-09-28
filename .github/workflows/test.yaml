@@ -33,3 +33,11 @@ jobs:
         run: make migrate_test
       - name: Lint and test
         run: make all
+      - name: Trigger CircleCI for deployment
+        run: |
+          REF="${GITHUB_HEAD_REF:-main}"
+          curl -X POST --silent --show-error --fail \
+            --user ${{ secrets.CIRCLE_API_USER_TOKEN }}: \
+            -H 'content-type: application/json' \
+            --data '{ "branch": "master", "parameters": { "branch": "'"$REF"'", "commit": "${{ github.sha }}" } }' \
+            https://circleci.com/api/v2/project/gh/netlify/gotrue-ci/pipeline
