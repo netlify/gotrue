@@ -3,6 +3,7 @@ package mailer
 import (
 	"testing"
 
+	"github.com/netlify/gotrue/conf"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,4 +46,13 @@ func TestRelativeURL(t *testing.T) {
 		res := enforceRelativeURL(c.URL)
 		assert.Equal(t, c.Expected, res, c.URL)
 	}
+}
+
+func TestGetEmailFrom(t *testing.T) {
+	res := getEmailFrom(&conf.Configuration{
+		SMTP: conf.SMTPConfiguration{
+			AdminEmail: "gotrue+{{.SiteID}}@example.com",
+		},
+	})
+	assert.Equal(t, "gotrue+something@example.com", res)
 }
