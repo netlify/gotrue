@@ -9,6 +9,10 @@ import (
 	jwt "github.com/golang-jwt/jwt"
 )
 
+const (
+	bitbucketUser string = `{"uuid":"bitbucketTestId","display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
+)
+
 func (ts *ExternalTestSuite) TestSignupExternalBitbucket() {
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=bitbucket", nil)
 	w := httptest.NewRecorder()
@@ -66,14 +70,13 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucket_AuthorizationCode() {
 	ts.Config.DisableSignup = false
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{"email":"bitbucket@example.com","is_primary":true,"is_confirmed":true}]}`
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
 	u := performAuthorization(ts, "bitbucket", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "bitbucketTestId", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNoUser() {
@@ -94,7 +97,6 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNo
 	ts.Config.DisableSignup = true
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{}]}`
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
@@ -108,51 +110,48 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNo
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar", "")
+	ts.createUser("bitbucketTestId", "bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{"email":"bitbucket@example.com","is_primary":true,"is_confirmed":true}]}`
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
 	u := performAuthorization(ts, "bitbucket", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "bitbucketTestId", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWithSecondaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("secondary@example.com", "Bitbucket Test", "http://example.com/avatar", "")
+	ts.createUser("bitbucketTestId", "secondary@example.com", "Bitbucket Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{"email":"primary@example.com","is_primary":true,"is_confirmed":true},{"email":"secondary@example.com","is_primary":false,"is_confirmed":true}]}`
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
 	u := performAuthorization(ts, "bitbucket", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "Bitbucket Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "Bitbucket Test", "bitbucketTestId", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketSuccessWhenMatchingToken() {
 	// name and avatar should be populated from Bitbucket API
-	ts.createUser("bitbucket@example.com", "", "", "invite_token")
+	ts.createUser("bitbucketTestId", "bitbucket@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{"email":"bitbucket@example.com","is_primary":true,"is_confirmed":true}]}`
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()
 
 	u := performAuthorization(ts, "bitbucket", code, "invite_token")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "bitbucket@example.com", "Bitbucket Test", "bitbucketTestId", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenNoMatchingToken() {
@@ -168,7 +167,7 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenNoMatching
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenWrongToken() {
-	ts.createUser("bitbucket@example.com", "", "", "invite_token")
+	ts.createUser("bitbucketTestId", "bitbucket@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -182,11 +181,10 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenWrongToken
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenEmailDoesntMatch() {
-	ts.createUser("bitbucket@example.com", "", "", "invite_token")
+	ts.createUser("bitbucketTestId", "bitbucket@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	bitbucketUser := `{"display_name":"Bitbucket Test","avatar":{"href":"http://example.com/avatar"}}`
 	emails := `{"values":[{"email":"other@example.com","is_primary":true,"is_confirmed":true}]}`
 	server := BitbucketTestSignupSetup(ts, &tokenCount, &userCount, code, bitbucketUser, emails)
 	defer server.Close()

@@ -20,6 +20,7 @@ type googleProvider struct {
 }
 
 type googleUser struct {
+	ID            string `json:"id"`
 	Name          string `json:"name"`
 	AvatarURL     string `json:"picture"`
 	Email         string `json:"email"`
@@ -69,12 +70,7 @@ func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 		return nil, err
 	}
 
-	data := &UserProvidedData{
-		Metadata: map[string]string{
-			nameKey:      u.Name,
-			avatarURLKey: u.AvatarURL,
-		},
-	}
+	data := &UserProvidedData{}
 
 	if u.Email != "" {
 		data.Emails = append(data.Emails, Email{
@@ -86,6 +82,20 @@ func (g googleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 
 	if len(data.Emails) <= 0 {
 		return nil, errors.New("Unable to find email with Google provider")
+	}
+
+	data.Metadata = &Claims{
+		Issuer:        g.APIPath,
+		Subject:       u.ID,
+		Name:          u.Name,
+		Picture:       u.AvatarURL,
+		Email:         u.Email,
+		EmailVerified: u.EmailVerified,
+
+		// To be deprecated
+		AvatarURL:  u.AvatarURL,
+		FullName:   u.Name,
+		ProviderId: u.ID,
 	}
 
 	return data, nil

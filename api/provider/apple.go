@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -50,6 +52,7 @@ type idTokenClaims struct {
 	AuthTime        int    `json:"auth_time"`
 	Email           string `json:"email"`
 	IsPrivateEmail  bool   `json:"is_private_email,string"`
+	Sub             string `json:"sub"`
 }
 
 // NewAppleProvider creates a Apple account provider.
@@ -85,6 +88,19 @@ func (p AppleProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 		oauth2.SetAuthURLParam("secret", p.ClientSecret),
 	}
 	return p.Exchange(oauth2.NoContext, code, opts...)
+}
+
+func (p AppleProvider) AuthCodeURL(state string, args ...oauth2.AuthCodeOption) string {
+	opts := make([]oauth2.AuthCodeOption, 0, 1)
+	opts = append(opts, oauth2.SetAuthURLParam("response_mode", "form_post"))
+	authURL := p.Config.AuthCodeURL(state, opts...)
+	if authURL != "" {
+		if u, err := url.Parse(authURL); err != nil {
+			u.RawQuery = strings.ReplaceAll(u.RawQuery, "+", "%20")
+			authURL = u.String()
+		}
+	}
+	return authURL
 }
 
 // GetUserData returns the user data fetched from the apple provider
@@ -148,22 +164,29 @@ func (p AppleProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 				Verified: true,
 				Primary:  true,
 			}},
-		}
+			Metadata: &Claims{
+				Issuer:        p.UserInfoURL,
+				Subject:       idToken.Claims.(*idTokenClaims).Sub,
+				Email:         idToken.Claims.(*idTokenClaims).Email,
+				EmailVerified: true,
 
+				// To be deprecated
+				ProviderId: idToken.Claims.(*idTokenClaims).Sub,
+			},
+		}
 	}
 	return user, nil
 }
 
 // ParseUser parses the apple user's info
-func (p AppleProvider) ParseUser(data string) map[string]string {
-	userData := &appleUser{}
-	err := json.Unmarshal([]byte(data), userData)
+func (p AppleProvider) ParseUser(data string, userData *UserProvidedData) error {
+	u := &appleUser{}
+	err := json.Unmarshal([]byte(data), u)
 	if err != nil {
-		return nil
+		return err
 	}
-	return map[string]string{
-		"firstName": userData.Name.FirstName,
-		"lastName":  userData.Name.LastName,
-		"email":     userData.Email,
-	}
+
+	userData.Metadata.Name = strings.TrimSpace(u.Name.FirstName + " " + u.Name.LastName)
+	userData.Metadata.FullName = strings.TrimSpace(u.Name.FirstName + " " + u.Name.LastName)
+	return nil
 }

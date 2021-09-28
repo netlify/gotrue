@@ -20,6 +20,7 @@ type bitbucketProvider struct {
 
 type bitbucketUser struct {
 	Name   string `json:"display_name"`
+	ID     string `json:"uuid"`
 	Avatar struct {
 		Href string `json:"href"`
 	} `json:"avatar"`
@@ -69,12 +70,7 @@ func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (
 		return nil, err
 	}
 
-	data := &UserProvidedData{
-		Metadata: map[string]string{
-			nameKey:      u.Name,
-			avatarURLKey: u.Avatar.Href,
-		},
-	}
+	data := &UserProvidedData{}
 
 	var emails bitbucketEmails
 	if err := makeRequest(ctx, tok, g.Config, g.APIPath+"/user/emails", &emails); err != nil {
@@ -95,6 +91,18 @@ func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (
 
 	if len(data.Emails) <= 0 {
 		return nil, errors.New("Unable to find email with Bitbucket provider")
+	}
+
+	data.Metadata = &Claims{
+		Issuer:  g.APIPath,
+		Subject: u.ID,
+		Name:    u.Name,
+		Picture: u.Avatar.Href,
+
+		// To be deprecated
+		AvatarURL:  u.Avatar.Href,
+		FullName:   u.Name,
+		ProviderId: u.ID,
 	}
 
 	return data, nil

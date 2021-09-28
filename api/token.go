@@ -20,6 +20,7 @@ type GoTrueClaims struct {
 	Phone        string                 `json:"phone"`
 	AppMetaData  map[string]interface{} `json:"app_metadata"`
 	UserMetaData map[string]interface{} `json:"user_metadata"`
+	Identities   []*models.Identity     `json:"identities"`
 	Role         string                 `json:"role"`
 }
 
@@ -183,7 +184,13 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 			return internalServerError(terr.Error())
 		}
 
-		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
+		identities := make([]*models.Identity, 0)
+		identities, terr = models.FindIdentitiesByUser(tx, user)
+		if terr != nil {
+			return internalServerError("error retrieving identities").WithInternalError(terr)
+		}
+
+		tokenString, terr = generateAccessToken(user, identities, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
 		if terr != nil {
 			return internalServerError("error generating jwt token").WithInternalError(terr)
 		}
@@ -208,7 +215,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	})
 }
 
-func generateAccessToken(user *models.User, expiresIn time.Duration, secret string) (string, error) {
+func generateAccessToken(user *models.User, identities []*models.Identity, expiresIn time.Duration, secret string) (string, error) {
 	claims := &GoTrueClaims{
 		StandardClaims: jwt.StandardClaims{
 			Subject:   user.ID.String(),
@@ -219,6 +226,7 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, secret stri
 		Phone:        user.GetPhone(),
 		AppMetaData:  user.AppMetaData,
 		UserMetaData: user.UserMetaData,
+		Identities:   identities,
 		Role:         user.Role,
 	}
 
@@ -241,8 +249,12 @@ func (a *API) issueRefreshToken(ctx context.Context, conn *storage.Connection, u
 		if terr != nil {
 			return internalServerError("Database error granting user").WithInternalError(terr)
 		}
+		identities, terr := models.FindIdentitiesByUser(tx, user)
+		if terr != nil {
+			return internalServerError("Database error granting user").WithInternalError(terr)
+		}
 
-		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
+		tokenString, terr = generateAccessToken(user, identities, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
 		if terr != nil {
 			return internalServerError("error generating jwt token").WithInternalError(terr)
 		}

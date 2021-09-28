@@ -9,6 +9,12 @@ import (
 	jwt "github.com/golang-jwt/jwt"
 )
 
+const (
+	gitlabUser           string = `{"id":123,"email":"gitlab@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
+	gitlabUserWrongEmail string = `{"id":123,"email":"other@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
+	gitlabUserNoEmail    string = `{"id":123,"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
+)
+
 func (ts *ExternalTestSuite) TestSignupExternalGitlab() {
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=gitlab", nil)
 	w := httptest.NewRecorder()
@@ -68,14 +74,13 @@ func (ts *ExternalTestSuite) TestSignupExternalGitlab_AuthorizationCode() {
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"name":"GitLab Test","avatar_url":"http://example.com/avatar"}`
 	emails := `[{"id":1,"email":"gitlab@example.com"}]`
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
 	u := performAuthorization(ts, "gitlab", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "123", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenNoUser() {
@@ -83,7 +88,6 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenNoUse
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
 	emails := `[{"id":1,"email":"gitlab@example.com"}]`
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
@@ -98,9 +102,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenEmpty
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"name":"Gitlab Test","avatar_url":"http://example.com/avatar"}`
 	emails := `[]`
-	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUserNoEmail, emails)
 	defer server.Close()
 
 	u := performAuthorization(ts, "gitlab", code, "")
@@ -111,18 +114,17 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenEmpty
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("gitlab@example.com", "GitLab Test", "http://example.com/avatar", "")
+	ts.createUser("123", "gitlab@example.com", "GitLab Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"email":"gitlab@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
 	emails := "[]"
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
 	u := performAuthorization(ts, "gitlab", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "123", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithSecondaryEmail() {
@@ -130,40 +132,37 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithSec
 	ts.Config.Mailer.Autoconfirm = true
 	ts.Config.DisableSignup = true
 
-	ts.createUser("secondary@example.com", "GitLab Test", "http://example.com/avatar", "")
+	ts.createUser("123", "secondary@example.com", "GitLab Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"email":"primary@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar"}`
 	emails := `[{"id":1,"email":"secondary@example.com"}]`
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
 	u := performAuthorization(ts, "gitlab", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "GitLab Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "GitLab Test", "123", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabSuccessWhenMatchingToken() {
 	// name and avatar should be populated from GitLab API
-	ts.createUser("gitlab@example.com", "", "", "invite_token")
+	ts.createUser("123", "gitlab@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"email":"gitlab@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
 	emails := "[]"
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
 
 	u := performAuthorization(ts, "gitlab", code, "invite_token")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "gitlab@example.com", "GitLab Test", "123", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenNoMatchingToken() {
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"email":"gitlab@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
 	emails := "[]"
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
@@ -173,11 +172,10 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenNoMatchingTok
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenWrongToken() {
-	ts.createUser("gitlab@example.com", "", "", "invite_token")
+	ts.createUser("123", "gitlab@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"email":"gitlab@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
 	emails := "[]"
 	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
 	defer server.Close()
@@ -187,13 +185,12 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenWrongToken() 
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenEmailDoesntMatch() {
-	ts.createUser("gitlab@example.com", "", "", "invite_token")
+	ts.createUser("123", "gitlab@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	gitlabUser := `{"email":"other@example.com","name":"GitLab Test","avatar_url":"http://example.com/avatar","confirmed_at":"2012-05-23T09:05:22Z"}`
 	emails := "[]"
-	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUser, emails)
+	server := GitlabTestSignupSetup(ts, &tokenCount, &userCount, code, gitlabUserWrongEmail, emails)
 	defer server.Close()
 
 	u := performAuthorization(ts, "gitlab", code, "invite_token")

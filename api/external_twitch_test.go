@@ -9,6 +9,11 @@ import (
 	jwt "github.com/golang-jwt/jwt"
 )
 
+const (
+	twitchUser           string = `{"data":[{"id":"twitchTestId","login":"Twitch user","display_name":"Twitch user","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":"","email":"twitch@example.com"}]}`
+	twitchUserWrongEmail string = `{"data":[{"id":"twitchTestId","login":"Twitch user","display_name":"Twitch user","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":"","email":"other@example.com"}]}`
+)
+
 func (ts *ExternalTestSuite) TestSignupExternalTwitch() {
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=twitch", nil)
 	w := httptest.NewRecorder()
@@ -63,13 +68,12 @@ func (ts *ExternalTestSuite) TestSignupExternalTwitch_AuthorizationCode() {
 	ts.Config.DisableSignup = false
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	TwitchUser := `{"data":[{"id":"1","login":"Twitch Test","display_name":"Twitch Test","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":"","email":"twitch@example.com"}]}`
-	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, TwitchUser)
+	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, twitchUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "twitch", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "twitch@example.com", "Twitch Test", "https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "twitch@example.com", "Twitch user", "twitchTestId", "https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalTwitchDisableSignupErrorWhenNoUser() {
@@ -103,32 +107,31 @@ func (ts *ExternalTestSuite) TestSignupExternalTwitchDisableSignupErrorWhenEmpty
 func (ts *ExternalTestSuite) TestSignupExternalTwitchDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("twitch@example.com", "Twitch Test", "https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8", "")
+	ts.createUser("twitchTestId", "twitch@example.com", "Twitch Test", "https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	TwitchUser := `{"data":[{"id":"1","login":"Twitch user","display_name":"Twitch user","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":"","email":"twitch@example.com"}]}`
-	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, TwitchUser)
+	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, twitchUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "twitch", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "twitch@example.com", "Twitch Test", "https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "twitch@example.com", "Twitch Test", "twitchTestId", "https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalTwitchSuccessWhenMatchingToken() {
 	// name and avatar should be populated from Twitch API
-	ts.createUser("twitch@example.com", "", "", "invite_token")
+	ts.createUser("twitchTestId", "twitch@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	TwitchUser := `{"data":[{"id":"1","login":"Twitch Test","display_name":"Twitch Test","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":"","email":"twitch@example.com"}]}`
+	TwitchUser := `{"data":[{"id":"twitchTestId","login":"Twitch Test","display_name":"Twitch Test","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":"","email":"twitch@example.com"}]}`
 	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, TwitchUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "twitch", code, "invite_token")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "twitch@example.com", "Twitch Test", "https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "twitch@example.com", "Twitch Test", "twitchTestId", "https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalTwitchErrorWhenNoMatchingToken() {
@@ -143,12 +146,11 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalTwitchErrorWhenNoMatchingTok
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalTwitchErrorWhenWrongToken() {
-	ts.createUser("twitch@example.com", "", "", "invite_token")
+	ts.createUser("twitchTestId", "twitch@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	TwitchUser := `{"data":[{"id":"1","login":"Twitch user","display_name":"Twitch user","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":"","email":"twitch@example.com"}]}`
-	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, TwitchUser)
+	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, twitchUser)
 	defer server.Close()
 
 	w := performAuthorizationRequest(ts, "twitch", "wrong_token")
@@ -156,12 +158,11 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalTwitchErrorWhenWrongToken() 
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalTwitchErrorWhenEmailDoesntMatch() {
-	ts.createUser("twitch@example.com", "", "", "invite_token")
+	ts.createUser("twitchTestId", "twitch@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	TwitchUser := `{"data":[{"id":"1","login":"Twitch user","display_name":"Twitch user","type":"","broadcaster_type":"","description":"","profile_image_url":"https://s.gravatar.com/avatar/23463b99b62a72f26ed677cc556c44e8","offline_image_url":"","email":"other@example.com"}]}`
-	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, TwitchUser)
+	server := TwitchTestSignupSetup(ts, &tokenCount, &userCount, code, twitchUserWrongEmail)
 	defer server.Close()
 
 	u := performAuthorization(ts, "twitch", code, "invite_token")

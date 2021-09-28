@@ -9,6 +9,11 @@ import (
 	jwt "github.com/golang-jwt/jwt"
 )
 
+const (
+	azureUser        string = `{"name":"Azure Test","email":"azure@example.com","sub":"azuretestid"}`
+	azureUserNoEmail string = `{"name":"Azure Test","sub":"azuretestid"}`
+)
+
 func (ts *ExternalTestSuite) TestSignupExternalAzure() {
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=azure", nil)
 	w := httptest.NewRecorder()
@@ -61,23 +66,21 @@ func AzureTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int
 
 func (ts *ExternalTestSuite) TestSignupExternalAzure_AuthorizationCode() {
 	ts.Config.DisableSignup = false
-	ts.createUser("azure@example.com", "Azure Test", "", "")
+	ts.createUser("azuretestid", "azure@example.com", "Azure Test", "", "")
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test","email":"azure@example.com"}`
 	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "azure", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "azuretestid", "")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalAzureDisableSignupErrorWhenNoUser() {
 	ts.Config.DisableSignup = true
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test","email":"azure@example.com"}`
 	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
@@ -90,8 +93,7 @@ func (ts *ExternalTestSuite) TestSignupExternalAzureDisableSignupErrorWhenNoEmai
 	ts.Config.DisableSignup = true
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test"}`
-	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
+	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUserNoEmail)
 	defer server.Close()
 
 	u := performAuthorization(ts, "azure", code, "")
@@ -103,32 +105,30 @@ func (ts *ExternalTestSuite) TestSignupExternalAzureDisableSignupErrorWhenNoEmai
 func (ts *ExternalTestSuite) TestSignupExternalAzureDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("azure@example.com", "Azure Test", "", "")
+	ts.createUser("azuretestid", "azure@example.com", "Azure Test", "", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test","email":"azure@example.com"}`
 	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "azure", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "azuretestid", "")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalAzureSuccessWhenMatchingToken() {
 	// name and avatar should be populated from Azure API
-	ts.createUser("azure@example.com", "", "", "invite_token")
+	ts.createUser("azuretestid", "azure@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	azureUser := `{"name":"Azure Test","email":"azure@example.com"}}`
 	server := AzureTestSignupSetup(ts, &tokenCount, &userCount, code, azureUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "azure", code, "invite_token")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "azure@example.com", "Azure Test", "azuretestid", "")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalAzureErrorWhenNoMatchingToken() {
@@ -143,7 +143,7 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalAzureErrorWhenNoMatchingToke
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalAzureErrorWhenWrongToken() {
-	ts.createUser("azure@example.com", "", "", "invite_token")
+	ts.createUser("azuretestid", "azure@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -156,7 +156,7 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalAzureErrorWhenWrongToken() {
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalAzureErrorWhenEmailDoesntMatch() {
-	ts.createUser("azure@example.com", "", "", "invite_token")
+	ts.createUser("azuretestid", "azure@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"

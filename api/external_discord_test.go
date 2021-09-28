@@ -9,6 +9,12 @@ import (
 	jwt "github.com/golang-jwt/jwt"
 )
 
+const (
+	discordUser           string = `{"id":"discordTestId","avatar":"abc","email":"discord@example.com","username":"Discord Test","verified":true}}`
+	discordUserWrongEmail string = `{"id":"discordTestId","avatar":"abc","email":"other@example.com","username":"Discord Test","verified":true}}`
+	discordUserNoEmail    string = `{"id":"discordTestId","avatar":"abc","username":"Discord Test","verified":true}}`
+)
+
 func (ts *ExternalTestSuite) TestSignupExternalDiscord() {
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=discord", nil)
 	w := httptest.NewRecorder()
@@ -63,13 +69,12 @@ func (ts *ExternalTestSuite) TestSignupExternalDiscord_AuthorizationCode() {
 	ts.Config.DisableSignup = false
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	discordUser := `{"avatar":"abc","email":"discord@example.com","id":"123","username":"Discord Test","verified":true}}`
 	server := DiscordTestSignupSetup(ts, &tokenCount, &userCount, code, discordUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "discord", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "discord@example.com", "Discord Test", "https://cdn.discordapp.com/avatars/123/abc.png")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "discord@example.com", "Discord Test", "discordTestId", "https://cdn.discordapp.com/avatars/discordTestId/abc.png")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalDiscordDisableSignupErrorWhenNoUser() {
@@ -77,7 +82,6 @@ func (ts *ExternalTestSuite) TestSignupExternalDiscordDisableSignupErrorWhenNoUs
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	discordUser := `{"avatar":"abc","email":"discord@example.com","id":"123","username":"Discord Test","verified":true}}`
 	server := DiscordTestSignupSetup(ts, &tokenCount, &userCount, code, discordUser)
 	defer server.Close()
 
@@ -90,8 +94,7 @@ func (ts *ExternalTestSuite) TestSignupExternalDiscordDisableSignupErrorWhenEmpt
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	discordUser := `{"avatar":"abc","id":"123","username":"Discord Test","verified":true}}`
-	server := DiscordTestSignupSetup(ts, &tokenCount, &userCount, code, discordUser)
+	server := DiscordTestSignupSetup(ts, &tokenCount, &userCount, code, discordUserNoEmail)
 	defer server.Close()
 
 	u := performAuthorization(ts, "discord", code, "")
@@ -102,38 +105,35 @@ func (ts *ExternalTestSuite) TestSignupExternalDiscordDisableSignupErrorWhenEmpt
 func (ts *ExternalTestSuite) TestSignupExternalDiscordDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("discord@example.com", "Discord Test", "https://cdn.discordapp.com/avatars/123/abc.png", "")
+	ts.createUser("discordTestId", "discord@example.com", "Discord Test", "https://cdn.discordapp.com/avatars/discordTestId/abc.png", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	discordUser := `{"avatar":"abc","email":"discord@example.com","id":"123","username":"Discord Test","verified":true}}`
 	server := DiscordTestSignupSetup(ts, &tokenCount, &userCount, code, discordUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "discord", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "discord@example.com", "Discord Test", "https://cdn.discordapp.com/avatars/123/abc.png")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "discord@example.com", "Discord Test", "discordTestId", "https://cdn.discordapp.com/avatars/discordTestId/abc.png")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalDiscordSuccessWhenMatchingToken() {
 	// name and avatar should be populated from Discord API
-	ts.createUser("discord@example.com", "", "", "invite_token")
+	ts.createUser("discordTestId", "discord@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	discordUser := `{"avatar":"abc","email":"discord@example.com","id":"123","username":"Discord Test","verified":true}}`
 	server := DiscordTestSignupSetup(ts, &tokenCount, &userCount, code, discordUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "discord", code, "invite_token")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "discord@example.com", "Discord Test", "https://cdn.discordapp.com/avatars/123/abc.png")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "discord@example.com", "Discord Test", "discordTestId", "https://cdn.discordapp.com/avatars/discordTestId/abc.png")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalDiscordErrorWhenNoMatchingToken() {
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	discordUser := `{"avatar":"abc","email":"discord@example.com","id":"123","username":"Discord Test","verified":true}}`
 	server := DiscordTestSignupSetup(ts, &tokenCount, &userCount, code, discordUser)
 	defer server.Close()
 
@@ -142,11 +142,10 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalDiscordErrorWhenNoMatchingTo
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalDiscordErrorWhenWrongToken() {
-	ts.createUser("discord@example.com", "", "", "invite_token")
+	ts.createUser("discordTestId", "discord@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	discordUser := `{"avatar":"abc","email":"discord@example.com","id":"123","username":"Discord Test","verified":true}}`
 	server := DiscordTestSignupSetup(ts, &tokenCount, &userCount, code, discordUser)
 	defer server.Close()
 
@@ -155,12 +154,11 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalDiscordErrorWhenWrongToken()
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalDiscordErrorWhenEmailDoesntMatch() {
-	ts.createUser("discord@example.com", "", "", "invite_token")
+	ts.createUser("discordTestId", "discord@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	discordUser := `{"avatar":"abc","email":"other@example.com","id":"123","username":"Discord Test","verified":true}}`
-	server := DiscordTestSignupSetup(ts, &tokenCount, &userCount, code, discordUser)
+	server := DiscordTestSignupSetup(ts, &tokenCount, &userCount, code, discordUserWrongEmail)
 	defer server.Close()
 
 	u := performAuthorization(ts, "discord", code, "invite_token")

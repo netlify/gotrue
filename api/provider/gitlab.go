@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/netlify/gotrue/conf"
@@ -23,6 +24,7 @@ type gitlabUser struct {
 	Name        string `json:"name"`
 	AvatarURL   string `json:"avatar_url"`
 	ConfirmedAt string `json:"confirmed_at"`
+	ID          int    `json:"id"`
 }
 
 type gitlabUserEmail struct {
@@ -71,12 +73,7 @@ func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 		return nil, err
 	}
 
-	data := &UserProvidedData{
-		Metadata: map[string]string{
-			nameKey:      u.Name,
-			avatarURLKey: u.AvatarURL,
-		},
-	}
+	data := &UserProvidedData{}
 
 	var emails []*gitlabUserEmail
 	if err := makeRequest(ctx, tok, g.Config, g.Host+"/api/v4/user/emails", &emails); err != nil {
@@ -97,6 +94,20 @@ func (g gitlabProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 
 	if len(data.Emails) <= 0 {
 		return nil, errors.New("Unable to find email with GitLab provider")
+	}
+
+	data.Metadata = &Claims{
+		Issuer:        g.Host,
+		Subject:       strconv.Itoa(u.ID),
+		Name:          u.Name,
+		Picture:       u.AvatarURL,
+		Email:         u.Email,
+		EmailVerified: true,
+
+		// To be deprecated
+		AvatarURL:  u.AvatarURL,
+		FullName:   u.Name,
+		ProviderId: strconv.Itoa(u.ID),
 	}
 
 	return data, nil

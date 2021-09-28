@@ -9,6 +9,12 @@ import (
 	jwt "github.com/golang-jwt/jwt"
 )
 
+const (
+	googleUser           string = `{"id":"googleTestId","name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
+	googleUserWrongEmail string = `{"id":"googleTestId","name":"Google Test","picture":"http://example.com/avatar","email":"other@example.com","verified_email":true}}`
+	googleUserNoEmail    string = `{"id":"googleTestId","name":"Google Test","picture":"http://example.com/avatar","verified_email":true}}`
+)
+
 func (ts *ExternalTestSuite) TestSignupExternalGoogle() {
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=google", nil)
 	w := httptest.NewRecorder()
@@ -63,13 +69,12 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogle_AuthorizationCode() {
 	ts.Config.DisableSignup = false
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
 	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "google", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "googleTestId", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupErrorWhenNoUser() {
@@ -77,7 +82,6 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupErrorWhenNoUse
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
 	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
 	defer server.Close()
 
@@ -90,8 +94,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupErrorWhenEmpty
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","verified_email":true}}`
-	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
+	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUserNoEmail)
 	defer server.Close()
 
 	u := performAuthorization(ts, "google", code, "")
@@ -102,38 +105,35 @@ func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupErrorWhenEmpty
 func (ts *ExternalTestSuite) TestSignupExternalGoogleDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("google@example.com", "Google Test", "http://example.com/avatar", "")
+	ts.createUser("googleTestId", "google@example.com", "Google Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
 	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "google", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "googleTestId", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGoogleSuccessWhenMatchingToken() {
 	// name and avatar should be populated from Google API
-	ts.createUser("google@example.com", "", "", "invite_token")
+	ts.createUser("googleTestId", "google@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
 	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "google", code, "invite_token")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "google@example.com", "Google Test", "googleTestId", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGoogleErrorWhenNoMatchingToken() {
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
 	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
 	defer server.Close()
 
@@ -142,11 +142,10 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGoogleErrorWhenNoMatchingTok
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGoogleErrorWhenWrongToken() {
-	ts.createUser("google@example.com", "", "", "invite_token")
+	ts.createUser("googleTestId", "google@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"google@example.com","verified_email":true}}`
 	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
 	defer server.Close()
 
@@ -155,12 +154,11 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGoogleErrorWhenWrongToken() 
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGoogleErrorWhenEmailDoesntMatch() {
-	ts.createUser("google@example.com", "", "", "invite_token")
+	ts.createUser("googleTestId", "google@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	googleUser := `{"name":"Google Test","picture":"http://example.com/avatar","email":"other@example.com","verified_email":true}}`
-	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUser)
+	server := GoogleTestSignupSetup(ts, &tokenCount, &userCount, code, googleUserWrongEmail)
 	defer server.Close()
 
 	u := performAuthorization(ts, "google", code, "invite_token")

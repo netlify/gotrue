@@ -13,6 +13,8 @@ func IsNotFoundError(err error) bool {
 		return true
 	case TotpSecretNotFoundError:
 		return true
+	case IdentityNotFoundError:
+		return true
 	}
 	return false
 }
@@ -22,6 +24,13 @@ type UserNotFoundError struct{}
 
 func (e UserNotFoundError) Error() string {
 	return "User not found"
+}
+
+// IdentityNotFoundError represents when an identity is not found.
+type IdentityNotFoundError struct{}
+
+func (e IdentityNotFoundError) Error() string {
+	return "Identity not found"
 }
 
 // ConfirmationTokenNotFoundError represents when a confirmation token is not found.

@@ -24,6 +24,7 @@ type facebookProvider struct {
 }
 
 type facebookUser struct {
+	ID        string `json:"id"`
 	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
@@ -88,10 +89,20 @@ func (p facebookProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*
 	}
 
 	return &UserProvidedData{
-		Metadata: map[string]string{
-			aliasKey:     u.Alias,
-			nameKey:      strings.TrimSpace(u.FirstName + " " + u.LastName),
-			avatarURLKey: u.Avatar.Data.URL,
+		Metadata: &Claims{
+			Issuer:        p.ProfileURL,
+			Subject:       u.ID,
+			Name:          strings.TrimSpace(u.FirstName + " " + u.LastName),
+			NickName:      u.Alias,
+			Email:         u.Email,
+			EmailVerified: true, // if email is returned, the email is verified by facebook already
+			Picture:       u.Avatar.Data.URL,
+
+			// To be deprecated
+			Slug:       u.Alias,
+			AvatarURL:  u.Avatar.Data.URL,
+			FullName:   strings.TrimSpace(u.FirstName + " " + u.LastName),
+			ProviderId: u.ID,
 		},
 		Emails: []Email{{
 			Email:    u.Email,

@@ -9,6 +9,12 @@ import (
 	jwt "github.com/golang-jwt/jwt"
 )
 
+const (
+	facebookUser           string = `{"id":"facebookTestId","name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+	facebookUserWrongEmail string = `{"id":"facebookTestId","name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"other@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+	facebookUserNoEmail    string = `{"id":"facebookTestId","name":"Facebook Test","first_name":"Facebook","last_name":"Test","picture":{"data":{"url":"http://example.com/avatar"}}}}`
+)
+
 func (ts *ExternalTestSuite) TestSignupExternalFacebook() {
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=facebook", nil)
 	w := httptest.NewRecorder()
@@ -63,13 +69,12 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebook_AuthorizationCode() {
 	ts.Config.DisableSignup = false
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
 	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "facebook", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "facebookTestId", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupErrorWhenNoUser() {
@@ -77,7 +82,6 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupErrorWhenNoU
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
 	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
@@ -90,8 +94,7 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupErrorWhenEmp
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","picture":{"data":{"url":"http://example.com/avatar"}}}}`
-	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
+	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUserNoEmail)
 	defer server.Close()
 
 	u := performAuthorization(ts, "facebook", code, "")
@@ -102,38 +105,35 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupErrorWhenEmp
 func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("facebook@example.com", "Facebook Test", "http://example.com/avatar", "")
+	ts.createUser("facebookTestId", "facebook@example.com", "Facebook Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
 	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "facebook", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "facebookTestId", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookSuccessWhenMatchingToken() {
 	// name and avatar should be populated from Facebook API
-	ts.createUser("facebook@example.com", "", "", "invite_token")
+	ts.createUser("facebookTestId", "facebook@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
 	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
 	u := performAuthorization(ts, "facebook", code, "invite_token")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "facebook@example.com", "Facebook Test", "facebookTestId", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenNoMatchingToken() {
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
 	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
@@ -142,11 +142,10 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenNoMatchingT
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenWrongToken() {
-	ts.createUser("facebook@example.com", "", "", "invite_token")
+	ts.createUser("facebookTestId", "facebook@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"facebook@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
 	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
 	defer server.Close()
 
@@ -155,12 +154,11 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenWrongToken(
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenEmailDoesntMatch() {
-	ts.createUser("facebook@example.com", "", "", "invite_token")
+	ts.createUser("facebookTestId", "facebook@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
-	facebookUser := `{"name":"Facebook Test","first_name":"Facebook","last_name":"Test","email":"other@example.com","picture":{"data":{"url":"http://example.com/avatar"}}}}`
-	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUser)
+	server := FacebookTestSignupSetup(ts, &tokenCount, &userCount, code, facebookUserWrongEmail)
 	defer server.Close()
 
 	u := performAuthorization(ts, "facebook", code, "invite_token")

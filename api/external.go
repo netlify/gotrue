@@ -15,7 +15,6 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/oauth2"
 )
 
 // ExternalProviderClaims are the JWT claims sent as the state in the external oauth provider signup flow
@@ -86,16 +85,6 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		if err != nil {
 			return internalServerError("Error storing request token in session").WithInternalError(err)
 		}
-	case *provider.AppleProvider:
-		opts := make([]oauth2.AuthCodeOption, 0, 1)
-		opts = append(opts, oauth2.SetAuthURLParam("response_mode", "form_post"))
-		authURL = externalProvider.Config.AuthCodeURL(tokenString, opts...)
-		if authURL != "" {
-			if u, err := url.Parse(authURL); err == nil {
-				u.RawQuery = strings.ReplaceAll(u.RawQuery, "+", "%20")
-				authURL = u.String()
-			}
-		}
 	default:
 		authURL = p.AuthCodeURL(tokenString)
 	}
@@ -152,51 +141,84 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			}
 		} else {
 			aud := a.requestAud(ctx, r)
-
-			// search user using all available emails
 			var emailData provider.Email
-			for _, e := range userData.Emails {
-				if e.Verified || config.Mailer.Autoconfirm {
-					user, terr = models.FindUserByEmailAndAudience(tx, instanceID, e.Email, aud)
-					if terr != nil && !models.IsNotFoundError(terr) {
-						return internalServerError("Error checking for duplicate users").WithInternalError(terr)
-					}
-
-					if user != nil {
-						emailData = e
-						break
-					}
+			var identityData map[string]interface{}
+			if userData.Metadata != nil {
+				identityData, terr = userData.Metadata.ToMap()
+				if terr != nil {
+					return terr
 				}
 			}
 
-			if user == nil {
-				if config.DisableSignup {
-					return forbiddenError("Signups not allowed for this instance")
-				}
-
-				// prefer primary email for new signups
-				emailData = userData.Emails[0]
-				for _, e := range userData.Emails {
-					if e.Primary {
-						emailData = e
-						break
+			var identity *models.Identity
+			// check if identity exists
+			if identity, terr = models.FindIdentityByIdAndProvider(tx, userData.Metadata.Subject, providerType); terr != nil {
+				if models.IsNotFoundError(terr) {
+					// search user using all available emails
+					for _, e := range userData.Emails {
+						if e.Verified || config.Mailer.Autoconfirm {
+							user, terr = models.FindUserByEmailAndAudience(tx, instanceID, e.Email, aud)
+							if terr != nil && !models.IsNotFoundError(terr) {
+								return internalServerError("Error checking for duplicate users").WithInternalError(terr)
+							}
+							if user != nil {
+								emailData = e
+								break
+							}
+						}
 					}
-				}
+					if user != nil {
+						if identity, terr = a.createNewIdentity(tx, user, providerType, identityData); terr != nil {
+							return terr
+						}
+						if terr = user.UpdateAppMetaDataProvider(tx); terr != nil {
+							return terr
+						}
+					} else {
+						if config.DisableSignup {
+							return forbiddenError("Signups not allowed for this instance")
+						}
 
-				params := &SignupParams{
-					Provider: providerType,
-					Email:    emailData.Email,
-					Aud:      aud,
-					Data:     make(map[string]interface{}),
-				}
-				for k, v := range userData.Metadata {
-					if v != "" {
-						params.Data[k] = v
+						// prefer primary email for new signups
+						emailData = userData.Emails[0]
+						for _, e := range userData.Emails {
+							if e.Primary {
+								emailData = e
+								break
+							}
+						}
+
+						params := &SignupParams{
+							Provider: providerType,
+							Email:    emailData.Email,
+							Aud:      aud,
+							Data:     identityData,
+						}
+
+						user, terr = a.signupNewUser(ctx, tx, params)
+						if terr != nil {
+							return terr
+						}
+
+						if identity, terr = a.createNewIdentity(tx, user, providerType, identityData); terr != nil {
+							return terr
+						}
 					}
+				} else {
+					return terr
 				}
+			}
 
-				user, terr = a.signupNewUser(ctx, tx, params)
+			if identity != nil && user == nil {
+				// get user associated with identity
+				user, terr = models.FindUserByID(tx, identity.UserID)
 				if terr != nil {
+					return terr
+				}
+				if terr = tx.UpdateOnly(identity, "identity_data", "last_sign_in_at"); terr != nil {
+					return terr
+				}
+				if terr = user.UpdateAppMetaDataProvider(tx); terr != nil {
 					return terr
 				}
 			}
@@ -281,19 +303,20 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 		return nil, badRequestError("Invited email does not match emails from external provider").WithInternalMessage("invited=%s external=%s", user.Email, strings.Join(emails, ", "))
 	}
 
-	if err := user.UpdateAppMetaData(tx, map[string]interface{}{
-		"provider": providerType,
-	}); err != nil {
-		return nil, internalServerError("Database error updating user").WithInternalError(err)
-	}
-
-	updates := make(map[string]interface{})
-	for k, v := range userData.Metadata {
-		if v != "" {
-			updates[k] = v
+	var identityData map[string]interface{}
+	if userData.Metadata != nil {
+		identityData, err = userData.Metadata.ToMap()
+		if err != nil {
+			return nil, internalServerError("Error serialising user metadata").WithInternalError(err)
 		}
 	}
-	if err := user.UpdateUserMetaData(tx, updates); err != nil {
+	if _, err := a.createNewIdentity(tx, user, providerType, identityData); err != nil {
+		return nil, err
+	}
+	if err = user.UpdateAppMetaDataProvider(tx); err != nil {
+		return nil, err
+	}
+	if err := user.UpdateUserMetaData(tx, identityData); err != nil {
 		return nil, internalServerError("Database error updating user").WithInternalError(err)
 	}
 
@@ -416,4 +439,24 @@ func (a *API) getExternalRedirectURL(r *http.Request) string {
 		return er
 	}
 	return config.SiteURL
+}
+
+func (a *API) createNewIdentity(conn *storage.Connection, user *models.User, providerType string, identityData map[string]interface{}) (*models.Identity, error) {
+	identity, err := models.NewIdentity(user, providerType, identityData)
+	if err != nil {
+		return nil, err
+	}
+
+	err = conn.Transaction(func(tx *storage.Connection) error {
+		if terr := tx.Create(identity); terr != nil {
+			return internalServerError("Error creating identity").WithInternalError(terr)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return identity, nil
 }
