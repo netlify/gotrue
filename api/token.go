@@ -47,6 +47,7 @@ type RefreshTokenGrantParams struct {
 
 const useCookieHeader = "x-use-cookie"
 const useSessionCookie = "session"
+const InvalidLoginMessage = "Invalid login credentials"
 
 // Token is the endpoint for OAuth access token requests
 func (a *API) Token(w http.ResponseWriter, r *http.Request) error {
@@ -89,12 +90,12 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		params.Phone = a.formatPhoneNumber(params.Phone)
 		user, err = models.FindUserByPhoneAndAudience(a.db, instanceID, params.Phone, aud)
 	} else {
-		return oauthError("invalid_grant", "Invalid login credentials")
+		return oauthError("invalid_grant", InvalidLoginMessage)
 	}
 
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return oauthError("invalid_grant", "Invalid login credentials")
+			return oauthError("invalid_grant", InvalidLoginMessage)
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
@@ -106,7 +107,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	}
 
 	if !user.Authenticate(params.Password) {
-		return oauthError("invalid_grant", "Invalid email or password")
+		return oauthError("invalid_grant", InvalidLoginMessage)
 	}
 
 	var token *AccessTokenResponse
