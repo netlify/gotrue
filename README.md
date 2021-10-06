@@ -532,7 +532,7 @@ GoTrue exposes the following endpoints:
   Logout a user (Requires authentication).
 
   This will revoke all refresh tokens for the user. Remember that the JWT tokens
-  will still be valid for stateless auth until they expires.
+  will still be valid for stateless auth until they expire.
 
 ## TODO
 
