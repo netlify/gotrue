@@ -47,7 +47,7 @@ func GitHubTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *in
 		case "/api/v3/user":
 			*userCount++
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, `{"id":"githubTestId", "name":"GitHub Test","avatar_url":"http://example.com/avatar"}`)
+			fmt.Fprint(w, `{"id":123, "name":"GitHub Test","avatar_url":"http://example.com/avatar"}`)
 		case "/api/v3/user/emails":
 			w.Header().Add("Content-Type", "application/json")
 			fmt.Fprint(w, emails)
@@ -71,7 +71,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHub_AuthorizationCode() {
 
 	u := performAuthorization(ts, "github", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "githubTestId", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "123", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenNoUser() {
@@ -103,7 +103,7 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenEmpty
 func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("githubTestId", "github@example.com", "GitHub Test", "http://example.com/avatar", "")
+	ts.createUser("123", "github@example.com", "GitHub Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -113,13 +113,13 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithPri
 
 	u := performAuthorization(ts, "github", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "githubTestId", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "123", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithNonPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("githubTestId", "secondary@example.com", "GitHub Test", "http://example.com/avatar", "")
+	ts.createUser("123", "secondary@example.com", "GitHub Test", "http://example.com/avatar", "")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -129,12 +129,12 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithNon
 
 	u := performAuthorization(ts, "github", code, "")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "GitHub Test", "githubTestId", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "secondary@example.com", "GitHub Test", "123", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubSuccessWhenMatchingToken() {
 	// name and avatar should be populated from GitHub API
-	ts.createUser("githubTestId", "github@example.com", "", "", "invite_token")
+	ts.createUser("123", "github@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -144,7 +144,7 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubSuccessWhenMatchingTok
 
 	u := performAuthorization(ts, "github", code, "invite_token")
 
-	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "githubTestId", "http://example.com/avatar")
+	assertAuthorizationSuccess(ts, u, tokenCount, userCount, "github@example.com", "GitHub Test", "123", "http://example.com/avatar")
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenNoMatchingToken() {
@@ -159,7 +159,7 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenNoMatchingTok
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenWrongToken() {
-	ts.createUser("githubTestId", "github@example.com", "", "", "invite_token")
+	ts.createUser("123", "github@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -172,7 +172,7 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenWrongToken() 
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenEmailDoesntMatch() {
-	ts.createUser("githubTestId", "github@example.com", "", "", "invite_token")
+	ts.createUser("123", "github@example.com", "", "", "invite_token")
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
