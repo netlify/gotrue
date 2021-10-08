@@ -36,7 +36,6 @@ func (a *API) sendPhoneConfirmation(ctx context.Context, tx *storage.Connection,
 		return MaxFrequencyLimitError
 	}
 
-	now := time.Now()
 	oldToken := user.ConfirmationToken
 	otp, err := crypto.GenerateOtp(config.Sms.OtpLength)
 	if err != nil {
@@ -61,6 +60,7 @@ func (a *API) sendPhoneConfirmation(ctx context.Context, tx *storage.Connection,
 		return serr
 	}
 
+	now := time.Now()
 	user.ConfirmationSentAt = &now
 
 	return errors.Wrap(tx.UpdateOnly(user, "confirmation_token", "confirmation_sent_at"), "Database error updating user for confirmation")
