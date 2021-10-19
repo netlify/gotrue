@@ -313,6 +313,11 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 	if _, err := a.createNewIdentity(tx, user, providerType, identityData); err != nil {
 		return nil, err
 	}
+	if err = user.UpdateAppMetaData(tx, map[string]interface{}{
+		"provider": providerType,
+	}); err != nil {
+		return nil, err
+	}
 	if err = user.UpdateAppMetaDataProviders(tx); err != nil {
 		return nil, err
 	}
