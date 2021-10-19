@@ -236,7 +236,8 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	if user.AppMetaData == nil {
 		user.AppMetaData = make(map[string]interface{})
 	}
-	user.AppMetaData["provider"] = []string{"email"}
+	user.AppMetaData["provider"] = "email"
+	user.AppMetaData["providers"] = []string{"email"}
 
 	err = a.db.Transaction(func(tx *storage.Connection) error {
 		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserSignedUpAction, map[string]interface{}{

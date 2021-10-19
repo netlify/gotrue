@@ -266,7 +266,8 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab() {
 	ts.Require().NoError(err)
 	ts.Equal("Gitlab Test", user.UserMetaData["full_name"])
 	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
-	ts.Equal([]interface{}{"gitlab"}, user.AppMetaData["provider"])
+	ts.Equal("gitlab", user.AppMetaData["provider"])
+	ts.Equal([]interface{}{"gitlab"}, user.AppMetaData["providers"])
 }
 
 func (ts *InviteTestSuite) TestInviteExternalGitlab_MismatchedEmails() {

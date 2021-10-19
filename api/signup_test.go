@@ -73,7 +73,8 @@ func (ts *SignupTestSuite) TestSignup() {
 	assert.Equal(ts.T(), "test@example.com", data.GetEmail())
 	assert.Equal(ts.T(), ts.Config.JWT.Aud, data.Aud)
 	assert.Equal(ts.T(), 1.0, data.UserMetaData["a"])
-	assert.Equal(ts.T(), []interface{}{"email"}, data.AppMetaData["provider"])
+	assert.Equal(ts.T(), "email", data.AppMetaData["provider"])
+	assert.Equal(ts.T(), []interface{}{"email"}, data.AppMetaData["providers"])
 }
 
 func (ts *SignupTestSuite) TestWebhookTriggered() {
@@ -119,8 +120,9 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 
 		appmeta, ok := u["app_metadata"].(map[string]interface{})
 		require.True(ok)
-		assert.Len(appmeta, 1)
-		assert.EqualValues([]interface{}{"email"}, appmeta["provider"])
+		assert.Len(appmeta, 2)
+		assert.EqualValues("email", appmeta["provider"])
+		assert.EqualValues([]interface{}{"email"}, appmeta["providers"])
 
 		usermeta, ok := u["user_metadata"].(map[string]interface{})
 		require.True(ok)

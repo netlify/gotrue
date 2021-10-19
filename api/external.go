@@ -171,7 +171,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 						if identity, terr = a.createNewIdentity(tx, user, providerType, identityData); terr != nil {
 							return terr
 						}
-						if terr = user.UpdateAppMetaDataProvider(tx); terr != nil {
+						if terr = user.UpdateAppMetaDataProviders(tx); terr != nil {
 							return terr
 						}
 					} else {
@@ -218,7 +218,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				if terr = tx.UpdateOnly(identity, "identity_data", "last_sign_in_at"); terr != nil {
 					return terr
 				}
-				if terr = user.UpdateAppMetaDataProvider(tx); terr != nil {
+				if terr = user.UpdateAppMetaDataProviders(tx); terr != nil {
 					return terr
 				}
 			}
@@ -313,7 +313,12 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 	if _, err := a.createNewIdentity(tx, user, providerType, identityData); err != nil {
 		return nil, err
 	}
-	if err = user.UpdateAppMetaDataProvider(tx); err != nil {
+	if err = user.UpdateAppMetaData(tx, map[string]interface{}{
+		"provider": providerType,
+	}); err != nil {
+		return nil, err
+	}
+	if err = user.UpdateAppMetaDataProviders(tx); err != nil {
 		return nil, err
 	}
 	if err := user.UpdateUserMetaData(tx, identityData); err != nil {
