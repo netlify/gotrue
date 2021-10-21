@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/netlify/gotrue/conf"
@@ -22,7 +23,7 @@ type githubProvider struct {
 }
 
 type githubUser struct {
-	ID        string `json:"id"`
+	ID        int    `json:"id"`
 	UserName  string `json:"login"`
 	Email     string `json:"email"`
 	Name      string `json:"name"`
@@ -83,14 +84,14 @@ func (g githubProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Us
 	data := &UserProvidedData{
 		Metadata: &Claims{
 			Issuer:            g.APIHost,
-			Subject:           u.ID,
+			Subject:           strconv.Itoa(u.ID),
 			Name:              u.Name,
 			PreferredUsername: u.UserName,
 
 			// To be deprecated
 			AvatarURL:   u.AvatarURL,
 			FullName:    u.Name,
-			ProviderId:  u.ID,
+			ProviderId:  strconv.Itoa(u.ID),
 			UserNameKey: u.UserName,
 		},
 	}
