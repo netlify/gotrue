@@ -90,8 +90,8 @@ func (g spotifyProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*U
 			Subject:       u.ID,
 			Name:          u.DisplayName,
 			Picture:       avatarURL,
-			Email:         u.Email, // Spotify dosen't provide data on if email is verified.
-			EmailVerified: true,
+			Email:         u.Email,
+			EmailVerified: true, // Spotify dosen't provide data on if email is verified.
 
 			// To be deprecated
 			AvatarURL:  avatarURL,
