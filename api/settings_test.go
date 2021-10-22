@@ -32,6 +32,7 @@ func TestSettings_DefaultProviders(t *testing.T) {
 	require.True(t, p.Bitbucket)
 	require.True(t, p.Discord)
 	require.True(t, p.Facebook)
+	require.True(t, p.Spotify)
 	require.True(t, p.Google)
 	require.True(t, p.GitHub)
 	require.True(t, p.GitLab)
