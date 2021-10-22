@@ -37,7 +37,9 @@ func NewSlackProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAuth
 	authPath := chooseHost(ext.URL, defaultSlackApiBase) + "/oauth"
 
 	oauthScopes := []string{
-		"identity.basic,identity.email,identity.avatar",
+		"identity.basic",
+		"identity.avatar",
+		"identity.email",
 	}
 
 	if scopes != "" {
