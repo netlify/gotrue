@@ -44,7 +44,7 @@ type User struct {
 	EmailChangeTokenNew      string     `json:"-" db:"email_change_token_new"`
 	EmailChange              string     `json:"new_email,omitempty" db:"email_change"`
 	EmailChangeSentAt        *time.Time `json:"email_change_sent_at,omitempty" db:"email_change_sent_at"`
-	EmailChangeConfirmStatus int        `json:"email_change_confirm_status" db:"email_change_confirm_status"`
+	EmailChangeConfirmStatus int        `json:"-" db:"email_change_confirm_status"`
 
 	PhoneChangeToken  string     `json:"-" db:"phone_change_token"`
 	PhoneChange       string     `json:"new_phone,omitempty" db:"phone_change"`
@@ -55,7 +55,8 @@ type User struct {
 	AppMetaData  JSONMap `json:"app_metadata" db:"raw_app_meta_data"`
 	UserMetaData JSONMap `json:"user_metadata" db:"raw_user_meta_data"`
 
-	IsSuperAdmin bool `json:"-" db:"is_super_admin"`
+	IsSuperAdmin bool       `json:"-" db:"is_super_admin"`
+	Identities   []Identity `json:"identities" has_many:"identities"`
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
@@ -330,7 +331,7 @@ func CountOtherUsers(tx *storage.Connection, instanceID, id uuid.UUID) (int, err
 
 func findUser(tx *storage.Connection, query string, args ...interface{}) (*User, error) {
 	obj := &User{}
-	if err := tx.Q().Where(query, args...).First(obj); err != nil {
+	if err := tx.Eager().Q().Where(query, args...).First(obj); err != nil {
 		if errors.Cause(err) == sql.ErrNoRows {
 			return nil, UserNotFoundError{}
 		}
