@@ -44,7 +44,7 @@ type User struct {
 	EmailChangeTokenNew      string     `json:"-" db:"email_change_token_new"`
 	EmailChange              string     `json:"new_email,omitempty" db:"email_change"`
 	EmailChangeSentAt        *time.Time `json:"email_change_sent_at,omitempty" db:"email_change_sent_at"`
-	EmailChangeConfirmStatus int        `json:"email_change_confirm_status" db:"email_change_confirm_status"`
+	EmailChangeConfirmStatus int        `json:"-" db:"email_change_confirm_status"`
 
 	PhoneChangeToken  string     `json:"-" db:"phone_change_token"`
 	PhoneChange       string     `json:"new_phone,omitempty" db:"phone_change"`
