@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	defaultSpotifyAPIBase  = "api.spotify.com"                  // Used to get user data
-	defaultSpotifyAuthBase = "https://accounts.spotify.com/api" // Used for OAuth flow
+	defaultSpotifyAPIBase  = "api.spotify.com"      // Used to get user data
+	defaultSpotifyAuthBase = "accounts.spotify.com" // Used for OAuth flow
 )
 
 type spotifyProvider struct {
