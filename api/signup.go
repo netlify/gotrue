@@ -78,7 +78,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		}
 		user, err = models.FindUserByPhoneAndAudience(a.db, instanceID, params.Phone, params.Aud)
 	default:
-		return unprocessableEntityError("Signup provider must be either email or phone")
+		return invalidSignupError(config)
 	}
 
 	if err != nil && !models.IsNotFoundError(err) {
@@ -89,11 +89,11 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		var terr error
 		if user != nil {
 			if params.Provider == "email" && user.IsConfirmed() {
-				return badRequestError("Thanks for registering, now check your email to complete the process.")
+				return UserExistsError
 			}
 
 			if params.Provider == "phone" && user.IsPhoneConfirmed() {
-				return badRequestError("A user with this phone number has already been registered")
+				return UserExistsError
 			}
 
 			if err := user.UpdateUserMetaData(tx, params.Data); err != nil {
@@ -160,6 +160,12 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		if errors.Is(err, MaxFrequencyLimitError) {
 			return tooManyRequestsError("For security purposes, you can only request this once every minute")
 		}
+		if errors.Is(err, UserExistsError) {
+			sanitizedUser := sanitizeUser(user, params)
+
+			// return sanitized user
+			return sendJSON(w, http.StatusOK, sanitizedUser)
+		}
 		return err
 	}
 
@@ -196,6 +202,34 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return sendJSON(w, http.StatusOK, user)
+}
+
+func sanitizeUser(user *models.User, params *SignupParams) *models.User {
+	u := user
+	now := time.Now()
+
+	u.CreatedAt, u.UpdatedAt, u.ConfirmationSentAt, u.LastSignInAt, u.ConfirmedAt = now, now, &now, &now, &now
+	u.Identities = make([]models.Identity, 0)
+	u.UserMetaData = params.Data
+	u.Aud = params.Aud
+
+	// sanitize app_metadata
+	u.AppMetaData = map[string]interface{}{
+		"provider":  params.Provider,
+		"providers": []string{params.Provider},
+	}
+
+	// sanitize param fields
+	switch params.Provider {
+	case "email":
+		u.PhoneConfirmedAt, u.EmailConfirmedAt, u.Phone = nil, &now, ""
+	case "phone":
+		u.PhoneConfirmedAt, u.EmailConfirmedAt, u.Email = &now, nil, ""
+	default:
+		u.Phone, u.EmailConfirmedAt, u.PhoneConfirmedAt, u.Email = "", nil, nil, ""
+	}
+
+	return u
 }
 
 func (a *API) signupNewUser(ctx context.Context, conn *storage.Connection, params *SignupParams) (*models.User, error) {

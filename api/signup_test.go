@@ -219,11 +219,16 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 	encode()
 	ts.API.handler.ServeHTTP(w, req)
 
-	data := make(map[string]interface{})
+	data := models.User{}
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
 
-	assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
-	assert.Equal(ts.T(), float64(http.StatusBadRequest), data["code"])
+	require.Equal(ts.T(), http.StatusOK, w.Code)
+
+	assert.Equal(ts.T(), "test1@example.com", data.GetEmail())
+	assert.Equal(ts.T(), ts.Config.JWT.Aud, data.Aud)
+	assert.Equal(ts.T(), 1.0, data.UserMetaData["a"])
+	assert.Equal(ts.T(), "email", data.AppMetaData["provider"])
+	assert.Equal(ts.T(), []interface{}{"email"}, data.AppMetaData["providers"])
 }
 
 func (ts *SignupTestSuite) TestVerifySignup() {
