@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/netlify/gotrue/conf"
@@ -17,14 +18,10 @@ type slackProvider struct {
 }
 
 type slackUser struct {
-	ID        string `json:"id"`
+	ID        string `json:"https://slack.com/user_id"`
 	Email     string `json:"email"`
 	Name      string `json:"name"`
-	Avatar24  string `json:"image_24"`
-	Avatar32  string `json:"image_32"`
-	Avatar48  string `json:"image_48"`
-	Avatar72  string `json:"image_72"`
-	Avatar192 string `json:"image_192"`
+	AvatarURL string `json:"picture"`
 }
 
 // NewSlackProvider creates a Slack account provider.
@@ -37,9 +34,9 @@ func NewSlackProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAuth
 	authPath := chooseHost(ext.URL, defaultSlackApiBase) + "/oauth"
 
 	oauthScopes := []string{
-		"identity.basic",
-		"identity.avatar",
-		"identity.email",
+		"profile",
+		"email",
+		"openid",
 	}
 
 	if scopes != "" {
@@ -52,7 +49,7 @@ func NewSlackProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAuth
 			ClientSecret: ext.Secret,
 			Endpoint: oauth2.Endpoint{
 				AuthURL:  authPath + "/authorize",
-				TokenURL: authPath + "/token",
+				TokenURL: apiPath + "/oauth.access",
 			},
 			Scopes:      oauthScopes,
 			RedirectURL: ext.RedirectURI,
@@ -67,10 +64,10 @@ func (g slackProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
 
 func (g slackProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {
 	var u slackUser
-	if err := makeRequest(ctx, tok, g.Config, g.APIPath+"/users.identity", &u); err != nil {
+	if err := makeRequest(ctx, tok, g.Config, g.APIPath+"/openid.connect.userInfo", &u); err != nil {
 		return nil, err
 	}
-
+	fmt.Printf("%+v\n", u)
 	if u.Email == "" {
 		return nil, errors.New("Unable to find email with Slack provider")
 	}
@@ -80,12 +77,12 @@ func (g slackProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*Use
 			Issuer:        g.APIPath,
 			Subject:       u.ID,
 			Name:          u.Name,
-			Picture:       u.Avatar72,
+			Picture:       u.AvatarURL,
 			Email:         u.Email,
 			EmailVerified: true, // Slack dosen't provide data on if email is verified.
 
 			// To be deprecated
-			AvatarURL:  u.Avatar72,
+			AvatarURL:  u.AvatarURL,
 			FullName:   u.Name,
 			ProviderId: u.ID,
 		},
