@@ -34,11 +34,13 @@ jobs:
       - name: Lint and test
         run: make all
       - name: Trigger CircleCI for deployment
-        if: ${{ matrix.go-version == '1.13.x' && secrets.CIRCLE_API_USER_TOKEN != '' }}
+        env:
+          CIRCLE_API_USER_TOKEN: ${{ secrets.CIRCLE_API_USER_TOKEN }}
+        if: ${{ matrix.go-version == '1.13.x' && env.CIRCLE_API_USER_TOKEN != null }}
         run: |
           REF="${GITHUB_HEAD_REF:-main}"
           curl -X POST --silent --show-error --fail \
-            --user ${{ secrets.CIRCLE_API_USER_TOKEN }}: \
+            --user $CIRCLE_API_USER_TOKEN: \
             -H 'content-type: application/json' \
             --data '{ "branch": "master", "parameters": { "branch": "'"$REF"'", "commit": "${{ github.event.pull_request.head.sha || github.sha }}" } }' \
             https://circleci.com/api/v2/project/gh/netlify/gotrue-ci/pipeline
