@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	defaultSpotifyAPIBase  = "api.spotify.com"      // Used to get user data
+	defaultSpotifyAPIBase  = "api.spotify.com/v1"   // Used to get user data
 	defaultSpotifyAuthBase = "accounts.spotify.com" // Used for OAuth flow
 )
 
@@ -38,7 +38,7 @@ func NewSpotifyProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAu
 		return nil, err
 	}
 
-	apiPath := chooseHost(ext.URL, defaultSpotifyAPIBase) + "/v1"
+	apiPath := chooseHost(ext.URL, defaultSpotifyAPIBase)
 	authPath := chooseHost(ext.URL, defaultSpotifyAuthBase)
 
 	oauthScopes := []string{
@@ -55,7 +55,7 @@ func NewSpotifyProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAu
 			ClientSecret: ext.Secret,
 			Endpoint: oauth2.Endpoint{
 				AuthURL:  authPath + "/authorize",
-				TokenURL: authPath + "/token",
+				TokenURL: authPath + "/api/token",
 			},
 			Scopes:      oauthScopes,
 			RedirectURL: ext.RedirectURI,
