@@ -222,6 +222,8 @@ func (a *API) signupNewUser(ctx context.Context, conn *storage.Connection, param
 		user.AppMetaData = make(map[string]interface{})
 	}
 
+	user.Identities = make([]models.Identity, 0)
+
 	// TODO: Depcreate "provider" field
 	user.AppMetaData["provider"] = params.Provider
 
