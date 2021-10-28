@@ -73,7 +73,9 @@ func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[str
 	if err != nil {
 		return nil, err
 	}
-
+	if userData == nil {
+		userData = make(map[string]interface{})
+	}
 	user := &User{
 		InstanceID:        instanceID,
 		ID:                id,
