@@ -3,14 +3,15 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/metering"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
+	"github.com/pkg/errors"
 )
 
 // SignupParams are the parameters the Signup endpoint accepts
@@ -53,6 +54,9 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 		params.Provider = "email"
 	} else if params.Phone != "" {
 		params.Provider = "phone"
+	}
+	if params.Data == nil {
+		params.Data = make(map[string]interface{})
 	}
 
 	var user *models.User
@@ -161,9 +165,10 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 			return tooManyRequestsError("For security purposes, you can only request this once every minute")
 		}
 		if errors.Is(err, UserExistsError) {
-			sanitizedUser := sanitizeUser(user, params)
-
-			// return sanitized user
+			sanitizedUser, err := sanitizeUser(user, params)
+			if err != nil {
+				return err
+			}
 			return sendJSON(w, http.StatusOK, sanitizedUser)
 		}
 		return err
@@ -204,10 +209,16 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	return sendJSON(w, http.StatusOK, user)
 }
 
-func sanitizeUser(user *models.User, params *SignupParams) *models.User {
-	u := user
+// sanitizeUser removes all user sensitive information from the user object
+// Should be used whenever we want to prevent information about whether a user is registered or not from leaking
+func sanitizeUser(u *models.User, params *SignupParams) (*models.User, error) {
+	var err error
 	now := time.Now()
 
+	u.ID, err = uuid.NewV4()
+	if err != nil {
+		return nil, errors.Wrap(err, "Error generating unique id")
+	}
 	u.CreatedAt, u.UpdatedAt, u.ConfirmationSentAt, u.LastSignInAt, u.ConfirmedAt = now, now, &now, &now, &now
 	u.Identities = make([]models.Identity, 0)
 	u.UserMetaData = params.Data
@@ -229,7 +240,7 @@ func sanitizeUser(user *models.User, params *SignupParams) *models.User {
 		u.Phone, u.EmailConfirmedAt, u.PhoneConfirmedAt, u.Email = "", nil, nil, ""
 	}
 
-	return u
+	return u, nil
 }
 
 func (a *API) signupNewUser(ctx context.Context, conn *storage.Connection, params *SignupParams) (*models.User, error) {
