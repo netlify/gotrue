@@ -1,4 +1,4 @@
-.env
+.env*
 vendor/
 gotrue
 gotrue-arm64
