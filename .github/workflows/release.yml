@@ -85,3 +85,26 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ secrets.DOCKER_REPO }}
           tags: latest,${{ steps.releases.outputs.release }}
+
+      - name: Login to ECR account - staging
+        uses: docker/login-action@v1
+        with:
+          registry: 436098097459.dkr.ecr.us-east-1.amazonaws.com
+          username: ${{ secrets.DEV_ACCESS_KEY_ID }}
+          password: ${{ secrets.DEV_SECRET_ACCESS_KEY }}
+
+      - name: Login to ECR account - prod
+        uses: docker/login-action@v1
+        with:
+          registry: 646182064048.dkr.ecr.us-east-1.amazonaws.com
+          username: ${{ secrets.PROD_ACCESS_KEY_ID }}
+          password: ${{ secrets.PROD_SECRET_ACCESS_KEY }}
+
+      - name: Upload image to ECR
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: |
+            436098097459.dkr.ecr.us-east-1.amazonaws.com/gotrue:${{ steps.releases.outputs.release }}
+            646182064048.dkr.ecr.us-east-1.amazonaws.com/gotrue:${{ steps.releases.outputs.release }}
