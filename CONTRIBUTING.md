@@ -31,8 +31,10 @@ $ make build
   - gotrue runs any database migrations from `/migrations` on start 
 
 ## Testing
-- Currently, we don't use a test db. You can just create a new postgres container use `hack/postgresd.sh`
+- Currently, we don't use a test db. You can just create a new postgres container, make sure docker is running and do:
 ```sh
+$ ./hack/postgresd.sh
+$ make migrate_test
 $ make test
 ```
 
