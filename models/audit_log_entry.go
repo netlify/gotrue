@@ -23,6 +23,7 @@ const (
 	UserModifiedAction              AuditAction = "user_modified"
 	UserRecoveryRequestedAction     AuditAction = "user_recovery_requested"
 	UserConfirmationRequestedAction AuditAction = "user_confirmation_requested"
+	UserRepeatedSignUpAction        AuditAction = "user_repeated_signup"
 	TokenRevokedAction              AuditAction = "token_revoked"
 	TokenRefreshedAction            AuditAction = "token_refreshed"
 
@@ -44,6 +45,7 @@ var actionLogTypeMap = map[AuditAction]auditLogType{
 	UserModifiedAction:              user,
 	UserRecoveryRequestedAction:     user,
 	UserConfirmationRequestedAction: user,
+	UserRepeatedSignUpAction:        user,
 }
 
 // AuditLogEntry is the database model for audit log entries.

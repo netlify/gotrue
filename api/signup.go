@@ -92,11 +92,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	err = a.db.Transaction(func(tx *storage.Connection) error {
 		var terr error
 		if user != nil {
-			if params.Provider == "email" && user.IsConfirmed() {
-				return UserExistsError
-			}
-
-			if params.Provider == "phone" && user.IsPhoneConfirmed() {
+			if (params.Provider == "email" && user.IsConfirmed()) || (params.Provider == "phone" && user.IsPhoneConfirmed()) {
 				return UserExistsError
 			}
 
@@ -165,6 +161,18 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 			return tooManyRequestsError("For security purposes, you can only request this once every minute")
 		}
 		if errors.Is(err, UserExistsError) {
+			err = a.db.Transaction(func(tx *storage.Connection) error {
+				if terr := models.NewAuditLogEntry(tx, instanceID, user, models.UserRepeatedSignUpAction, nil); terr != nil {
+					return terr
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			if config.Mailer.Autoconfirm || config.Sms.Autoconfirm {
+				return badRequestError("User already registered")
+			}
 			sanitizedUser, err := sanitizeUser(user, params)
 			if err != nil {
 				return err
