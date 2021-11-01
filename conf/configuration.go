@@ -121,19 +121,25 @@ type PhoneProviderConfiguration struct {
 }
 
 type SmsProviderConfiguration struct {
-	Autoconfirm  bool                        `json:"autoconfirm"`
-	MaxFrequency time.Duration               `json:"max_frequency" split_words:"true"`
-	OtpExp       uint                        `json:"otp_exp" split_words:"true"`
-	OtpLength    int                         `json:"otp_length" split_words:"true"`
-	Provider     string                      `json:"provider"`
-	Template     string                      `json:"template"`
-	Twilio       TwilioProviderConfiguration `json:"twilio"`
+	Autoconfirm  bool                             `json:"autoconfirm"`
+	MaxFrequency time.Duration                    `json:"max_frequency" split_words:"true"`
+	OtpExp       uint                             `json:"otp_exp" split_words:"true"`
+	OtpLength    int                              `json:"otp_length" split_words:"true"`
+	Provider     string                           `json:"provider"`
+	Template     string                           `json:"template"`
+	Twilio       TwilioProviderConfiguration      `json:"twilio"`
+	Messagebird  MessagebirdProviderConfiguration `json:"messagebird"`
 }
 
 type TwilioProviderConfiguration struct {
 	AccountSid        string `json:"account_sid" split_words:"true"`
 	AuthToken         string `json:"auth_token" split_words:"true"`
 	MessageServiceSid string `json:"message_service_sid" split_words:"true"`
+}
+
+type MessagebirdProviderConfiguration struct {
+	AccessKey  string `json:"access_key" split_words:"true"`
+	Originator string `json:"originator" split_words:"true"`
 }
 
 type CaptchaConfiguration struct {
@@ -344,6 +350,16 @@ func (t *TwilioProviderConfiguration) Validate() error {
 	}
 	if t.MessageServiceSid == "" {
 		return errors.New("Missing Twilio message service SID or Twilio phone number")
+	}
+	return nil
+}
+
+func (t *MessagebirdProviderConfiguration) Validate() error {
+	if t.AccessKey == "" {
+		return errors.New("Missing Messagebird access key")
+	}
+	if t.Originator == "" {
+		return errors.New("Missing Messagebird originator")
 	}
 	return nil
 }

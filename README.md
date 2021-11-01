@@ -455,13 +455,17 @@ Controls the number of digits of the sms otp sent.
 
 `SMS_PROVIDER` - `string`
 
-for now only option is: `twilio`
+Available options are: `twilio` and `messagebird`
 
 Then you can use your [twilio credentials](https://www.twilio.com/docs/usage/requests-to-twilio#credentials):
 
 - `SMS_TWILIO_ACCOUNT_SID`
 - `SMS_TWILIO_AUTH_TOKEN`
 - `SMS_TWILIO_MESSAGE_SERVICE_SID` - can be set to your twilio sender mobile number
+
+Or Messagebird credentials, which can be obtained in the [Dashboard](https://dashboard.messagebird.com/en/developers/access):
+- `SMS_MESSAGEBIRD_ACCESS_KEY` - your Messagebird access key
+- `SMS_MESSAGEBIRD_ORIGINATOR` - SMS sender (your Messagebird phone number with + or company name)
 
 ### CAPTCHA
 
