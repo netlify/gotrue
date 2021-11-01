@@ -30,9 +30,8 @@ type MessagebirdResponse struct {
 type MessagebirdError struct {
 	Code        int    `json:"code"`
 	Description string `json:"description"`
-	parameter   string `json:"parameter"`
+	Parameter   string `json:"parameter"`
 }
-
 
 type MessagebirdErrResponse struct {
 	Errors []MessagebirdError `json:"errors"`
@@ -59,9 +58,9 @@ func NewMessagebirdProvider(config conf.MessagebirdProviderConfiguration) (SmsPr
 func (t MessagebirdProvider) SendSms(phone string, message string) error {
 	body := url.Values{
 		"originator": {t.Config.Originator},
-		"body":    {message},
-		"recipients":    {phone},
-		"type": {"sms"},
+		"body":       {message},
+		"recipients": {phone},
+		"type":       {"sms"},
 		"datacoding": {"unicode"},
 	}
 
@@ -71,7 +70,7 @@ func (t MessagebirdProvider) SendSms(phone string, message string) error {
 		return err
 	}
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	r.Header.Add("Authorization", "AccessKey " + t.Config.AccessKey)
+	r.Header.Add("Authorization", "AccessKey "+t.Config.AccessKey)
 	res, err := client.Do(r)
 	if err != nil {
 		return err
