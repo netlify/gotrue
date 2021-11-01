@@ -224,6 +224,7 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 
 	require.Equal(ts.T(), http.StatusOK, w.Code)
 
+	assert.NotEqual(ts.T(), u.ID, data.ID)
 	assert.Equal(ts.T(), "test1@example.com", data.GetEmail())
 	assert.Equal(ts.T(), ts.Config.JWT.Aud, data.Aud)
 	assert.Equal(ts.T(), 1.0, data.UserMetaData["a"])
