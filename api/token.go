@@ -2,10 +2,14 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/coreos/go-oidc/v3/oidc"
 	jwt "github.com/golang-jwt/jwt"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/metering"
@@ -44,9 +48,72 @@ type RefreshTokenGrantParams struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+// IdTokenGrantParams are the parameters the IdTokenGrant method accepts
+type IdTokenGrantParams struct {
+	IdToken  string `json:"id_token"`
+	Nonce    string `json:"nonce"`
+	Provider string `json:"provider"`
+}
+
 const useCookieHeader = "x-use-cookie"
 const useSessionCookie = "session"
 const InvalidLoginMessage = "Invalid login credentials"
+
+func (p *IdTokenGrantParams) getVerifier(ctx context.Context) (*oidc.IDTokenVerifier, error) {
+	config := getConfig(ctx)
+
+	var provider *oidc.Provider
+	var err error
+	var oAuthProvider conf.OAuthProviderConfiguration
+	var oAuthProviderClientId string
+	switch p.Provider {
+	case "apple":
+		oAuthProvider = config.External.Apple
+		oAuthProviderClientId = config.External.IosBundleId
+		provider, err = oidc.NewProvider(ctx, "https://appleid.apple.com")
+	case "azure":
+		oAuthProvider = config.External.Azure
+		oAuthProviderClientId = oAuthProvider.ClientID
+		provider, err = oidc.NewProvider(ctx, "https://login.microsoftonline.com/common/v2.0")
+	case "facebook":
+		oAuthProvider = config.External.Facebook
+		oAuthProviderClientId = oAuthProvider.ClientID
+		provider, err = oidc.NewProvider(ctx, "https://www.facebook.com")
+	case "google":
+		oAuthProvider = config.External.Google
+		oAuthProviderClientId = oAuthProvider.ClientID
+		provider, err = oidc.NewProvider(ctx, "https://accounts.google.com")
+	default:
+		return nil, fmt.Errorf("Provider %s doesn't support the id_token grant flow", p.Provider)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !oAuthProvider.Enabled {
+		return nil, badRequestError("Provider is not enabled")
+	}
+
+	return provider.Verifier(&oidc.Config{ClientID: oAuthProviderClientId}), nil
+}
+
+func getEmailVerified(v interface{}) bool {
+	var emailVerified bool
+	var err error
+	switch v.(type) {
+	case string:
+		emailVerified, err = strconv.ParseBool(v.(string))
+	case bool:
+		emailVerified = v.(bool)
+	default:
+		emailVerified = false
+	}
+	if err != nil {
+		return false
+	}
+	return emailVerified
+}
 
 // Token is the endpoint for OAuth access token requests
 func (a *API) Token(w http.ResponseWriter, r *http.Request) error {
@@ -58,6 +125,8 @@ func (a *API) Token(w http.ResponseWriter, r *http.Request) error {
 		return a.ResourceOwnerPasswordGrant(ctx, w, r)
 	case "refresh_token":
 		return a.RefreshTokenGrant(ctx, w, r)
+	case "id_token":
+		return a.IdTokenGrant(ctx, w, r)
 	default:
 		return oauthError("unsupported_grant_type", "")
 	}
@@ -96,7 +165,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", InvalidLoginMessage)
 		}
-		return internalServerError("Database error finding user").WithInternalError(err)
+		return internalServerError("Database error querying schema").WithInternalError(err)
 	}
 
 	if params.Email != "" && !user.IsConfirmed() {
@@ -205,6 +274,159 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		TokenType:    "bearer",
 		ExpiresIn:    config.JWT.Exp,
 		RefreshToken: newToken.Token,
+		User:         user,
+	})
+}
+
+// IdTokenGrant implements the id_token grant type flow
+func (a *API) IdTokenGrant(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	config := a.getConfig(ctx)
+	instanceID := getInstanceID(ctx)
+
+	params := &IdTokenGrantParams{}
+
+	jsonDecoder := json.NewDecoder(r.Body)
+	if err := jsonDecoder.Decode(params); err != nil {
+		return badRequestError("Could not read id token grant params: %v", err)
+	}
+
+	if params.IdToken == "" || params.Nonce == "" || params.Provider == "" {
+		return oauthError("invalid request", "id_token, nonce and provider required")
+	}
+
+	verifier, err := params.getVerifier(ctx)
+	if err != nil {
+		return err
+	}
+
+	idToken, err := verifier.Verify(ctx, params.IdToken)
+	if err != nil {
+		return badRequestError("%v", err)
+	}
+
+	claims := make(map[string]interface{})
+	if err := idToken.Claims(&claims); err != nil {
+		return err
+	}
+
+	// verify nonce to mitigate replay attacks
+	hashedNonce, ok := claims["nonce"]
+	if !ok {
+		return oauthError("invalid request", "missing nonce in id_token")
+	}
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(params.Nonce)))
+	if hash != hashedNonce.(string) {
+		return oauthError("invalid nonce", "").WithInternalMessage("Possible abuse attempt: %v", r)
+	}
+
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		return oauthError("invalid request", "missing sub claim in id_token")
+	}
+
+	email, ok := claims["email"].(string)
+	if !ok {
+		email = ""
+	}
+
+	var user *models.User
+	var token *AccessTokenResponse
+	err = a.db.Transaction(func(tx *storage.Connection) error {
+		var terr error
+		var identity *models.Identity
+
+		if identity, terr = models.FindIdentityByIdAndProvider(tx, sub, params.Provider); terr != nil {
+			// create new identity & user if identity is not found
+			if models.IsNotFoundError(terr) {
+				if config.DisableSignup {
+					return forbiddenError("Signups not allowed for this instance")
+				}
+				aud := a.requestAud(ctx, r)
+				signupParams := &SignupParams{
+					Provider: params.Provider,
+					Email:    email,
+					Aud:      aud,
+					Data:     claims,
+				}
+
+				user, terr = a.signupNewUser(ctx, tx, signupParams)
+				if terr != nil {
+					return terr
+				}
+				if identity, terr = a.createNewIdentity(tx, user, params.Provider, claims); terr != nil {
+					return terr
+				}
+			} else {
+				return terr
+			}
+		} else {
+			user, terr = models.FindUserByID(tx, identity.UserID)
+			if terr != nil {
+				return terr
+			}
+			if email != "" {
+				identity.IdentityData["email"] = email
+			}
+			if terr = tx.UpdateOnly(identity, "identity_data", "last_sign_in_at"); terr != nil {
+				return terr
+			}
+			if terr = user.UpdateAppMetaDataProviders(tx); terr != nil {
+				return terr
+			}
+		}
+
+		if !user.IsConfirmed() {
+			isEmailVerified := false
+			emailVerified, ok := claims["email_verified"]
+			if ok {
+				isEmailVerified = getEmailVerified(emailVerified)
+			}
+			if (!ok || !isEmailVerified) && !config.Mailer.Autoconfirm {
+				mailer := a.Mailer(ctx)
+				referrer := a.getReferrer(r)
+				if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
+					return internalServerError("Error sending confirmation mail").WithInternalError(terr)
+				}
+				return unauthorizedError("Error unverified email")
+			}
+
+			if terr := models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
+				return terr
+			}
+
+			if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+				return terr
+			}
+
+			if terr = user.Confirm(tx); terr != nil {
+				return internalServerError("Error updating user").WithInternalError(terr)
+			}
+		} else {
+			if terr := models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
+				return terr
+			}
+			if terr = triggerEventHooks(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
+				return terr
+			}
+		}
+
+		token, terr = a.issueRefreshToken(ctx, tx, user)
+		if terr != nil {
+			return oauthError("server_error", terr.Error())
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	metering.RecordLogin("id_token", user.ID, instanceID)
+	return sendJSON(w, http.StatusOK, &AccessTokenResponse{
+		Token:        token.Token,
+		TokenType:    token.TokenType,
+		ExpiresIn:    token.ExpiresIn,
+		RefreshToken: token.RefreshToken,
 		User:         user,
 	})
 }

@@ -6,6 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/badoux/checkmail v0.0.0-20170203135005-d0a759655d62
 	github.com/beevik/etree v1.1.0
+	github.com/coreos/go-oidc/v3 v3.0.0 // indirect
 	github.com/didip/tollbooth/v5 v5.1.1
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/go-chi/chi v4.0.2+incompatible

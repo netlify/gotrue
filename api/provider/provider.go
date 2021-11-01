@@ -9,11 +9,11 @@ import (
 
 type Claims struct {
 	// Reserved claims
-	Issuer  string `json:"iss,omitempty"`
-	Subject string `json:"sub,omitempty"`
-	Aud     string `json:"aud,omitempty"`
-	Iat     string `json:"iat,omitempty"`
-	Exp     string `json:"exp,omitempty"`
+	Issuer  string  `json:"iss,omitempty"`
+	Subject string  `json:"sub,omitempty"`
+	Aud     string  `json:"aud,omitempty"`
+	Iat     float64 `json:"iat,omitempty"`
+	Exp     float64 `json:"exp,omitempty"`
 
 	// Default profile claims
 	Name              string `json:"name,omitempty"`

@@ -215,6 +215,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				if terr != nil {
 					return terr
 				}
+				identity.IdentityData = identityData
 				if terr = tx.UpdateOnly(identity, "identity_data", "last_sign_in_at"); terr != nil {
 					return terr
 				}
