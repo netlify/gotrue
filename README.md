@@ -555,7 +555,7 @@ Register a new user with an email and password.
 }
 ```
 
-Returns:
+returns:
 
 ```json
 {
@@ -565,6 +565,10 @@ Returns:
   "created_at": "2016-05-15T19:53:12.368652374-07:00",
   "updated_at": "2016-05-15T19:53:12.368652374-07:00"
 }
+
+// if sign up is a duplicate then faux data will be returned
+// as to not leak information about whether a given email
+// has an account with your service or not
 ```
 
 Register a new user with a phone number and password.
@@ -580,11 +584,19 @@ Returns:
 
 ```json
 {
-  "id": "11111111-2222-3333-4444-5555555555555",
+  "id": "11111111-2222-3333-4444-5555555555555", // if duplicate sign up, this ID will be faux
   "phone": "12345678",
   "confirmation_sent_at": "2016-05-15T20:49:40.882805774-07:00",
   "created_at": "2016-05-15T19:53:12.368652374-07:00",
   "updated_at": "2016-05-15T19:53:12.368652374-07:00"
+}
+```
+
+if AUTOCONFIRM is enabled and the sign up is a duplicate, then the endpoint will return:
+```
+{
+  "code":400,
+  "msg":"User already registered"
 }
 ```
 
