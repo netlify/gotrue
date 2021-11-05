@@ -431,7 +431,7 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithDisabledLogin() {
 				"email":    "test1@example.com",
 				"password": "test1",
 			},
-			http.StatusBadRequest,
+			http.StatusOK,
 		},
 		{
 			"Phone Signups Disabled",
@@ -447,7 +447,7 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithDisabledLogin() {
 				"phone":    "123456789",
 				"password": "test1",
 			},
-			http.StatusBadRequest,
+			http.StatusOK,
 		},
 		{
 			"All Signups Disabled",
@@ -456,10 +456,10 @@ func (ts *AdminTestSuite) TestAdminUserCreateWithDisabledLogin() {
 				DisableSignup: true,
 			},
 			map[string]interface{}{
-				"email":    "test1@example.com",
-				"password": "test1",
+				"email":    "test2@example.com",
+				"password": "test2",
 			},
-			http.StatusForbidden,
+			http.StatusOK,
 		},
 	}
 

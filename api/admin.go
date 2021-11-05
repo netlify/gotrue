@@ -177,10 +177,6 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
 
-	if config.DisableSignup {
-		return forbiddenError("Signups not allowed for this instance")
-	}
-
 	instanceID := getInstanceID(ctx)
 	adminUser := getAdminUser(ctx)
 	params, err := a.getAdminParams(r)
@@ -198,9 +194,6 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.Email != "" {
-		if !config.External.Email.Enabled {
-			return badRequestError("Email signups are disabled")
-		}
 		if err := a.validateEmail(ctx, params.Email); err != nil {
 			return err
 		}
@@ -212,9 +205,6 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.Phone != "" {
-		if !config.External.Phone.Enabled {
-			return badRequestError("Phone signups are disabled")
-		}
 		params.Phone = a.formatPhoneNumber(params.Phone)
 		if isValid := a.validateE164Format(params.Phone); !isValid {
 			return unprocessableEntityError("Invalid phone format")
