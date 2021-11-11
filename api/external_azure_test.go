@@ -24,6 +24,7 @@ func (ts *ExternalTestSuite) TestSignupExternalAzure() {
 	q := u.Query()
 	ts.Equal(ts.Config.External.Azure.RedirectURI, q.Get("redirect_uri"))
 	ts.Equal(ts.Config.External.Azure.ClientID, q.Get("client_id"))
+	ts.Equal(ts.Config.External.Azure.TenantID, q.Get("tenant_id"))
 	ts.Equal("code", q.Get("response_type"))
 	ts.Equal("openid", q.Get("scope"))
 
@@ -41,7 +42,7 @@ func (ts *ExternalTestSuite) TestSignupExternalAzure() {
 func AzureTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, user string) *httptest.Server {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/common/oauth2/v2.0/token":
+		case "/" + ts.Config.External.Azure.TenantID + "/oauth2/v2.0/token":
 			*tokenCount++
 			ts.Equal(code, r.FormValue("code"))
 			ts.Equal("authorization_code", r.FormValue("grant_type"))

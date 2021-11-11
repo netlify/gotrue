@@ -32,7 +32,7 @@ type azureEmail struct {
 }
 
 // NewAzureProvider creates a Azure account provider.
-func NewAzureProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAuthProvider, error) {
+func NewAzureProvider(ext conf.AzureProviderConfiguration, scopes string) (OAuthProvider, error) {
 	if err := ext.Validate(); err != nil {
 		return nil, err
 	}
@@ -49,10 +49,11 @@ func NewAzureProvider(ext conf.OAuthProviderConfiguration, scopes string) (OAuth
 	return &azureProvider{
 		Config: &oauth2.Config{
 			ClientID:     ext.ClientID,
+			TenantID:     ext.TenantID,
 			ClientSecret: ext.Secret,
 			Endpoint: oauth2.Endpoint{
-				AuthURL:  authHost + "/common/oauth2/v2.0/authorize",
-				TokenURL: authHost + "/common/oauth2/v2.0/token",
+				AuthURL:  authHost + "/" + ext.TenantID + "/oauth2/v2.0/authorize",
+				TokenURL: authHost + "/" + ext.TenantID + "/oauth2/v2.0/token",
 			},
 			RedirectURL: ext.RedirectURI,
 			Scopes:      oauthScopes,

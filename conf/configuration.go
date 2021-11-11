@@ -20,6 +20,12 @@ type OAuthProviderConfiguration struct {
 	Enabled     bool   `json:"enabled"`
 }
 
+// AzureProviderConfiguration holds all config related to azure account provider.
+type AzureProviderConfiguration struct {
+	*OAuthProviderConfiguration
+	TenantID    string `json:"tenant_id" split_words:"true" default:"common"`
+}
+
 type EmailProviderConfiguration struct {
 	Enabled bool `json:"enabled" default:"true"`
 }
@@ -81,7 +87,7 @@ type EmailContentConfiguration struct {
 
 type ProviderConfiguration struct {
 	Apple       OAuthProviderConfiguration `json:"apple"`
-	Azure       OAuthProviderConfiguration `json:"azure"`
+	Azure       AzureProviderConfiguration `json:"azure"`
 	Bitbucket   OAuthProviderConfiguration `json:"bitbucket"`
 	Discord     OAuthProviderConfiguration `json:"discord"`
 	Facebook    OAuthProviderConfiguration `json:"facebook"`
