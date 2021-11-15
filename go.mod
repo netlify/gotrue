@@ -3,7 +3,7 @@ module github.com/netlify/gotrue
 require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20170623214735-571947b0f240
 	github.com/badoux/checkmail v0.0.0-20170203135005-d0a759655d62
-	github.com/beevik/etree v1.1.0
+	github.com/beevik/etree v1.1.1-0.20200718192613-4a2f8b9d084c
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/didip/tollbooth/v5 v5.1.1
 	github.com/go-chi/chi v4.0.2+incompatible
@@ -37,6 +37,11 @@ require (
 	gopkg.in/DataDog/dd-trace-go.v1 v1.12.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect
+)
+
+replace (
+	github.com/beevik/etree => github.com/beevik/etree v1.1.1-0.20200718192613-4a2f8b9d084c
+	github.com/russellhaering/goxmldsig => github.com/russellhaering/goxmldsig v1.1.1
 )
 
 go 1.13
