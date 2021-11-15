@@ -44,4 +44,4 @@ replace (
 	github.com/russellhaering/goxmldsig => github.com/russellhaering/goxmldsig v1.1.1
 )
 
-go 1.13
+go 1.15
