@@ -68,7 +68,7 @@ func getExcludedColumns(model interface{}, includeColumns ...string) ([]string, 
 	}
 
 	// get all columns and remove included to get excluded set
-	cols := columns.ForStructWithAlias(model, sm.TableName(), sm.As)
+	cols := columns.ForStructWithAlias(model, sm.TableName(), sm.As, sm.IDField())
 	for _, f := range includeColumns {
 		if _, ok := cols.Cols[f]; !ok {
 			return nil, errors.Errorf("Invalid column name %s", f)
