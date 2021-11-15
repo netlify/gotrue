@@ -8,10 +8,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/didip/tollbooth/v5"
 	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/gobuffalo/uuid"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/netlify/gotrue/models"
 )
 
