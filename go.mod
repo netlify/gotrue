@@ -1,12 +1,12 @@
 module github.com/netlify/gotrue
 
 require (
-	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20170623214735-571947b0f240
+	github.com/GoogleCloudPlatform/cloudsql-proxy v1.27.0
 	github.com/badoux/checkmail v0.0.0-20170203135005-d0a759655d62
 	github.com/beevik/etree v1.1.1-0.20200718192613-4a2f8b9d084c
 	github.com/didip/tollbooth/v5 v5.1.1
 	github.com/go-chi/chi v4.0.2+incompatible
-	github.com/go-sql-driver/mysql v1.5.0
+	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gobuffalo/pop/v5 v5.3.4
 	github.com/gobuffalo/uuid v2.0.5+incompatible
 	github.com/golang-jwt/jwt/v4 v4.1.0
@@ -24,14 +24,10 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
-	golang.org/x/lint v0.0.0-20190930215403-16217165b5de
-	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
-	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/appengine v1.6.5 // indirect
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
+	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
 	gopkg.in/DataDog/dd-trace-go.v1 v1.12.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect
