@@ -2,12 +2,11 @@ package storage
 
 import (
 	"net/url"
-	"reflect"
 
 	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gobuffalo/pop"
-	"github.com/gobuffalo/pop/columns"
+	"github.com/gobuffalo/pop/v5"
+	"github.com/gobuffalo/pop/v5/columns"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
@@ -62,13 +61,9 @@ func (c *Connection) Transaction(fn func(*Connection) error) error {
 
 func getExcludedColumns(model interface{}, includeColumns ...string) ([]string, error) {
 	sm := &pop.Model{Value: model}
-	st := reflect.TypeOf(model)
-	if st.Kind() == reflect.Ptr {
-		st = st.Elem()
-	}
 
 	// get all columns and remove included to get excluded set
-	cols := columns.ForStructWithAlias(model, sm.TableName(), sm.As)
+	cols := columns.ForStructWithAlias(model, sm.TableName(), sm.As, sm.IDField())
 	for _, f := range includeColumns {
 		if _, ok := cols.Cols[f]; !ok {
 			return nil, errors.Errorf("Invalid column name %s", f)

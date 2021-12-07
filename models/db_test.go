@@ -3,7 +3,7 @@ package models_test
 import (
 	"testing"
 
-	"github.com/gobuffalo/pop"
+	"github.com/gobuffalo/pop/v5"
 	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
 )

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt/v4"
 )
 
 // requireAuthentication checks incoming requests for tokens presented using the Authorization header

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gobuffalo/uuid"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -177,7 +177,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				if terr := models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
 					return terr
 				}
-				if terr = triggerHook(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+				if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
 					return terr
 				}
 
@@ -189,7 +189,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				if terr := models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
 					return terr
 				}
-				if terr = triggerHook(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
+				if terr = triggerEventHooks(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
 					return terr
 				}
 			}
@@ -261,7 +261,7 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 	if err := models.NewAuditLogEntry(tx, instanceID, user, models.InviteAcceptedAction, nil); err != nil {
 		return nil, err
 	}
-	if err := triggerHook(ctx, tx, SignupEvent, user, instanceID, config); err != nil {
+	if err := triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); err != nil {
 		return nil, err
 	}
 
