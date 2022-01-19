@@ -44,6 +44,7 @@ type DBConfiguration struct {
 // JWTConfiguration holds all the JWT related configuration.
 type JWTConfiguration struct {
 	Secret           string `json:"secret" required:"true"`
+  Iss              string `json:"iss"`
 	Exp              int    `json:"exp"`
 	Aud              string `json:"aud"`
 	AdminGroupName   string `json:"admin_group_name" split_words:"true"`

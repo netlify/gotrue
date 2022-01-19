@@ -62,7 +62,7 @@ func (ts *UserTestSuite) TestUser_UpdatePassword() {
 	req := httptest.NewRequest(http.MethodPut, "http://localhost/user", &buffer)
 	req.Header.Set("Content-Type", "application/json")
 
-	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
+	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret, ts.Config.JWT.Iss)
 	require.NoError(ts.T(), err)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 

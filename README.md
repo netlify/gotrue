@@ -152,6 +152,10 @@ How long tokens are valid for, in seconds. Defaults to 3600 (1 hour).
 
 The default JWT audience. Use audiences to group users.
 
+`JWT_ISS` - `string`
+
+The "iss" (issuer) claim identifies the principal that issued the JWT
+
 `JWT_ADMIN_GROUP_NAME` - `string`
 
 The name of the admin group (if enabled). Defaults to `admin`.
