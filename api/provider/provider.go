@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 
 	"golang.org/x/oauth2"
 )
@@ -49,6 +51,15 @@ func chooseHost(base, defaultHost string) string {
 	return base
 }
 
+type RequestError struct {
+	code int
+	body string
+}
+
+func (r *RequestError) Error() string {
+	return fmt.Sprintf("Request failed with status %d:\n%s", r.code, r.body)
+}
+
 func makeRequest(ctx context.Context, tok *oauth2.Token, g *oauth2.Config, url string, dst interface{}) error {
 	client := g.Client(ctx, tok)
 	res, err := client.Get(url)
@@ -56,6 +67,14 @@ func makeRequest(ctx context.Context, tok *oauth2.Token, g *oauth2.Config, url s
 		return err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode/100 != 2 {
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		return &RequestError{code: res.StatusCode, body: string(body)}
+	}
 
 	if err := json.NewDecoder(res.Body).Decode(dst); err != nil {
 		return err
