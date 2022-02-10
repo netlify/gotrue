@@ -1,5 +1,7 @@
 on:
   push:
+    branches: [master]
+    tags: ["*"]
   pull_request:
     types: [opened, synchronize, reopened]
 name: Test
