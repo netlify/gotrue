@@ -39,5 +39,5 @@ jobs:
           curl -X POST --silent --show-error --fail \
             --user $CIRCLE_API_USER_TOKEN: \
             -H 'content-type: application/json' \
-            --data '{ "branch": "master", "parameters": { "branch": "${{ github.event.pull_request.head.ref || github.ref_name }}", "commit": "${{ github.sha }}" } }' \
+            --data '{ "branch": "master", "parameters": { "branch": "${{ github.event.pull_request.head.ref || github.ref_name }}", "commit": "${{ github.event.pull_request.head.sha || github.sha }}" } }' \
             https://circleci.com/api/v2/project/gh/netlify/gotrue-ci/pipeline
