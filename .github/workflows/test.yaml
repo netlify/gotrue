@@ -36,11 +36,10 @@ jobs:
       - name: Trigger CircleCI for deployment
         env:
           CIRCLE_API_USER_TOKEN: ${{ secrets.CIRCLE_API_USER_TOKEN }}
-        if: ${{ matrix.go-version == '1.15.x' && env.CIRCLE_API_USER_TOKEN != null }}
+        if: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == 'netlify/gotrue') && matrix.go-version == '1.15.x' && env.CIRCLE_API_USER_TOKEN != null }}
         run: |
-          REF="${GITHUB_HEAD_REF:-main}"
           curl -X POST --silent --show-error --fail \
             --user $CIRCLE_API_USER_TOKEN: \
             -H 'content-type: application/json' \
-            --data '{ "branch": "master", "parameters": { "branch": "'"$REF"'", "commit": "${{ github.event.pull_request.head.sha || github.sha }}" } }' \
+            --data '{ "branch": "master", "parameters": { "branch": "${{ github.event.pull_request.head.ref || github.ref_name }}", "commit": "${{ github.event.pull_request.head.sha || github.sha }}" } }' \
             https://circleci.com/api/v2/project/gh/netlify/gotrue-ci/pipeline
