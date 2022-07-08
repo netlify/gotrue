@@ -1,0 +1,23 @@
+name: gotrue
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  dagger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v2
+
+      - name: Deploy to Docker Hub
+        uses: dagger/dagger-for-github@v3
+        with:
+          version: 0.2
+          cmds: |
+            project update
+            do deploy
+        env:
+          DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN }}
