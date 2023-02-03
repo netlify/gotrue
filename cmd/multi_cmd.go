@@ -27,6 +27,11 @@ func multi(cmd *cobra.Command, args []string) {
 		logrus.Fatal("Operator token secret is required")
 	}
 
+	config, err := conf.LoadConfig(configFile)
+	if err != nil {
+		logrus.Fatal("couldn't load config")
+	}
+
 	var db *storage.Connection
 	// try a couple times to connect to the database
 	for i := 1; i <= 3; i++ {
@@ -43,7 +48,7 @@ func multi(cmd *cobra.Command, args []string) {
 	defer db.Close()
 
 	globalConfig.MultiInstanceMode = true
-	api := api.NewAPIWithVersion(context.Background(), globalConfig, db, Version)
+	api := api.NewAPIWithVersion(context.Background(), globalConfig, config, db, Version)
 
 	l := fmt.Sprintf("%v:%v", globalConfig.API.Host, globalConfig.API.Port)
 	logrus.Infof("GoTrue API started on: %s", l)

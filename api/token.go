@@ -6,6 +6,7 @@ import (
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v4"
+	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/metering"
 	"github.com/netlify/gotrue/models"
@@ -16,7 +17,7 @@ import (
 type GoTrueClaims struct {
 	jwt.StandardClaims
 	Email        string                 `json:"email"`
-	AppMetaData  map[string]interface{} `json:"app_metadata"`
+	AppMetaData  map[string]interface{} `json:"https://tigris/n"`
 	UserMetaData map[string]interface{} `json:"user_metadata"`
 }
 
@@ -139,7 +140,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 			return internalServerError(terr.Error())
 		}
 
-		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
+		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), a.getConfig(ctx), a.tokenSigner)
 		if terr != nil {
 			return internalServerError("error generating jwt token").WithInternalError(terr)
 		}
@@ -163,7 +164,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	})
 }
 
-func generateAccessToken(user *models.User, expiresIn time.Duration, secret string) (string, error) {
+func generateAccessToken(user *models.User, expiresIn time.Duration, config *conf.Configuration, tokenSigner *TokenSigner) (string, error) {
 	claims := &GoTrueClaims{
 		StandardClaims: jwt.StandardClaims{
 			Subject:   user.ID.String(),
@@ -175,8 +176,14 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, secret stri
 		UserMetaData: user.UserMetaData,
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secret))
+	switch config.JWT.Algorithm {
+	case jwa.RS256.String():
+		token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+		return tokenSigner.signUsingRsa(token)
+	default:
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		return tokenSigner.signUsingHmacWithSHA(token)
+	}
 }
 
 func (a *API) issueRefreshToken(ctx context.Context, conn *storage.Connection, user *models.User) (*AccessTokenResponse, error) {
@@ -195,7 +202,10 @@ func (a *API) issueRefreshToken(ctx context.Context, conn *storage.Connection, u
 			return internalServerError("Database error granting user").WithInternalError(terr)
 		}
 
-		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)
+		config := a.getConfig(ctx)
+		tokenSigner := NewTokenSigner(config)
+
+		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config, tokenSigner)
 		if terr != nil {
 			return internalServerError("error generating jwt token").WithInternalError(terr)
 		}

@@ -138,6 +138,12 @@ The name to use for the service.
 GOTRUE_JWT_SECRET=supersecretvalue
 GOTRUE_JWT_EXP=3600
 GOTRUE_JWT_AUD=netlify
+
+## For RSA based algorithm
+GOTRUE_JWT_ALGORITHM=RS256
+GOTRUE_JWT_RSA_PRIVATE_KEY=/opt/app/myapp/keys/my.key
+# first public key is the current one and others are from past which have been rotated but there are tokens signed with this still valid
+GOTRUE_JWT_RSA_PUBLIC_KEYS=/opt/app/myapp/keys/my.key.pub,/opt/app/myapp/keys/my1.key.pub,/opt/app/myapp/keys/my2.key.pub
 ```
 
 `JWT_SECRET` - `string` **required**

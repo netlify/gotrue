@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -61,8 +61,9 @@ func (ts *UserTestSuite) TestUser_UpdatePassword() {
 	// Setup request
 	req := httptest.NewRequest(http.MethodPut, "http://localhost/user", &buffer)
 	req.Header.Set("Content-Type", "application/json")
+	tokenSigner := NewTokenSigner(ts.Config)
 
-	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
+	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config, tokenSigner)
 	require.NoError(ts.T(), err)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 

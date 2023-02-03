@@ -61,7 +61,9 @@ func (ts *InviteTestSuite) makeSuperAdmin(email string) string {
 	u.IsSuperAdmin = true
 	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
 
-	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config.JWT.Secret)
+	tokenSigner := NewTokenSigner(ts.Config)
+
+	token, err := generateAccessToken(u, time.Second*time.Duration(ts.Config.JWT.Exp), ts.Config, tokenSigner)
 	require.NoError(ts.T(), err, "Error generating access token")
 
 	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/api"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -31,7 +31,7 @@ func serve(globalConfig *conf.GlobalConfiguration, config *conf.Configuration) {
 	if err != nil {
 		logrus.Fatalf("Error loading instance config: %+v", err)
 	}
-	api := api.NewAPIWithVersion(ctx, globalConfig, db, Version)
+	api := api.NewAPIWithVersion(ctx, globalConfig, config, db, Version)
 
 	l := fmt.Sprintf("%v:%v", globalConfig.API.Host, globalConfig.API.Port)
 	logrus.Infof("GoTrue API started on: %s", l)

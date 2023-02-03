@@ -2,6 +2,10 @@ package api
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,7 +17,9 @@ import (
 	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/go-chi/chi"
 	"github.com/gobuffalo/uuid"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/imdario/mergo"
+	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
@@ -31,10 +37,59 @@ var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 
 // API is the main REST API
 type API struct {
-	handler http.Handler
-	db      *storage.Connection
-	config  *conf.GlobalConfiguration
-	version string
+	handler     http.Handler
+	db          *storage.Connection
+	config      *conf.GlobalConfiguration
+	tokenSigner *TokenSigner
+	version     string
+}
+
+type TokenSigner struct {
+	jwtConfig  *conf.JWTConfiguration
+	privateKey *rsa.PrivateKey
+}
+
+func NewTokenSigner(config *conf.Configuration) *TokenSigner {
+	t := &TokenSigner{
+		jwtConfig: &config.JWT,
+	}
+	t.init()
+	return t
+}
+
+func (t *TokenSigner) init() {
+	if t.jwtConfig.RSAPrivateKey == "" && t.jwtConfig.Algorithm == jwa.RS256.String() {
+		log.Fatal("No RSA private key configured")
+	}
+	privateKeyData, err := os.ReadFile(t.jwtConfig.RSAPrivateKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	block, _ := pem.Decode(privateKeyData)
+	if block == nil {
+		log.Fatal("block is null for configured rsa private key")
+		return
+	}
+
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	t.privateKey = privateKey
+}
+
+// Signs the token with RSA algorithm
+func (t *TokenSigner) signUsingRsa(token *jwt.Token) (string, error) {
+	claims := token.Claims.(*GoTrueClaims)
+	claims.Issuer = t.jwtConfig.Issuer
+	return token.SignedString(t.privateKey)
+}
+
+// Signs the token with HMAC+SHA
+func (t *TokenSigner) signUsingHmacWithSHA(token *jwt.Token) (string, error) {
+	return token.SignedString(t.jwtConfig.Secret)
 }
 
 // ListenAndServe starts the REST API
@@ -72,14 +127,18 @@ func waitForTermination(log logrus.FieldLogger, done <-chan struct{}) {
 }
 
 // NewAPI instantiates a new REST API
-func NewAPI(globalConfig *conf.GlobalConfiguration, db *storage.Connection) *API {
-	return NewAPIWithVersion(context.Background(), globalConfig, db, defaultVersion)
+func NewAPI(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, db *storage.Connection) *API {
+	return NewAPIWithVersion(context.Background(), globalConfig, config, db, defaultVersion)
 }
 
 // NewAPIWithVersion creates a new REST API using the specified version
-func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, db *storage.Connection, version string) *API {
-	api := &API{config: globalConfig, db: db, version: version}
-
+func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, config *conf.Configuration, db *storage.Connection, version string) *API {
+	api := &API{config: globalConfig, db: db, version: version, tokenSigner: NewTokenSigner(config)}
+	jwks, err := NewJKWS(globalConfig, config, version)
+	if err != nil {
+		log.Fatal("Couldn't construct JWKS")
+		return nil
+	}
 	xffmw, _ := xff.Default()
 	logger := newStructuredLogger(logrus.StandardLogger())
 
@@ -131,6 +190,10 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 			r.Use(api.requireAuthentication)
 			r.Get("/", api.UserGet)
 			r.Put("/", api.UserUpdate)
+		})
+
+		r.Route("/.well-known", func(r *router) {
+			r.Get("/jwks.json", jwks.getJWKS)
 		})
 
 		r.Route("/admin", func(r *router) {
@@ -214,7 +277,7 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 		return nil, nil, err
 	}
 
-	return NewAPIWithVersion(ctx, globalConfig, db, version), config, nil
+	return NewAPIWithVersion(ctx, globalConfig, config, db, version), config, nil
 }
 
 func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {

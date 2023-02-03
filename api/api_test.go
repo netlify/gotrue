@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/test"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -89,7 +89,7 @@ func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Config
 		return nil, nil, err
 	}
 
-	return NewAPIWithVersion(ctx, globalConfig, conn, apiTestVersion), config, nil
+	return NewAPIWithVersion(ctx, globalConfig, config, conn, apiTestVersion), config, nil
 }
 
 func TestEmailEnabledByDefault(t *testing.T) {

@@ -48,6 +48,13 @@ type JWTConfiguration struct {
 	Aud              string `json:"aud"`
 	AdminGroupName   string `json:"admin_group_name" split_words:"true"`
 	DefaultGroupName string `json:"default_group_name" split_words:"true"`
+	Algorithm        string `json:"algorithm"`
+	Issuer           string `json:"issuer"`
+	// Current RSA private key used to sign the token currently
+	RSAPrivateKey string `json:"rsa_private_key" split_words:"true"`
+	// Current and past few RSA public keys used to sign the token.
+	// First entry points to current public key
+	RSAPublicKeys []string `json:"rsa_public_keys" split_words:"true"`
 }
 
 // GlobalConfiguration holds all the configuration that applies to all instances.
@@ -65,7 +72,8 @@ type GlobalConfiguration struct {
 	MultiInstanceMode bool
 	Tracing           TracingConfig
 	SMTP              SMTPConfiguration
-	RateLimitHeader   string `split_words:"true"`
+
+	RateLimitHeader string `split_words:"true"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.

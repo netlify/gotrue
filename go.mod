@@ -13,6 +13,7 @@ require (
 	github.com/imdario/mergo v0.0.0-20160216103600-3e95a51e0639
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/lestrrat-go/jwx/v2 v2.0.8
 	github.com/netlify/mailme v1.1.1
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
@@ -24,8 +25,8 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.7.0
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
+	github.com/stretchr/testify v1.8.1
+	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
 	gopkg.in/DataDog/dd-trace-go.v1 v1.12.1
