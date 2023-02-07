@@ -35,54 +35,57 @@ func NewJKWS(globalConfig *conf.GlobalConfiguration, config *conf.Configuration,
 		version:      version,
 	}
 
-	publicKeyPEM, err := os.ReadFile(config.JWT.RSAPublicKeys[0])
-	if err != nil {
-		return nil, err
+	var keysMap []map[string]interface{}
+
+	for _, key := range config.JWT.RSAPublicKeys {
+		publicKeyPEM, err := os.ReadFile(key)
+		if err != nil {
+			return nil, err
+		}
+
+		block, _ := pem.Decode(publicKeyPEM)
+		if block == nil || block.Type != "PUBLIC KEY" {
+			return nil, errors.New("Couldn't decode pem file")
+		}
+
+		publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, errors.New("Couldn't parse pkix public key")
+		}
+
+		rsaPublicKey, ok := publicKey.(*rsa.PublicKey)
+		if !ok {
+			return nil, errors.New("public key is not of type RSA")
+		}
+
+		//  thumbprint
+		publicKeyDER, err := x509.MarshalPKIXPublicKey(rsaPublicKey)
+		if err != nil {
+			return nil, err
+		}
+		thumbprint := sha1.Sum(publicKeyDER)
+		hexThumbprint := hex.EncodeToString(thumbprint[:])
+
+		// kid
+		kid, err := getKeyID(rsaPublicKey)
+		if err != nil {
+			return nil, err
+		}
+
+		thisKeyInfo := map[string]interface{}{"kty": "RSA",
+			"alg": config.JWT.Algorithm,
+			"use": "sig",
+			"kid": kid,
+			"n":   base64UrlEncode(rsaPublicKey.N.Bytes()),
+			"e":   base64UrlEncode(big.NewInt(int64(rsaPublicKey.E)).Bytes()),
+			"x5t": hexThumbprint}
+
+		keysMap = append(keysMap, thisKeyInfo)
 	}
 
-	block, _ := pem.Decode(publicKeyPEM)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return nil, errors.New("Couldn't decode pem file")
+	result.response = map[string]interface{}{
+		"keys": keysMap,
 	}
-
-	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, errors.New("Couldn't parse pkix public key")
-	}
-
-	rsaPublicKey, ok := publicKey.(*rsa.PublicKey)
-	if !ok {
-		return nil, errors.New("public key is not of type RSA")
-	}
-
-	//  thumbprint
-	publicKeyDER, err := x509.MarshalPKIXPublicKey(rsaPublicKey)
-	if err != nil {
-		return nil, err
-	}
-	thumbprint := sha1.Sum(publicKeyDER)
-	hexThumbprint := hex.EncodeToString(thumbprint[:])
-
-	// kid
-	kid, err := getKeyID(rsaPublicKey)
-	if err != nil {
-		return nil, err
-	}
-
-	jwks := map[string]interface{}{
-		"keys": []map[string]interface{}{
-			{
-				"kty": "RSA",
-				"alg": config.JWT.Algorithm,
-				"use": "sig",
-				"kid": kid,
-				"n":   base64UrlEncode(rsaPublicKey.N.Bytes()),
-				"e":   base64UrlEncode(big.NewInt(int64(rsaPublicKey.E)).Bytes()),
-				"x5t": hexThumbprint,
-			},
-		},
-	}
-	result.response = jwks
 	return result, nil
 }
 

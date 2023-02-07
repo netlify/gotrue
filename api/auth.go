@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	jwt "github.com/golang-jwt/jwt/v4"
+	"github.com/pkg/errors"
 )
 
 // requireAuthentication checks incoming requests for tokens presented using the Authorization header
@@ -77,9 +78,14 @@ func (a *API) parseJWTClaims(bearer string, r *http.Request, w http.ResponseWrit
 	ctx := r.Context()
 	config := a.getConfig(ctx)
 
-	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name, jwt.SigningMethodRS256.Name}}
 	token, err := p.ParseWithClaims(bearer, &GoTrueClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(config.JWT.Secret), nil
+		if config.JWT.Algorithm == jwt.SigningMethodHS256.Name {
+			return []byte(config.JWT.Secret), nil
+		} else if config.JWT.Algorithm == jwt.SigningMethodRS256.Name {
+			return a.tokenSigner.publicKey, nil
+		}
+		return nil, errors.New("Unsupported token signature algorithm")
 	})
 	if err != nil {
 		a.clearCookieToken(ctx, w)

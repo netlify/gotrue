@@ -47,6 +47,7 @@ type API struct {
 type TokenSigner struct {
 	jwtConfig  *conf.JWTConfiguration
 	privateKey *rsa.PrivateKey
+	publicKey  *rsa.PublicKey
 }
 
 func NewTokenSigner(config *conf.Configuration) *TokenSigner {
@@ -78,6 +79,16 @@ func (t *TokenSigner) init() {
 		return
 	}
 	t.privateKey = privateKey
+	// public key
+	publicKeyData, e := os.ReadFile(t.jwtConfig.RSAPublicKeys[0])
+	if e != nil {
+		panic(e.Error())
+	}
+	publicKey, e := jwt.ParseRSAPublicKeyFromPEM(publicKeyData)
+	if e != nil {
+		panic(e.Error())
+	}
+	t.publicKey = publicKey
 }
 
 // Signs the token with RSA algorithm
@@ -136,7 +147,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	api := &API{config: globalConfig, db: db, version: version, tokenSigner: NewTokenSigner(config)}
 	jwks, err := NewJKWS(globalConfig, config, version)
 	if err != nil {
-		log.Fatal("Couldn't construct JWKS")
+		log.Fatalf("Couldn't construct JWKS %v", err)
 		return nil
 	}
 	xffmw, _ := xff.Default()

@@ -3,10 +3,11 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
 )
 
 // UserUpdateParams parameters for updating a user
@@ -26,7 +27,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read claims")
 	}
 
-	userID, err := uuid.FromString(claims.Subject)
+	userID, err := uuid.FromString(GetUserIdFromSubject(claims.Subject))
 	if err != nil {
 		return badRequestError("Could not read User ID claim")
 	}
@@ -47,6 +48,10 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 	return sendJSON(w, http.StatusOK, user)
 }
 
+func GetUserIdFromSubject(subject string) string {
+	return strings.Replace(subject, "gt|", "", 1)
+}
+
 // UserUpdate updates fields on a user
 func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
@@ -61,7 +66,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	claims := getClaims(ctx)
-	userID, err := uuid.FromString(claims.Subject)
+	userID, err := uuid.FromString(GetUserIdFromSubject(claims.Subject))
 	if err != nil {
 		return badRequestError("Could not read User ID claim")
 	}
