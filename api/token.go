@@ -16,9 +16,9 @@ import (
 // GoTrueClaims is a struct thats used for JWT claims
 type GoTrueClaims struct {
 	jwt.StandardClaims
-	Email        string                 `json:"email"`
-	AppMetaData  map[string]interface{} `json:"https://tigris/n"`
-	UserMetaData map[string]interface{} `json:"user_metadata"`
+	TigrisMetadata map[string]interface{} `json:"https://tigris"`
+	AppMetaData    map[string]interface{} `json:"app_metadata"`
+	UserMetaData   map[string]interface{} `json:"user_metadata"`
 }
 
 // AccessTokenResponse represents an OAuth2 success response
@@ -165,15 +165,17 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 }
 
 func generateAccessToken(user *models.User, expiresIn time.Duration, config *conf.Configuration, tokenSigner *TokenSigner) (string, error) {
+	tigrisClaims := map[string]interface{}{
+		"n": user.AppMetaData["namespace"],
+		"p": "test-project",
+	}
 	claims := &GoTrueClaims{
 		StandardClaims: jwt.StandardClaims{
-			Subject:   user.ID.String(),
+			Subject:   "gt|" + user.ID.String(), // customize sub b
 			Audience:  user.Aud,
 			ExpiresAt: time.Now().Add(expiresIn).Unix(),
 		},
-		Email:        user.Email,
-		AppMetaData:  user.AppMetaData,
-		UserMetaData: user.UserMetaData,
+		TigrisMetadata: tigrisClaims,
 	}
 
 	switch config.JWT.Algorithm {

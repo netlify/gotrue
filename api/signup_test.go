@@ -93,7 +93,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 			return []byte(ts.Config.Webhook.Secret), nil
 		})
 		assert.True(token.Valid)
-		assert.Equal(ts.instanceID.String(), claims.Subject) // not configured for multitenancy
+		assert.Equal(ts.instanceID.String(), GetUserIdFromSubject(claims.Subject)) // not configured for multitenancy
 		assert.Equal("gotrue", claims.Issuer)
 		assert.WithinDuration(time.Now(), time.Unix(claims.IssuedAt, 0), 5*time.Second)
 
