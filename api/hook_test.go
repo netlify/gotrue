@@ -9,22 +9,30 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tigrisdata/tigris-client-go/tigris"
 )
 
 func TestSignupHookSendInstanceID(t *testing.T) {
 	globalConfig, err := conf.LoadGlobal(apiTestConfig)
 	require.NoError(t, err)
 
-	conn, err := test.SetupDBConnection(globalConfig)
+	tigrisClient, err := test.SetupDBConnection(globalConfig)
 	require.NoError(t, err)
 
-	iid := uuid.Must(uuid.NewV4())
+	database, err := tigrisClient.OpenDatabase(context.TODO(), &models.User{})
+	require.NoError(t, err)
+
+	defer func() {
+		_ = tigris.GetCollection[models.User](database).Drop(context.TODO())
+	}()
+
+	iid := uuid.Must(uuid.NewRandom())
 	user, err := models.NewUser(iid, "test@truth.com", "thisisapassword", "", nil)
 	require.NoError(t, err)
 
@@ -55,7 +63,7 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, triggerEventHooks(context.Background(), conn, SignupEvent, user, iid, config))
+	require.NoError(t, triggerEventHooks(context.Background(), database, SignupEvent, user, iid, config))
 
 	assert.Equal(t, 1, callCount)
 }
@@ -64,10 +72,17 @@ func TestSignupHookFromClaims(t *testing.T) {
 	globalConfig, err := conf.LoadGlobal(apiTestConfig)
 	require.NoError(t, err)
 
-	conn, err := test.SetupDBConnection(globalConfig)
+	tigrisClient, err := test.SetupDBConnection(globalConfig)
 	require.NoError(t, err)
 
-	iid := uuid.Must(uuid.NewV4())
+	database, err := tigrisClient.OpenDatabase(context.TODO(), &models.User{})
+	require.NoError(t, err)
+
+	defer func() {
+		_ = tigris.GetCollection[models.User](database).Drop(context.TODO())
+	}()
+
+	iid := uuid.Must(uuid.NewRandom())
 	user, err := models.NewUser(iid, "test@truth.com", "thisisapassword", "", nil)
 	require.NoError(t, err)
 
@@ -102,7 +117,7 @@ func TestSignupHookFromClaims(t *testing.T) {
 		"signup": []string{svr.URL},
 	})
 
-	require.NoError(t, triggerEventHooks(ctx, conn, SignupEvent, user, iid, config))
+	require.NoError(t, triggerEventHooks(ctx, database, SignupEvent, user, iid, config))
 
 	assert.Equal(t, 1, callCount)
 }

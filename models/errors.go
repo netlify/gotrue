@@ -3,6 +3,8 @@ package models
 // IsNotFoundError returns whether an error represents a "not found" error.
 func IsNotFoundError(err error) bool {
 	switch err.(type) {
+	case nil:
+		return false
 	case UserNotFoundError:
 		return true
 	case RefreshTokenNotFoundError:
@@ -10,7 +12,8 @@ func IsNotFoundError(err error) bool {
 	case InstanceNotFoundError:
 		return true
 	}
-	return false
+
+	return err.Error() == "document not found"
 }
 
 // UserNotFoundError represents when a user is not found.

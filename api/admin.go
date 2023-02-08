@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/go-chi/chi"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"github.com/tigrisdata/tigris-client-go/filter"
 )
 
 type adminUserParams struct {
@@ -22,7 +23,7 @@ type adminUserParams struct {
 }
 
 func (a *API) loadUser(w http.ResponseWriter, r *http.Request) (context.Context, error) {
-	userID, err := uuid.FromString(chi.URLParam(r, "user_id"))
+	userID, err := uuid.Parse(chi.URLParam(r, "user_id"))
 	if err != nil {
 		return nil, badRequestError("user_id must be an UUID")
 	}
@@ -30,7 +31,7 @@ func (a *API) loadUser(w http.ResponseWriter, r *http.Request) (context.Context,
 	logEntrySetField(r, "user_id", userID)
 	instanceID := getInstanceID(r.Context())
 
-	u, err := models.FindUserByInstanceIDAndID(a.db, instanceID, userID)
+	u, err := models.FindUserByInstanceIDAndID(r.Context(), a.db, instanceID, userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError("User not found")
@@ -68,7 +69,7 @@ func (a *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 
 	filter := r.URL.Query().Get("filter")
 
-	users, err := models.FindUsersInAudience(a.db, instanceID, aud, pageParams, sortParams, filter)
+	users, err := models.FindUsersInAudience(ctx, a.db, instanceID, aud, pageParams, sortParams, filter)
 	if err != nil {
 		return internalServerError("Database error finding users").WithInternalError(err)
 	}
@@ -98,44 +99,44 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	err = a.db.Transaction(func(tx *storage.Connection) error {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
 		if params.Role != "" {
-			if terr := user.SetRole(tx, params.Role); terr != nil {
+			if terr := user.SetRole(ctx, a.db, params.Role); terr != nil {
 				return terr
 			}
 		}
 
 		if params.Confirm {
-			if terr := user.Confirm(tx); terr != nil {
+			if terr := user.Confirm(ctx, a.db); terr != nil {
 				return terr
 			}
 		}
 
 		if params.Password != "" {
-			if terr := user.UpdatePassword(tx, params.Password); terr != nil {
+			if terr := user.UpdatePassword(ctx, a.db, params.Password); terr != nil {
 				return terr
 			}
 		}
 
 		if params.Email != "" {
-			if terr := user.SetEmail(tx, params.Email); terr != nil {
+			if terr := user.SetEmail(ctx, a.db, params.Email); terr != nil {
 				return terr
 			}
 		}
 
 		if params.AppMetaData != nil {
-			if terr := user.UpdateAppMetaData(tx, params.AppMetaData); terr != nil {
+			if terr := user.UpdateAppMetaData(ctx, a.db, params.AppMetaData); terr != nil {
 				return terr
 			}
 		}
 
 		if params.UserMetaData != nil {
-			if terr := user.UpdateUserMetaData(tx, params.UserMetaData); terr != nil {
+			if terr := user.UpdateUserMetaData(ctx, a.db, params.UserMetaData); terr != nil {
 				return terr
 			}
 		}
 
-		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserModifiedAction, map[string]interface{}{
+		if terr := models.NewAuditLogEntry(ctx, a.db, instanceID, adminUser, models.UserModifiedAction, map[string]interface{}{
 			"user_id":    user.ID,
 			"user_email": user.Email,
 		}); terr != nil {
@@ -170,7 +171,7 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 		aud = params.Aud
 	}
 
-	if exists, err := models.IsDuplicatedEmail(a.db, instanceID, params.Email, aud); err != nil {
+	if exists, err := models.IsDuplicatedEmail(ctx, a.db, instanceID, params.Email, aud); err != nil {
 		return internalServerError("Database error checking email").WithInternalError(err)
 	} else if exists {
 		return unprocessableEntityError("Email address already registered by another user")
@@ -186,15 +187,20 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	user.AppMetaData["provider"] = "email"
 
 	config := a.getConfig(ctx)
-	err = a.db.Transaction(func(tx *storage.Connection) error {
-		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserSignedUpAction, map[string]interface{}{
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
+		if terr := models.NewAuditLogEntry(ctx, a.db, instanceID, adminUser, models.UserSignedUpAction, map[string]interface{}{
 			"user_id":    user.ID,
 			"user_email": user.Email,
 		}); terr != nil {
 			return terr
 		}
 
-		if terr := tx.Create(user); terr != nil {
+		if terr := user.BeforeCreate(); terr != nil {
+			return terr
+		}
+
+		_, terr := tigris.GetCollection[models.User](a.db).Insert(ctx, user)
+		if terr != nil {
 			return terr
 		}
 
@@ -202,12 +208,12 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 		if params.Role != "" {
 			role = params.Role
 		}
-		if terr := user.SetRole(tx, role); terr != nil {
+		if terr := user.SetRole(ctx, a.db, role); terr != nil {
 			return terr
 		}
 
 		if params.Confirm {
-			if terr := user.Confirm(tx); terr != nil {
+			if terr := user.Confirm(ctx, a.db); terr != nil {
 				return terr
 			}
 		}
@@ -229,15 +235,16 @@ func (a *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
 	instanceID := getInstanceID(ctx)
 	adminUser := getAdminUser(ctx)
 
-	err := a.db.Transaction(func(tx *storage.Connection) error {
-		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserDeletedAction, map[string]interface{}{
+	err := a.db.Tx(ctx, func(ctx context.Context) error {
+		if terr := models.NewAuditLogEntry(ctx, a.db, instanceID, adminUser, models.UserDeletedAction, map[string]interface{}{
 			"user_id":    user.ID,
 			"user_email": user.Email,
 		}); terr != nil {
 			return internalServerError("Error recording audit log entry").WithInternalError(terr)
 		}
 
-		if terr := tx.Destroy(user); terr != nil {
+		_, terr := tigris.GetCollection[models.User](a.db).Delete(ctx, filter.EqUUID("id", user.ID))
+		if terr != nil {
 			return internalServerError("Database error deleting user").WithInternalError(terr)
 		}
 		return nil

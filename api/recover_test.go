@@ -10,10 +10,12 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"context"
 )
 
 type RecoverTestSuite struct {
@@ -33,7 +35,6 @@ func TestRecover(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
@@ -44,14 +45,18 @@ func (ts *RecoverTestSuite) SetupTest() {
 	// Create user
 	u, err := models.NewUser(ts.instanceID, "test@example.com", "password", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error creating test user model")
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error saving new test user")
+
+	_, err = tigris.GetCollection[models.User](ts.API.db).Insert(context.TODO(), u)
+	require.NoError(ts.T(), err, "Error saving new test user")
 }
 
 func (ts *RecoverTestSuite) TestRecover_FirstRecovery() {
-	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err := models.FindUserByEmailAndAudience(context.TODO(), ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	u.RecoverySentAt = &time.Time{}
-	require.NoError(ts.T(), ts.API.db.Update(u))
+
+	_, err = tigris.GetCollection[models.User](ts.API.db).InsertOrReplace(context.TODO(), u)
+	require.NoError(ts.T(), err)
 
 	// Request body
 	var buffer bytes.Buffer
@@ -68,7 +73,7 @@ func (ts *RecoverTestSuite) TestRecover_FirstRecovery() {
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(ts.T(), http.StatusOK, w.Code)
 
-	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err = models.FindUserByEmailAndAudience(req.Context(), ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	assert.WithinDuration(ts.T(), time.Now(), *u.RecoverySentAt, 1*time.Second)
@@ -76,10 +81,11 @@ func (ts *RecoverTestSuite) TestRecover_FirstRecovery() {
 
 func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
 	recoveryTime := time.Now().UTC().Add(-5 * time.Minute)
-	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err := models.FindUserByEmailAndAudience(context.TODO(), ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	u.RecoverySentAt = &recoveryTime
-	require.NoError(ts.T(), ts.API.db.Update(u))
+	_, err = tigris.GetCollection[models.User](ts.API.db).InsertOrReplace(context.TODO(), u)
+	require.NoError(ts.T(), err)
 
 	// Request body
 	var buffer bytes.Buffer
@@ -96,7 +102,7 @@ func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(ts.T(), http.StatusOK, w.Code)
 
-	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err = models.FindUserByEmailAndAudience(req.Context(), ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// ensure it did not send a new email
@@ -107,10 +113,11 @@ func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
 
 func (ts *RecoverTestSuite) TestRecover_NewEmailSent() {
 	recoveryTime := time.Now().UTC().Add(-20 * time.Minute)
-	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err := models.FindUserByEmailAndAudience(context.TODO(), ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	u.RecoverySentAt = &recoveryTime
-	require.NoError(ts.T(), ts.API.db.Update(u))
+	_, err = tigris.GetCollection[models.User](ts.API.db).InsertOrReplace(context.TODO(), u)
+	require.NoError(ts.T(), err)
 
 	// Request body
 	var buffer bytes.Buffer
@@ -127,7 +134,7 @@ func (ts *RecoverTestSuite) TestRecover_NewEmailSent() {
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(ts.T(), http.StatusOK, w.Code)
 
-	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err = models.FindUserByEmailAndAudience(req.Context(), ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// ensure it sent a new email

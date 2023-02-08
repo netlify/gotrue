@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/test"
 	"github.com/stretchr/testify/require"
+	"github.com/tigrisdata/tigris-client-go/tigris"
 )
 
 const (
@@ -31,7 +31,7 @@ func setupAPIForTest() (*API, *conf.Configuration, error) {
 }
 
 func setupAPIForMultiinstanceTest() (*API, *conf.Configuration, error) {
-	cb := func(gc *conf.GlobalConfiguration, c *conf.Configuration, conn *storage.Connection) (uuid.UUID, error) {
+	cb := func(gc *conf.GlobalConfiguration, c *conf.Configuration, database *tigris.Database) (uuid.UUID, error) {
 		gc.MultiInstanceMode = true
 		return uuid.Nil, nil
 	}
@@ -40,9 +40,9 @@ func setupAPIForMultiinstanceTest() (*API, *conf.Configuration, error) {
 }
 
 func setupAPIForTestForInstance() (*API, *conf.Configuration, uuid.UUID, error) {
-	instanceID := uuid.Must(uuid.NewV4())
-	cb := func(gc *conf.GlobalConfiguration, c *conf.Configuration, conn *storage.Connection) (uuid.UUID, error) {
-		err := conn.Create(&models.Instance{
+	instanceID := uuid.Must(uuid.NewRandom())
+	cb := func(gc *conf.GlobalConfiguration, c *conf.Configuration, database *tigris.Database) (uuid.UUID, error) {
+		_, err := tigris.GetCollection[models.Instance](database).Insert(context.TODO(), &models.Instance{
 			ID:         instanceID,
 			UUID:       testUUID,
 			BaseConfig: c,
@@ -57,39 +57,45 @@ func setupAPIForTestForInstance() (*API, *conf.Configuration, uuid.UUID, error) 
 	return api, conf, instanceID, nil
 }
 
-func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Configuration, *storage.Connection) (uuid.UUID, error)) (*API, *conf.Configuration, error) {
+func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Configuration, *tigris.Database) (uuid.UUID, error)) (*API, *conf.Configuration, error) {
 	globalConfig, err := conf.LoadGlobal(apiTestConfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	conn, err := test.SetupDBConnection(globalConfig)
+	tigrisClient, err := test.SetupDBConnection(globalConfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	config, err := conf.LoadConfig(apiTestConfig)
 	if err != nil {
-		conn.Close()
+		tigrisClient.Close()
+		return nil, nil, err
+	}
+
+	database, err := tigrisClient.OpenDatabase(context.TODO(), &models.AuditLogEntry{}, &models.User{}, &models.RefreshToken{}, &models.Instance{})
+	if err != nil {
+		tigrisClient.Close()
 		return nil, nil, err
 	}
 
 	instanceID := uuid.Nil
 	if cb != nil {
-		instanceID, err = cb(globalConfig, config, conn)
+		instanceID, err = cb(globalConfig, config, database)
 		if err != nil {
-			conn.Close()
+			tigrisClient.Close()
 			return nil, nil, err
 		}
 	}
 
 	ctx, err := WithInstanceConfig(context.Background(), config, instanceID)
 	if err != nil {
-		conn.Close()
+		tigrisClient.Close()
 		return nil, nil, err
 	}
 
-	return NewAPIWithVersion(ctx, globalConfig, config, conn, apiTestVersion), config, nil
+	return NewAPIWithVersion(ctx, globalConfig, config, database, apiTestVersion), config, nil
 }
 
 func TestEmailEnabledByDefault(t *testing.T) {

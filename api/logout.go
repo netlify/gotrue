@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
+	"context"
 )
 
 // Logout is the endpoint for logging out a user and thereby revoking any refresh tokens
@@ -19,11 +19,11 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) error {
 		return unauthorizedError("Invalid user").WithInternalError(err)
 	}
 
-	err = a.db.Transaction(func(tx *storage.Connection) error {
-		if terr := models.NewAuditLogEntry(tx, instanceID, u, models.LogoutAction, nil); terr != nil {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
+		if terr := models.NewAuditLogEntry(ctx, a.db, instanceID, u, models.LogoutAction, nil); terr != nil {
 			return terr
 		}
-		return models.Logout(tx, instanceID, u.ID)
+		return models.Logout(ctx, a.db, instanceID, u.ID)
 	})
 	if err != nil {
 		return internalServerError("Error logging out user").WithInternalError(err)

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
+	"github.com/google/uuid"
+	"context"
 )
 
 // UserUpdateParams parameters for updating a user
@@ -27,7 +27,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read claims")
 	}
 
-	userID, err := uuid.FromString(GetUserIdFromSubject(claims.Subject))
+	userID, err := uuid.Parse(GetUserIdFromSubject(claims.Subject))
 	if err != nil {
 		return badRequestError("Could not read User ID claim")
 	}
@@ -37,7 +37,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Token audience doesn't match request audience")
 	}
 
-	user, err := models.FindUserByID(a.db, userID)
+	user, err := models.FindUserByID(r.Context(), a.db, userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -66,12 +66,12 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	claims := getClaims(ctx)
-	userID, err := uuid.FromString(GetUserIdFromSubject(claims.Subject))
+	userID, err := uuid.Parse(GetUserIdFromSubject(claims.Subject))
 	if err != nil {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	user, err := models.FindUserByID(a.db, userID)
+	user, err := models.FindUserByID(r.Context(), a.db, userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -82,16 +82,16 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	log := getLogEntry(r)
 	log.Debugf("Checking params for token %v", params)
 
-	err = a.db.Transaction(func(tx *storage.Connection) error {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
 		var terr error
 		if params.Password != "" {
-			if terr = user.UpdatePassword(tx, params.Password); terr != nil {
+			if terr = user.UpdatePassword(ctx, a.db, params.Password); terr != nil {
 				return internalServerError("Error during password storage").WithInternalError(terr)
 			}
 		}
 
 		if params.Data != nil {
-			if terr = user.UpdateUserMetaData(tx, params.Data); terr != nil {
+			if terr = user.UpdateUserMetaData(ctx, a.db, params.Data); terr != nil {
 				return internalServerError("Error updating user").WithInternalError(terr)
 			}
 		}
@@ -101,7 +101,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 				return unauthorizedError("Updating app_metadata requires admin privileges")
 			}
 
-			if terr = user.UpdateAppMetaData(tx, params.AppData); terr != nil {
+			if terr = user.UpdateAppMetaData(ctx, a.db, params.AppData); terr != nil {
 				return internalServerError("Error updating user").WithInternalError(terr)
 			}
 		}
@@ -113,7 +113,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 				return unauthorizedError("Email Change Token didn't match token on file")
 			}
 
-			if terr = user.ConfirmEmailChange(tx); terr != nil {
+			if terr = user.ConfirmEmailChange(ctx, a.db); terr != nil {
 				return internalServerError("Error updating user").WithInternalError(terr)
 			}
 		} else if params.Email != "" && params.Email != user.Email {
@@ -122,7 +122,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 			}
 
 			var exists bool
-			if exists, terr = models.IsDuplicatedEmail(tx, instanceID, params.Email, user.Aud); terr != nil {
+			if exists, terr = models.IsDuplicatedEmail(ctx, a.db, instanceID, params.Email, user.Aud); terr != nil {
 				return internalServerError("Database error checking email").WithInternalError(terr)
 			} else if exists {
 				return unprocessableEntityError("Email address already registered by another user")
@@ -130,12 +130,12 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 
 			mailer := a.Mailer(ctx)
 			referrer := a.getReferrer(r)
-			if terr = a.sendEmailChange(tx, user, mailer, params.Email, referrer); terr != nil {
+			if terr = a.sendEmailChange(ctx, a.db, user, mailer, params.Email, referrer); terr != nil {
 				return internalServerError("Error sending change email").WithInternalError(terr)
 			}
 		}
 
-		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserModifiedAction, nil); terr != nil {
+		if terr = models.NewAuditLogEntry(ctx, a.db, instanceID, user, models.UserModifiedAction, nil); terr != nil {
 			return internalServerError("Error recording audit log entry").WithInternalError(terr)
 		}
 

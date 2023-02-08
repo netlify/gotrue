@@ -16,16 +16,17 @@ import (
 	"github.com/didip/tollbooth/v5"
 	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/go-chi/chi"
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/imdario/mergo"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
-	"github.com/netlify/gotrue/storage"
 	"github.com/rs/cors"
 	"github.com/sebest/xff"
 	"github.com/sirupsen/logrus"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"github.com/netlify/gotrue/models"
 )
 
 const (
@@ -38,7 +39,7 @@ var bearerRegexp = regexp.MustCompile(`^(?:B|b)earer (\S+$)`)
 // API is the main REST API
 type API struct {
 	handler     http.Handler
-	db          *storage.Connection
+	db          *tigris.Database
 	config      *conf.GlobalConfiguration
 	tokenSigner *TokenSigner
 	version     string
@@ -140,12 +141,12 @@ func waitForTermination(log logrus.FieldLogger, done <-chan struct{}) {
 }
 
 // NewAPI instantiates a new REST API
-func NewAPI(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, db *storage.Connection) *API {
+func NewAPI(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, db *tigris.Database) *API {
 	return NewAPIWithVersion(context.Background(), globalConfig, config, db, defaultVersion)
 }
 
 // NewAPIWithVersion creates a new REST API using the specified version
-func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, config *conf.Configuration, db *storage.Connection, version string) *API {
+func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, config *conf.Configuration, db *tigris.Database, version string) *API {
 	api := &API{config: globalConfig, db: db, version: version, tokenSigner: NewTokenSigner(config)}
 	jwks, err := NewJKWS(globalConfig, config, version)
 	if err != nil {
@@ -285,14 +286,15 @@ func NewAPIFromConfigFile(filename string, version string) (*API, *conf.Configur
 		logrus.Fatalf("Error loading instance config: %+v", err)
 	}
 
-	db, err := storage.Dial(globalConfig)
+	db, err := tigris.OpenDatabase(context.TODO(), nil, &models.AuditLogEntry{})
 	if err != nil {
-		return nil, nil, err
+		logrus.Fatalf("Error opening database: %+v", err)
 	}
 
 	return NewAPIWithVersion(ctx, globalConfig, config, db, version), config, nil
 }
 
+// HealthCheck ...
 func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 	return sendJSON(w, http.StatusOK, map[string]string{
 		"version":     a.version,
@@ -301,12 +303,14 @@ func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
+// WithInstanceConfig ...
 func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanceID uuid.UUID) (context.Context, error) {
 	ctx = withConfig(ctx, config)
 	ctx = withInstanceID(ctx, instanceID)
 	return ctx, nil
 }
 
+// Mailer ...
 func (a *API) Mailer(ctx context.Context) mailer.Mailer {
 	config := a.getConfig(ctx)
 	return mailer.NewMailer(config)

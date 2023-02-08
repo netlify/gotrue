@@ -6,20 +6,21 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/pkg/errors"
+	"github.com/tigrisdata/tigris-client-go/tigris"
 )
 
 func (a *API) loadInstance(w http.ResponseWriter, r *http.Request) (context.Context, error) {
-	instanceID, err := uuid.FromString(chi.URLParam(r, "instance_id"))
+	instanceID, err := uuid.Parse(chi.URLParam(r, "instance_id"))
 	if err != nil {
 		return nil, badRequestError("Invalid instance ID")
 	}
 	logEntrySetField(r, "instance_id", instanceID)
 
-	i, err := models.GetInstance(a.db, instanceID)
+	i, err := models.GetInstance(r.Context(), a.db, instanceID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError("Instance not found")
@@ -56,7 +57,7 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Error decoding params: %v", err)
 	}
 
-	_, err := models.GetInstanceByUUID(a.db, params.UUID)
+	_, err := models.GetInstanceByUUID(r.Context(), a.db, params.UUID)
 	if err != nil {
 		if !models.IsNotFoundError(err) {
 			return internalServerError("Database error looking up instance").WithInternalError(err)
@@ -65,7 +66,7 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("An instance with that UUID already exists")
 	}
 
-	id, err := uuid.NewV4()
+	id, err := uuid.NewRandom()
 	if err != nil {
 		return errors.Wrap(err, "Error generating id")
 	}
@@ -75,7 +76,7 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		UUID:       params.UUID,
 		BaseConfig: params.BaseConfig,
 	}
-	if err = a.db.Create(&i); err != nil {
+	if _, err = tigris.GetCollection[models.Instance](a.db).Insert(r.Context(), &i); err != nil {
 		return internalServerError("Database error creating instance").WithInternalError(err)
 	}
 
@@ -108,7 +109,7 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Error decoding params: %v", err)
 	}
 
-	if err := i.UpdateConfig(a.db, params.BaseConfig); err != nil {
+	if err := i.UpdateConfig(r.Context(), a.db, params.BaseConfig); err != nil {
 		return internalServerError("Database error updating instance").WithInternalError(err)
 	}
 
@@ -121,7 +122,7 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 
 func (a *API) DeleteInstance(w http.ResponseWriter, r *http.Request) error {
 	i := getInstance(r.Context())
-	if err := models.DeleteInstance(a.db, i); err != nil {
+	if err := models.DeleteInstance(r.Context(), a.db, i); err != nil {
 		return internalServerError("Database error deleting instance").WithInternalError(err)
 	}
 

@@ -9,12 +9,12 @@ import (
 	"net/http/httptrace"
 	"net/url"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/tigrisdata/tigris-client-go/tigris"
 )
 
 func addRequestID(globalConfig *conf.GlobalConfiguration) middlewareHandler {
@@ -24,7 +24,7 @@ func addRequestID(globalConfig *conf.GlobalConfiguration) middlewareHandler {
 			id = r.Header.Get(globalConfig.API.RequestIDHeader)
 		}
 		if id == "" {
-			uid, err := uuid.NewV4()
+			uid, err := uuid.NewRandom()
 			if err != nil {
 				return nil, err
 			}
@@ -48,7 +48,7 @@ func sendJSON(w http.ResponseWriter, status int, obj interface{}) error {
 	return err
 }
 
-func getUserFromClaims(ctx context.Context, conn *storage.Connection) (*models.User, error) {
+func getUserFromClaims(ctx context.Context, db *tigris.Database) (*models.User, error) {
 	claims := getClaims(ctx)
 	if claims == nil {
 		return nil, errors.New("Invalid token")
@@ -64,11 +64,11 @@ func getUserFromClaims(ctx context.Context, conn *storage.Connection) (*models.U
 	if GetUserIdFromSubject(claims.Subject) == models.SystemUserUUID.String() || GetUserIdFromSubject(claims.Subject) == models.SystemUserID {
 		return models.NewSystemUser(instanceID, claims.Audience), nil
 	}
-	userID, err := uuid.FromString(GetUserIdFromSubject(claims.Subject))
+	userID, err := uuid.Parse(GetUserIdFromSubject(claims.Subject))
 	if err != nil {
 		return nil, errors.New("Invalid user ID")
 	}
-	return models.FindUserByInstanceIDAndID(conn, instanceID, userID)
+	return models.FindUserByInstanceIDAndID(ctx, db, instanceID, userID)
 }
 
 func (a *API) isAdmin(ctx context.Context, u *models.User, aud string) bool {

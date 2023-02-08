@@ -9,12 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"context"
+	"github.com/tigrisdata/tigris-client-go/tigris"
 )
 
 type UserTestSuite struct {
@@ -34,7 +36,6 @@ func TestUser(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
@@ -45,11 +46,13 @@ func (ts *UserTestSuite) SetupTest() {
 	// Create user
 	u, err := models.NewUser(ts.instanceID, "test@example.com", "password", ts.Config.JWT.Aud, nil)
 	require.NoError(ts.T(), err, "Error creating test user model")
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error saving new test user")
+
+	_, err = tigris.GetCollection[models.User](ts.API.db).Insert(context.TODO(), u)
+	require.NoError(ts.T(), err, "Error saving new test user")
 }
 
 func (ts *UserTestSuite) TestUser_UpdatePassword() {
-	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err := models.FindUserByEmailAndAudience(context.TODO(), ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// Request body
@@ -72,7 +75,7 @@ func (ts *UserTestSuite) TestUser_UpdatePassword() {
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), w.Code, http.StatusOK)
 
-	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err = models.FindUserByEmailAndAudience(req.Context(), ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	assert.True(ts.T(), u.Authenticate("newpass"))

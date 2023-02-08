@@ -13,14 +13,14 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
+	"github.com/tigrisdata/tigris-client-go/tigris"
 )
 
 type HookEvent string
@@ -152,7 +152,7 @@ func closeBody(rsp *http.Response) {
 	}
 }
 
-func triggerEventHooks(ctx context.Context, conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
+func triggerEventHooks(ctx context.Context, database *tigris.Database, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
 	if config.Webhook.URL != "" {
 		hookURL, err := url.Parse(config.Webhook.URL)
 		if err != nil {
@@ -161,7 +161,7 @@ func triggerEventHooks(ctx context.Context, conn *storage.Connection, event Hook
 		if !config.Webhook.HasEvent(string(event)) {
 			return nil
 		}
-		return triggerHook(ctx, hookURL, config.Webhook.Secret, conn, event, user, instanceID, config)
+		return triggerHook(ctx, hookURL, config.Webhook.Secret, database, event, user, instanceID, config)
 	}
 
 	fun := getFunctionHooks(ctx)
@@ -174,7 +174,7 @@ func triggerEventHooks(ctx context.Context, conn *storage.Connection, event Hook
 		if err != nil {
 			return errors.Wrapf(err, "Failed to parse Event Function Hook URL")
 		}
-		err = triggerHook(ctx, hookURL, config.JWT.Secret, conn, event, user, instanceID, config)
+		err = triggerHook(ctx, hookURL, config.JWT.Secret, database, event, user, instanceID, config)
 		if err != nil {
 			return err
 		}
@@ -182,7 +182,7 @@ func triggerEventHooks(ctx context.Context, conn *storage.Connection, event Hook
 	return nil
 }
 
-func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
+func triggerHook(ctx context.Context, hookURL *url.URL, secret string, database *tigris.Database, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
 	if !hookURL.IsAbs() {
 		siteURL, err := url.Parse(config.SiteURL)
 		if err != nil {
@@ -243,16 +243,16 @@ func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *sto
 		if err = decoder.Decode(webhookRsp); err != nil {
 			return internalServerError("Webhook returned malformed JSON: %v", err).WithInternalError(err)
 		}
-		return conn.Transaction(func(tx *storage.Connection) error {
+		return database.Tx(ctx, func(ctx context.Context) error {
 			if webhookRsp.UserMetaData != nil {
 				user.UserMetaData = nil
-				if terr := user.UpdateUserMetaData(tx, webhookRsp.UserMetaData); terr != nil {
+				if terr := user.UpdateUserMetaData(ctx, database, webhookRsp.UserMetaData); terr != nil {
 					return terr
 				}
 			}
 			if webhookRsp.AppMetaData != nil {
 				user.AppMetaData = nil
-				if terr := user.UpdateAppMetaData(tx, webhookRsp.AppMetaData); terr != nil {
+				if terr := user.UpdateAppMetaData(ctx, database, webhookRsp.AppMetaData); terr != nil {
 					return terr
 				}
 			}

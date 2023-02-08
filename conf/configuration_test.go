@@ -19,6 +19,7 @@ func TestGlobal(t *testing.T) {
 	os.Setenv("GOTRUE_DB_DATABASE_URL", "fake")
 	os.Setenv("GOTRUE_OPERATOR_TOKEN", "token")
 	os.Setenv("GOTRUE_API_REQUEST_ID_HEADER", "X-Request-ID")
+	os.Setenv("GOTRUE_DB_PROJECT", "test")
 	gc, err := LoadGlobal("")
 	require.NoError(t, err)
 	require.NotNil(t, gc)

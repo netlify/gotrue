@@ -1,79 +1,26 @@
 package storage
 
 import (
-	"net/url"
-
 	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gobuffalo/pop/v5"
-	"github.com/gobuffalo/pop/v5/columns"
 	"github.com/netlify/gotrue/conf"
-	"github.com/netlify/gotrue/storage/namespace"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"context"
+	tconf "github.com/tigrisdata/tigris-client-go/config"
+	"github.com/tigrisdata/tigris-client-go/driver"
 )
 
-// Connection is the interface a storage provider must implement.
-type Connection struct {
-	*pop.Connection
-}
-
-// Dial will connect to that storage engine
-func Dial(config *conf.GlobalConfiguration) (*Connection, error) {
-	if config.DB.Driver == "" && config.DB.URL != "" {
-		u, err := url.Parse(config.DB.URL)
-		if err != nil {
-			return nil, errors.Wrap(err, "parsing db connection url")
-		}
-		config.DB.Driver = u.Scheme
-	}
-
-	db, err := pop.NewConnection(&pop.ConnectionDetails{
-		Dialect: config.DB.Driver,
-		URL:     config.DB.URL,
-	})
+func Client(ctx context.Context, config *conf.GlobalConfiguration) (*tigris.Client, error) {
+	// ToDo: project creation is not needed here, this is to create the project in the local setup.
+	drv, _ := driver.NewDriver(ctx, &tconf.Driver{URL: config.DB.URL})
+	_, _ = drv.DeleteProject(ctx, config.DB.Project)
+	_, err := drv.CreateProject(ctx, config.DB.Project)
 	if err != nil {
-		return nil, errors.Wrap(err, "opening database connection")
-	}
-	if err := db.Open(); err != nil {
-		return nil, errors.Wrap(err, "checking database connection")
+		return nil, err
 	}
 
-	if config.DB.Namespace != "" {
-		namespace.SetNamespace(config.DB.Namespace)
-	}
-
-	if logrus.StandardLogger().Level == logrus.DebugLevel {
-		pop.Debug = true
-	}
-
-	return &Connection{db}, nil
-}
-
-func (c *Connection) Transaction(fn func(*Connection) error) error {
-	if c.TX == nil {
-		return c.Connection.Transaction(func(tx *pop.Connection) error {
-			return fn(&Connection{tx})
-		})
-	}
-	return fn(c)
-}
-
-func getExcludedColumns(model interface{}, includeColumns ...string) ([]string, error) {
-	sm := &pop.Model{Value: model}
-
-	// get all columns and remove included to get excluded set
-	cols := columns.ForStructWithAlias(model, sm.TableName(), sm.As, sm.IDField())
-	for _, f := range includeColumns {
-		if _, ok := cols.Cols[f]; !ok {
-			return nil, errors.Errorf("Invalid column name %s", f)
-		}
-		cols.Remove(f)
-	}
-
-	xcols := make([]string, len(cols.Cols))
-	for n := range cols.Cols {
-		xcols = append(xcols, n)
-	}
-	return xcols, nil
+	return tigris.NewClient(ctx, &tigris.Config{
+		URL:     config.DB.URL,
+		Project: config.DB.Project,
+	})
 }

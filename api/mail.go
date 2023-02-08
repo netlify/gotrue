@@ -7,11 +7,13 @@ import (
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"github.com/tigrisdata/tigris-client-go/filter"
+	"github.com/tigrisdata/tigris-client-go/fields"
 )
 
-func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
+func sendConfirmation(ctx context.Context, database *tigris.Database, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
 	if u.ConfirmationSentAt != nil && !u.ConfirmationSentAt.Add(maxFrequency).Before(time.Now()) {
 		return nil
 	}
@@ -24,10 +26,24 @@ func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mail
 		return errors.Wrap(err, "Error sending confirmation email")
 	}
 	u.ConfirmationSentAt = &now
-	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "confirmation_sent_at"), "Database error updating user for confirmation")
+
+	fieldsToSet, err := fields.UpdateBuilder().
+		Set("confirmation_token", u.ConfirmationToken).
+		Set("confirmation_sent_at", u.ConfirmationSentAt).
+		Build()
+	if err != nil {
+		return err
+	}
+
+	if terr := u.BeforeUpdate(); terr != nil {
+		return terr
+	}
+
+	_, err = tigris.GetCollection[models.User](database).Update(ctx, filter.Eq("id", u.ID), fieldsToSet)
+	return errors.Wrap(err, "Database error updating user for confirmation")
 }
 
-func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer, referrerURL string) error {
+func sendInvite(ctx context.Context, database *tigris.Database, u *models.User, mailer mailer.Mailer, referrerURL string) error {
 	oldToken := u.ConfirmationToken
 	u.ConfirmationToken = crypto.SecureToken()
 	now := time.Now()
@@ -36,10 +52,24 @@ func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer, re
 		return errors.Wrap(err, "Error sending invite email")
 	}
 	u.InvitedAt = &now
-	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "invited_at"), "Database error updating user for invite")
+
+	fieldsToSet, err := fields.UpdateBuilder().
+		Set("confirmation_token", u.ConfirmationToken).
+		Set("invited_at", u.InvitedAt).
+		Build()
+	if err != nil {
+		return err
+	}
+
+	if terr := u.BeforeUpdate(); terr != nil {
+		return terr
+	}
+
+	_, err = tigris.GetCollection[models.User](database).Update(ctx, filter.Eq("id", u.ID), fieldsToSet)
+	return errors.Wrap(err, "Database error updating user for invite")
 }
 
-func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
+func (a *API) sendPasswordRecovery(ctx context.Context, database *tigris.Database, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
 	if u.RecoverySentAt != nil && !u.RecoverySentAt.Add(maxFrequency).Before(time.Now()) {
 		return nil
 	}
@@ -52,10 +82,24 @@ func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, maile
 		return errors.Wrap(err, "Error sending recovery email")
 	}
 	u.RecoverySentAt = &now
-	return errors.Wrap(tx.UpdateOnly(u, "recovery_token", "recovery_sent_at"), "Database error updating user for recovery")
+
+	fieldsToSet, err := fields.UpdateBuilder().
+		Set("recovery_token", u.RecoveryToken).
+		Set("recovery_sent_at", u.RecoverySentAt).
+		Build()
+	if err != nil {
+		return err
+	}
+
+	if terr := u.BeforeUpdate(); terr != nil {
+		return terr
+	}
+
+	_, err = tigris.GetCollection[models.User](database).Update(ctx, filter.Eq("id", u.ID), fieldsToSet)
+	return errors.Wrap(err, "Database error updating user for recovery")
 }
 
-func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mailer.Mailer, email string, referrerURL string) error {
+func (a *API) sendEmailChange(ctx context.Context, database *tigris.Database, u *models.User, mailer mailer.Mailer, email string, referrerURL string) error {
 	oldToken := u.EmailChangeToken
 	oldEmail := u.EmailChange
 	u.EmailChangeToken = crypto.SecureToken()
@@ -68,7 +112,22 @@ func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mai
 	}
 
 	u.EmailChangeSentAt = &now
-	return errors.Wrap(tx.UpdateOnly(u, "email_change_token", "email_change", "email_change_sent_at"), "Database error updating user for email change")
+
+	fieldsToSet, err := fields.UpdateBuilder().
+		Set("email_change_token", u.EmailChangeToken).
+		Set("email_change", u.EmailChange).
+		Set("email_change_sent_at", u.EmailChangeSentAt).
+		Build()
+	if err != nil {
+		return err
+	}
+
+	if terr := u.BeforeUpdate(); terr != nil {
+		return terr
+	}
+
+	_, err = tigris.GetCollection[models.User](database).Update(ctx, filter.Eq("id", u.ID), fieldsToSet)
+	return errors.Wrap(err, "Database error updating user for email change")
 }
 
 func (a *API) validateEmail(ctx context.Context, email string) error {

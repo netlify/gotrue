@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
 )
 
 const (
@@ -43,13 +42,13 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		token *AccessTokenResponse
 	)
 
-	err = a.db.Transaction(func(tx *storage.Connection) error {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
 		var terr error
 		switch params.Type {
 		case signupVerification:
-			user, terr = a.signupVerify(ctx, tx, params)
+			user, terr = a.signupVerify(ctx, params)
 		case recoveryVerification:
-			user, terr = a.recoverVerify(ctx, tx, params)
+			user, terr = a.recoverVerify(ctx, params)
 		default:
 			return unprocessableEntityError("Verify requires a verification type")
 		}
@@ -58,7 +57,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 			return terr
 		}
 
-		token, terr = a.issueRefreshToken(ctx, tx, user)
+		token, terr = a.issueRefreshToken(ctx, user)
 		if terr != nil {
 			return terr
 		}
@@ -77,11 +76,11 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 	return sendJSON(w, http.StatusOK, token)
 }
 
-func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {
+func (a *API) signupVerify(ctx context.Context, params *VerifyParams) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 
-	user, err := models.FindUserByConfirmationToken(conn, params.Token)
+	user, err := models.FindUserByConfirmationToken(ctx, a.db, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError(err.Error())
@@ -89,28 +88,28 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	err = conn.Transaction(func(tx *storage.Connection) error {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
 		var terr error
 		if user.EncryptedPassword == "" {
 			if user.InvitedAt != nil {
 				if params.Password == "" {
 					return unprocessableEntityError("Invited users must specify a password")
 				}
-				if terr = user.UpdatePassword(tx, params.Password); terr != nil {
+				if terr = user.UpdatePassword(ctx, a.db, params.Password); terr != nil {
 					return internalServerError("Error storing password").WithInternalError(terr)
 				}
 			}
 		}
 
-		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
+		if terr = models.NewAuditLogEntry(ctx, a.db, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
 			return terr
 		}
 
-		if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+		if terr = triggerEventHooks(ctx, a.db, SignupEvent, user, instanceID, config); terr != nil {
 			return terr
 		}
 
-		if terr = user.Confirm(tx); terr != nil {
+		if terr = user.Confirm(ctx, a.db); terr != nil {
 			return internalServerError("Error confirming user").WithInternalError(terr)
 		}
 		return nil
@@ -121,10 +120,10 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 	return user, nil
 }
 
-func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {
+func (a *API) recoverVerify(ctx context.Context, params *VerifyParams) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
-	user, err := models.FindUserByRecoveryToken(conn, params.Token)
+	user, err := models.FindUserByRecoveryToken(ctx, a.db, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError(err.Error())
@@ -132,20 +131,20 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	err = conn.Transaction(func(tx *storage.Connection) error {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
 		var terr error
-		if terr = user.Recover(tx); terr != nil {
+		if terr = user.Recover(ctx, a.db); terr != nil {
 			return terr
 		}
 		if !user.IsConfirmed() {
-			if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
+			if terr = models.NewAuditLogEntry(ctx, a.db, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
 				return terr
 			}
 
-			if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+			if terr = triggerEventHooks(ctx, a.db, SignupEvent, user, instanceID, config); terr != nil {
 				return terr
 			}
-			if terr = user.Confirm(tx); terr != nil {
+			if terr = user.Confirm(ctx, a.db); terr != nil {
 				return terr
 			}
 		}

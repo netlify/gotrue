@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
 	"github.com/sirupsen/logrus"
+	"github.com/tigrisdata/tigris-client-go/tigris"
 )
 
 type ExternalProviderClaims struct {
@@ -42,7 +42,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 
 	inviteToken := r.URL.Query().Get("invite_token")
 	if inviteToken != "" {
-		_, userErr := models.FindUserByConfirmationToken(a.db, inviteToken)
+		_, userErr := models.FindUserByConfirmationToken(r.Context(), a.db, inviteToken)
 		if userErr != nil {
 			if models.IsNotFoundError(userErr) {
 				return notFoundError(userErr.Error())
@@ -105,11 +105,11 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 
 	var user *models.User
 	var token *AccessTokenResponse
-	err := a.db.Transaction(func(tx *storage.Connection) error {
+	err := a.db.Tx(ctx, func(ctx context.Context) error {
 		var terr error
 		inviteToken := getInviteToken(ctx)
 		if inviteToken != "" {
-			if user, terr = a.processInvite(ctx, tx, userData, instanceID, inviteToken, providerType); terr != nil {
+			if user, terr = a.processInvite(ctx, a.db, userData, instanceID, inviteToken, providerType); terr != nil {
 				return terr
 			}
 		} else {
@@ -119,7 +119,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 			var emailData provider.Email
 			for _, e := range userData.Emails {
 				if e.Verified || config.Mailer.Autoconfirm {
-					user, terr = models.FindUserByEmailAndAudience(tx, instanceID, e.Email, aud)
+					user, terr = models.FindUserByEmailAndAudience(ctx, a.db, instanceID, e.Email, aud)
 					if terr != nil && !models.IsNotFoundError(terr) {
 						return internalServerError("Error checking for duplicate users").WithInternalError(terr)
 					}
@@ -157,7 +157,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 					}
 				}
 
-				user, terr = a.signupNewUser(ctx, tx, params)
+				user, terr = a.signupNewUser(ctx, params)
 				if terr != nil {
 					return terr
 				}
@@ -167,35 +167,35 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 				if !emailData.Verified && !config.Mailer.Autoconfirm {
 					mailer := a.Mailer(ctx)
 					referrer := a.getReferrer(r)
-					if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
+					if terr = sendConfirmation(ctx, a.db, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
 						return internalServerError("Error sending confirmation mail").WithInternalError(terr)
 					}
 					// email must be verified to issue a token
 					return nil
 				}
 
-				if terr := models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
+				if terr := models.NewAuditLogEntry(ctx, a.db, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
 					return terr
 				}
-				if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+				if terr = triggerEventHooks(ctx, a.db, SignupEvent, user, instanceID, config); terr != nil {
 					return terr
 				}
 
 				// fall through to auto-confirm and issue token
-				if terr = user.Confirm(tx); terr != nil {
+				if terr = user.Confirm(ctx, a.db); terr != nil {
 					return internalServerError("Error updating user").WithInternalError(terr)
 				}
 			} else {
-				if terr := models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
+				if terr := models.NewAuditLogEntry(ctx, a.db, instanceID, user, models.LoginAction, nil); terr != nil {
 					return terr
 				}
-				if terr = triggerEventHooks(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
+				if terr = triggerEventHooks(ctx, a.db, LoginEvent, user, instanceID, config); terr != nil {
 					return terr
 				}
 			}
 		}
 
-		token, terr = a.issueRefreshToken(ctx, tx, user)
+		token, terr = a.issueRefreshToken(ctx, user)
 		if terr != nil {
 			return oauthError("server_error", terr.Error())
 		}
@@ -218,9 +218,9 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 	return nil
 }
 
-func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userData *provider.UserProvidedData, instanceID uuid.UUID, inviteToken, providerType string) (*models.User, error) {
+func (a *API) processInvite(ctx context.Context, database *tigris.Database, userData *provider.UserProvidedData, instanceID uuid.UUID, inviteToken, providerType string) (*models.User, error) {
 	config := a.getConfig(ctx)
-	user, err := models.FindUserByConfirmationToken(tx, inviteToken)
+	user, err := models.FindUserByConfirmationToken(ctx, database, inviteToken)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError(err.Error())
@@ -242,7 +242,7 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 		return nil, badRequestError("Invited email does not match emails from external provider").WithInternalMessage("invited=%s external=%s", user.Email, strings.Join(emails, ", "))
 	}
 
-	if err := user.UpdateAppMetaData(tx, map[string]interface{}{
+	if err := user.UpdateAppMetaData(ctx, database, map[string]interface{}{
 		"provider": providerType,
 	}); err != nil {
 		return nil, internalServerError("Database error updating user").WithInternalError(err)
@@ -254,19 +254,19 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 			updates[k] = v
 		}
 	}
-	if err := user.UpdateUserMetaData(tx, updates); err != nil {
+	if err := user.UpdateUserMetaData(ctx, database, updates); err != nil {
 		return nil, internalServerError("Database error updating user").WithInternalError(err)
 	}
 
-	if err := models.NewAuditLogEntry(tx, instanceID, user, models.InviteAcceptedAction, nil); err != nil {
+	if err := models.NewAuditLogEntry(ctx, database, instanceID, user, models.InviteAcceptedAction, nil); err != nil {
 		return nil, err
 	}
-	if err := triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); err != nil {
+	if err := triggerEventHooks(ctx, database, SignupEvent, user, instanceID, config); err != nil {
 		return nil, err
 	}
 
 	// confirm because they were able to respond to invite email
-	if err := user.Confirm(tx); err != nil {
+	if err := user.Confirm(ctx, database); err != nil {
 		return nil, err
 	}
 	return user, nil

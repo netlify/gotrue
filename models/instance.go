@@ -1,25 +1,26 @@
 package models
 
 import (
-	"database/sql"
 	"time"
 
-	"github.com/gobuffalo/pop/v5"
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/netlify/gotrue/conf"
-	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
+	"context"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"github.com/tigrisdata/tigris-client-go/filter"
+	"github.com/tigrisdata/tigris-client-go/fields"
 )
 
 const baseConfigKey = ""
 
 type Instance struct {
-	ID uuid.UUID `json:"id" db:"id"`
+	ID uuid.UUID `json:"id" db:"id" tigris:"primaryKey"`
 	// Netlify UUID
 	UUID uuid.UUID `json:"uuid,omitempty" db:"uuid"`
 
-	BaseConfig *conf.Configuration `json:"config" db:"raw_base_config"`
+	BaseConfig *conf.Configuration `json:"config" db:"config"`
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
@@ -35,7 +36,7 @@ func (Instance) TableName() string {
 	return tableName
 }
 
-// Config loads the the base configuration values with defaults.
+// Config loads the base configuration values with defaults.
 func (i *Instance) Config() (*conf.Configuration, error) {
 	if i.BaseConfig == nil {
 		return nil, errors.New("no configuration data available")
@@ -49,47 +50,53 @@ func (i *Instance) Config() (*conf.Configuration, error) {
 }
 
 // UpdateConfig updates the base config
-func (i *Instance) UpdateConfig(tx *storage.Connection, config *conf.Configuration) error {
+func (i *Instance) UpdateConfig(ctx context.Context, database *tigris.Database, config *conf.Configuration) error {
 	i.BaseConfig = config
-	return tx.UpdateOnly(i, "raw_base_config")
+	_, err := tigris.GetCollection[Instance](database).Update(ctx, filter.Eq("id", i.ID), fields.Set("config", i.BaseConfig))
+	return err
 }
 
 // GetInstance finds an instance by ID
-func GetInstance(tx *storage.Connection, instanceID uuid.UUID) (*Instance, error) {
-	instance := Instance{}
-	if err := tx.Find(&instance, instanceID); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
-			return nil, InstanceNotFoundError{}
-		}
-		return nil, errors.Wrap(err, "error finding instance")
+func GetInstance(ctx context.Context, database *tigris.Database, instanceID uuid.UUID) (*Instance, error) {
+	instance, err := tigris.GetCollection[Instance](database).ReadOne(ctx, filter.Eq("id", instanceID))
+	if err != nil {
+		return nil, err
 	}
-	return &instance, nil
+	if instance == nil {
+		return nil, InstanceNotFoundError{}
+	}
+	return instance, nil
 }
 
-func GetInstanceByUUID(tx *storage.Connection, uuid uuid.UUID) (*Instance, error) {
-	instance := Instance{}
-	if err := tx.Where("uuid = ?", uuid).First(&instance); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
-			return nil, InstanceNotFoundError{}
-		}
-		return nil, errors.Wrap(err, "error finding instance")
+func GetInstanceByUUID(ctx context.Context, database *tigris.Database, uuid uuid.UUID) (*Instance, error) {
+	instance, err := tigris.GetCollection[Instance](database).ReadOne(ctx, filter.Eq("uuid", uuid))
+	if err != nil {
+		return nil, err
 	}
-	return &instance, nil
+	if instance == nil {
+		return nil, InstanceNotFoundError{}
+	}
+
+	return instance, nil
 }
 
-func DeleteInstance(conn *storage.Connection, instance *Instance) error {
-	return conn.Transaction(func(tx *storage.Connection) error {
-		delModels := map[string]*pop.Model{
-			"user":          &pop.Model{Value: &User{}},
-			"refresh token": &pop.Model{Value: &RefreshToken{}},
+func DeleteInstance(ctx context.Context, database *tigris.Database, instance *Instance) error {
+	return database.Tx(ctx, func(ctx context.Context) error {
+		_, err := tigris.GetCollection[User](database).Delete(ctx, filter.Eq("instance_id", instance.ID))
+		if err != nil {
+			return errors.Wrap(err, "Error deleting user record")
 		}
 
-		for name, dm := range delModels {
-			if err := tx.RawQuery("DELETE FROM "+dm.TableName()+" WHERE instance_id = ?", instance.ID).Exec(); err != nil {
-				return errors.Wrapf(err, "Error deleting %s records", name)
-			}
+		_, err = tigris.GetCollection[RefreshToken](database).Delete(ctx, filter.Eq("instance_id", instance.ID))
+		if err != nil {
+			return errors.Wrap(err, "Error deleting refresh token record")
 		}
 
-		return errors.Wrap(tx.Destroy(instance), "Error deleting instance record")
+		_, err = tigris.GetCollection[Instance](database).Delete(ctx, filter.Eq("id", instance.ID))
+		if err != nil {
+			return errors.Wrap(err, "Error deleting instance record")
+		}
+
+		return nil
 	})
 }

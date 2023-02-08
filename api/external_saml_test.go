@@ -20,7 +20,7 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/russellhaering/gosaml2/types"
 	dsig "github.com/russellhaering/goxmldsig"
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -41,7 +41,6 @@ func TestExternalSaml(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
@@ -186,7 +185,7 @@ func (ts *ExternalSamlTestSuite) TestSignupExternalSaml_Callback() {
 	ts.Equal("bearer", v.Get("token_type"))
 
 	// ensure user has been created
-	_, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "saml@example.com", ts.Config.JWT.Aud)
+	_, err = models.FindUserByEmailAndAudience(req.Context(), ts.API.db, ts.instanceID, "saml@example.com", ts.Config.JWT.Aud)
 	ts.Require().NoError(err)
 }
 

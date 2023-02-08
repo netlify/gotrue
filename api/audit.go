@@ -36,7 +36,7 @@ func (a *API) adminAuditLog(w http.ResponseWriter, r *http.Request) error {
 		qval = qparts[1]
 	}
 
-	logs, err := models.FindAuditLogEntries(a.db, instanceID, col, qval, pageParams)
+	logs, err := models.FindAuditLogEntries(r.Context(), a.db, instanceID, col, qval, pageParams)
 	if err != nil {
 		return internalServerError("Error searching for audit logs").WithInternalError(err)
 	}

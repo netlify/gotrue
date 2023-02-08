@@ -3,10 +3,13 @@ package cmd
 import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"context"
+	"github.com/tigrisdata/tigris-client-go/filter"
+	"github.com/tigrisdata/tigris-client-go/fields"
 )
 
 var autoconfirm, isSuperAdmin, isAdmin bool
@@ -67,17 +70,11 @@ var adminEditRoleCmd = cobra.Command{
 	},
 }
 
-func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
-	iid := uuid.Must(uuid.FromString(instanceID))
-
-	db, err := storage.Dial(globalConfig)
-	if err != nil {
-		logrus.Fatalf("Error opening database: %+v", err)
-	}
-	defer db.Close()
+func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, database *tigris.Database, args []string) {
+	iid := uuid.Must(uuid.Parse(instanceID))
 
 	aud := getAudience(config)
-	if exists, err := models.IsDuplicatedEmail(db, iid, args[0], aud); exists {
+	if exists, err := models.IsDuplicatedEmail(context.TODO(), database, iid, args[0], aud); exists {
 		logrus.Fatalf("Error creating new user: user already exists")
 	} else if err != nil {
 		logrus.Fatalf("Error checking user email: %+v", err)
@@ -89,24 +86,30 @@ func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 	}
 	user.IsSuperAdmin = isSuperAdmin
 
-	err = db.Transaction(func(tx *storage.Connection) error {
+	ctx := context.TODO()
+	err = database.Tx(ctx, func(ctx context.Context) error {
 		var terr error
-		if terr = tx.Create(user); terr != nil {
+
+		if terr := user.BeforeCreate(); terr != nil {
+			return terr
+		}
+
+		if _, terr = tigris.GetCollection[models.User](database).Insert(ctx, user); terr != nil {
 			return terr
 		}
 
 		if len(args) > 2 {
-			if terr = user.SetRole(tx, args[2]); terr != nil {
+			if terr = user.SetRole(context.TODO(), database, args[2]); terr != nil {
 				return terr
 			}
 		} else if isAdmin {
-			if terr = user.SetRole(tx, config.JWT.AdminGroupName); terr != nil {
+			if terr = user.SetRole(context.TODO(), database, config.JWT.AdminGroupName); terr != nil {
 				return terr
 			}
 		}
 
 		if config.Mailer.Autoconfirm || autoconfirm {
-			if terr = user.Confirm(tx); terr != nil {
+			if terr = user.Confirm(ctx, database); terr != nil {
 				return terr
 			}
 		}
@@ -119,44 +122,32 @@ func adminCreateUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 	logrus.Infof("Created user: %s", args[0])
 }
 
-func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
-	iid := uuid.Must(uuid.FromString(instanceID))
+func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, database *tigris.Database, args []string) {
+	iid := uuid.Must(uuid.Parse(instanceID))
 
-	db, err := storage.Dial(globalConfig)
+	user, err := models.FindUserByEmailAndAudience(context.TODO(), database, iid, args[0], getAudience(config))
 	if err != nil {
-		logrus.Fatalf("Error opening database: %+v", err)
-	}
-	defer db.Close()
-
-	user, err := models.FindUserByEmailAndAudience(db, iid, args[0], getAudience(config))
-	if err != nil {
-		userID := uuid.Must(uuid.FromString(args[0]))
-		user, err = models.FindUserByInstanceIDAndID(db, iid, userID)
+		userID := uuid.Must(uuid.Parse(args[0]))
+		user, err = models.FindUserByInstanceIDAndID(context.TODO(), database, iid, userID)
 		if err != nil {
 			logrus.Fatalf("Error finding user (%s): %+v", userID, err)
 		}
 	}
 
-	if err = db.Destroy(user); err != nil {
+	if _, err = tigris.GetCollection[models.User](database).Delete(context.TODO(), filter.EqUUID("id", user.ID)); err != nil {
 		logrus.Fatalf("Error removing user (%s): %+v", args[0], err)
 	}
 
 	logrus.Infof("Removed user: %s", args[0])
 }
 
-func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
-	iid := uuid.Must(uuid.FromString(instanceID))
+func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, database *tigris.Database, args []string) {
+	iid := uuid.Must(uuid.Parse(instanceID))
 
-	db, err := storage.Dial(globalConfig)
+	user, err := models.FindUserByEmailAndAudience(context.TODO(), database, iid, args[0], getAudience(config))
 	if err != nil {
-		logrus.Fatalf("Error opening database: %+v", err)
-	}
-	defer db.Close()
-
-	user, err := models.FindUserByEmailAndAudience(db, iid, args[0], getAudience(config))
-	if err != nil {
-		userID := uuid.Must(uuid.FromString(args[0]))
-		user, err = models.FindUserByInstanceIDAndID(db, iid, userID)
+		userID := uuid.Must(uuid.Parse(args[0]))
+		user, err = models.FindUserByInstanceIDAndID(context.TODO(), database, iid, userID)
 		if err != nil {
 			logrus.Fatalf("Error finding user (%s): %+v", userID, err)
 		}
@@ -170,7 +161,11 @@ func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configur
 		user.Role = config.JWT.AdminGroupName
 	}
 
-	if err = db.UpdateOnly(user, "role", "is_super_admin"); err != nil {
+	fieldsToSet, err := fields.UpdateBuilder().Set("role", user.Role).Set("is_super_admin", user.IsSuperAdmin).Build()
+	if err != nil {
+		logrus.Fatalf("Error building fields for update (%s): %+v", args[0], err)
+	}
+	if _, err = tigris.GetCollection[models.User](database).Update(context.TODO(), filter.EqUUID("id", user.ID), fieldsToSet); err != nil {
 		logrus.Fatalf("Error updating role for user (%s): %+v", args[0], err)
 	}
 

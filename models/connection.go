@@ -1,8 +1,8 @@
 package models
 
 import (
-	"github.com/gobuffalo/pop/v5"
-	"github.com/netlify/gotrue/storage"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"context"
 )
 
 type Pagination struct {
@@ -30,17 +30,20 @@ type SortField struct {
 	Dir  SortDirection
 }
 
-func TruncateAll(conn *storage.Connection) error {
-	return conn.Transaction(func(tx *storage.Connection) error {
-		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: User{}}).TableName()).Exec(); err != nil {
-			return err
-		}
-		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: RefreshToken{}}).TableName()).Exec(); err != nil {
-			return err
-		}
-		if err := tx.RawQuery("TRUNCATE " + (&pop.Model{Value: AuditLogEntry{}}).TableName()).Exec(); err != nil {
-			return err
-		}
-		return tx.RawQuery("TRUNCATE " + (&pop.Model{Value: Instance{}}).TableName()).Exec()
-	})
+func TruncateAll(database *tigris.Database) error {
+	ctx := context.TODO()
+	if _, err := tigris.GetCollection[User](database).DeleteAll(ctx); err != nil {
+		return err
+	}
+	if _, err := tigris.GetCollection[RefreshToken](database).DeleteAll(ctx); err != nil {
+		return err
+	}
+	if _, err := tigris.GetCollection[AuditLogEntry](database).DeleteAll(ctx); err != nil {
+		return err
+	}
+	if _, err := tigris.GetCollection[Instance](database).DeleteAll(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -1,15 +1,16 @@
 package models
 
 import (
-	"database/sql"
+	"context"
 	"strings"
 	"time"
 
-	"github.com/gobuffalo/pop/v5"
-	"github.com/gobuffalo/uuid"
-	"github.com/netlify/gotrue/storage"
+	"github.com/google/uuid"
 	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"
+	"github.com/tigrisdata/tigris-client-go/fields"
+	"github.com/tigrisdata/tigris-client-go/filter"
+	"github.com/tigrisdata/tigris-client-go/tigris"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,32 +20,32 @@ var SystemUserUUID = uuid.Nil
 
 // User respresents a registered user with email/password authentication
 type User struct {
-	InstanceID uuid.UUID `json:"-" db:"instance_id"`
-	ID         uuid.UUID `json:"id" db:"id"`
+	InstanceID uuid.UUID `json:"instance_id" db:"instance_id"`
+	ID         uuid.UUID `json:"id" db:"id" tigris:"primaryKey"`
 
 	Aud               string     `json:"aud" db:"aud"`
 	Role              string     `json:"role" db:"role"`
 	Email             string     `json:"email" db:"email"`
-	EncryptedPassword string     `json:"-" db:"encrypted_password"`
+	EncryptedPassword string     `json:"encrypted_password" db:"encrypted_password"`
 	ConfirmedAt       *time.Time `json:"confirmed_at,omitempty" db:"confirmed_at"`
 	InvitedAt         *time.Time `json:"invited_at,omitempty" db:"invited_at"`
 
-	ConfirmationToken  string     `json:"-" db:"confirmation_token"`
+	ConfirmationToken  string     `json:"confirmation_token" db:"confirmation_token"`
 	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty" db:"confirmation_sent_at"`
 
-	RecoveryToken  string     `json:"-" db:"recovery_token"`
+	RecoveryToken  string     `json:"recovery_token" db:"recovery_token"`
 	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty" db:"recovery_sent_at"`
 
-	EmailChangeToken  string     `json:"-" db:"email_change_token"`
+	EmailChangeToken  string     `json:"email_change_token" db:"email_change_token"`
 	EmailChange       string     `json:"new_email,omitempty" db:"email_change"`
 	EmailChangeSentAt *time.Time `json:"email_change_sent_at,omitempty" db:"email_change_sent_at"`
 
 	LastSignInAt *time.Time `json:"last_sign_in_at,omitempty" db:"last_sign_in_at"`
 
-	AppMetaData  JSONMap `json:"app_metadata" db:"raw_app_meta_data"`
-	UserMetaData JSONMap `json:"user_metadata" db:"raw_user_meta_data"`
+	AppMetaData  JSONMap `json:"app_metadata" db:"app_metadata"`
+	UserMetaData JSONMap `json:"user_metadata" db:"user_metadata"`
 
-	IsSuperAdmin bool `json:"-" db:"is_super_admin"`
+	IsSuperAdmin bool `json:"is_super_admin" db:"is_super_admin"`
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
@@ -52,7 +53,7 @@ type User struct {
 
 // NewUser initializes a new user from an email, password and user data.
 func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[string]interface{}) (*User, error) {
-	id, err := uuid.NewV4()
+	id, err := uuid.NewRandom()
 	if err != nil {
 		return nil, errors.Wrap(err, "Error generating unique id")
 	}
@@ -69,6 +70,7 @@ func NewUser(instanceID uuid.UUID, email, password, aud string, userData map[str
 		UserMetaData:      userData,
 		EncryptedPassword: pw,
 	}
+
 	return user, nil
 }
 
@@ -91,11 +93,11 @@ func (User) TableName() string {
 	return tableName
 }
 
-func (u *User) BeforeCreate(tx *pop.Connection) error {
-	return u.BeforeUpdate(tx)
+func (u *User) BeforeCreate() error {
+	return u.BeforeUpdate()
 }
 
-func (u *User) BeforeUpdate(tx *pop.Connection) error {
+func (u *User) BeforeUpdate() error {
 	if u.ID == SystemUserUUID {
 		return errors.New("Cannot persist system user")
 	}
@@ -103,7 +105,7 @@ func (u *User) BeforeUpdate(tx *pop.Connection) error {
 	return nil
 }
 
-func (u *User) BeforeSave(tx *pop.Connection) error {
+func (u *User) BeforeSave() error {
 	if u.ID == SystemUserUUID {
 		return errors.New("Cannot persist system user")
 	}
@@ -136,9 +138,11 @@ func (u *User) IsConfirmed() bool {
 }
 
 // SetRole sets the users Role to roleName
-func (u *User) SetRole(tx *storage.Connection, roleName string) error {
+func (u *User) SetRole(ctx context.Context, database *tigris.Database, roleName string) error {
 	u.Role = strings.TrimSpace(roleName)
-	return tx.UpdateOnly(u, "role")
+
+	_, err := tigris.GetCollection[User](database).Update(ctx, filter.Eq("id", u.ID.String()), fields.Set("role", u.Role))
+	return err
 }
 
 // HasRole returns true when the users role is set to roleName
@@ -149,7 +153,7 @@ func (u *User) HasRole(roleName string) bool {
 // UpdateUserMetaData sets all user data from a map of updates,
 // ensuring that it doesn't override attributes that are not
 // in the provided map.
-func (u *User) UpdateUserMetaData(tx *storage.Connection, updates map[string]interface{}) error {
+func (u *User) UpdateUserMetaData(ctx context.Context, database *tigris.Database, updates map[string]interface{}) error {
 	if u.UserMetaData == nil {
 		u.UserMetaData = updates
 	} else if updates != nil {
@@ -161,11 +165,13 @@ func (u *User) UpdateUserMetaData(tx *storage.Connection, updates map[string]int
 			}
 		}
 	}
-	return tx.UpdateOnly(u, "raw_user_meta_data")
+
+	_, err := tigris.GetCollection[User](database).Update(ctx, filter.Eq("id", u.ID.String()), fields.Set("user_metadata", u.UserMetaData))
+	return err
 }
 
 // UpdateAppMetaData updates all app data from a map of updates
-func (u *User) UpdateAppMetaData(tx *storage.Connection, updates map[string]interface{}) error {
+func (u *User) UpdateAppMetaData(ctx context.Context, database *tigris.Database, updates map[string]interface{}) error {
 	if u.AppMetaData == nil {
 		u.AppMetaData = updates
 	} else if updates != nil {
@@ -177,12 +183,15 @@ func (u *User) UpdateAppMetaData(tx *storage.Connection, updates map[string]inte
 			}
 		}
 	}
-	return tx.UpdateOnly(u, "raw_app_meta_data")
+
+	_, err := tigris.GetCollection[User](database).Update(ctx, filter.Eq("id", u.ID.String()), fields.Set("app_metadata", u.AppMetaData))
+	return err
 }
 
-func (u *User) SetEmail(tx *storage.Connection, email string) error {
+func (u *User) SetEmail(ctx context.Context, database *tigris.Database, email string) error {
 	u.Email = email
-	return tx.UpdateOnly(u, "email")
+	_, err := tigris.GetCollection[User](database).Update(ctx, filter.Eq("id", u.ID.String()), fields.Set("email", u.Email))
+	return err
 }
 
 // hashPassword generates a hashed password from a plaintext string
@@ -194,13 +203,15 @@ func hashPassword(password string) (string, error) {
 	return string(pw), nil
 }
 
-func (u *User) UpdatePassword(tx *storage.Connection, password string) error {
+func (u *User) UpdatePassword(ctx context.Context, database *tigris.Database, password string) error {
 	pw, err := hashPassword(password)
 	if err != nil {
 		return err
 	}
 	u.EncryptedPassword = pw
-	return tx.UpdateOnly(u, "encrypted_password")
+
+	_, err = tigris.GetCollection[User](database).Update(ctx, filter.EqUUID("id", u.ID), fields.Set("encrypted_password", u.EncryptedPassword))
+	return err
 }
 
 // Authenticate a user from a password
@@ -210,81 +221,105 @@ func (u *User) Authenticate(password string) bool {
 }
 
 // Confirm resets the confimation token and the confirm timestamp
-func (u *User) Confirm(tx *storage.Connection) error {
+func (u *User) Confirm(ctx context.Context, database *tigris.Database) error {
 	u.ConfirmationToken = ""
 	now := time.Now()
 	u.ConfirmedAt = &now
-	return tx.UpdateOnly(u, "confirmation_token", "confirmed_at")
+
+	fieldsToSet, err := fields.UpdateBuilder().
+		Set("confirmation_token", u.ConfirmationToken).
+		Set("confirmed_at", u.ConfirmedAt).Build()
+	if err != nil {
+		return err
+	}
+	_, err = tigris.GetCollection[User](database).Update(ctx, filter.EqUUID("id", u.ID), fieldsToSet)
+	return err
 }
 
 // ConfirmEmailChange confirm the change of email for a user
-func (u *User) ConfirmEmailChange(tx *storage.Connection) error {
-	u.Email = u.EmailChange
-	u.EmailChange = ""
-	u.EmailChangeToken = ""
-	return tx.UpdateOnly(u, "email", "email_change", "email_change_token")
+func (u *User) ConfirmEmailChange(ctx context.Context, database *tigris.Database) error {
+	fieldsToSet, err := fields.UpdateBuilder().
+		Set("email", u.Email).
+		Set("email_change", u.EmailChange).
+		Set("email_change_token", u.EmailChangeToken).
+		Build()
+	if err != nil {
+		return err
+	}
+	_, err = tigris.GetCollection[User](database).Update(ctx, filter.EqUUID("id", u.ID), fieldsToSet)
+	return err
 }
 
 // Recover resets the recovery token
-func (u *User) Recover(tx *storage.Connection) error {
-	u.RecoveryToken = ""
-	return tx.UpdateOnly(u, "recovery_token")
+func (u *User) Recover(ctx context.Context, database *tigris.Database) error {
+	_, err := tigris.GetCollection[User](database).Update(ctx, filter.EqUUID("id", u.ID), fields.Set("recovery_token", u.RecoveryToken))
+	return err
 }
 
 // CountOtherUsers counts how many other users exist besides the one provided
-func CountOtherUsers(tx *storage.Connection, instanceID, id uuid.UUID) (int, error) {
-	userCount, err := tx.Q().Where("instance_id = ? and id != ?", instanceID, id).Count(&User{})
-	return userCount, errors.Wrap(err, "error finding registered users")
-}
-
-func findUser(tx *storage.Connection, query string, args ...interface{}) (*User, error) {
-	obj := &User{}
-	if err := tx.Q().Where(query, args...).First(obj); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
-			return nil, UserNotFoundError{}
-		}
-		return nil, errors.Wrap(err, "error finding user")
+func CountOtherUsers(ctx context.Context, database *tigris.Database, instanceID, id uuid.UUID) (int, error) {
+	it, err := tigris.GetCollection[User](database).Read(ctx, filter.And(filter.EqUUID("instance_id", instanceID), filter.EqUUID("id", id)))
+	if err != nil {
+		return 0, errors.Wrap(err, "error finding registered users")
 	}
 
-	return obj, nil
+	userCount := 0
+	var user User
+	for it.Next(&user) {
+		userCount++
+	}
+	return userCount, nil
+}
+
+func findUser(ctx context.Context, database *tigris.Database, filter filter.Filter) (*User, error) {
+	first, err := tigris.GetCollection[User](database).ReadOne(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	if first == nil {
+		return nil, &UserNotFoundError{}
+	}
+
+	return first, nil
 }
 
 // FindUserByConfirmationToken finds users with the matching confirmation token.
-func FindUserByConfirmationToken(tx *storage.Connection, token string) (*User, error) {
-	return findUser(tx, "confirmation_token = ?", token)
+func FindUserByConfirmationToken(ctx context.Context, database *tigris.Database, token string) (*User, error) {
+	return findUser(ctx, database, filter.Eq("confirmation_token", token))
 }
 
 // FindUserByEmailAndAudience finds a user with the matching email and audience.
-func FindUserByEmailAndAudience(tx *storage.Connection, instanceID uuid.UUID, email, aud string) (*User, error) {
-	return findUser(tx, "instance_id = ? and email = ? and aud = ?", instanceID, email, aud)
+func FindUserByEmailAndAudience(ctx context.Context, database *tigris.Database, instanceID uuid.UUID, email, aud string) (*User, error) {
+	return findUser(ctx, database, filter.And(filter.EqUUID("instance_id", instanceID), filter.Eq("email", email), filter.Eq("aud", aud)))
 }
 
 // FindUserByID finds a user matching the provided ID.
-func FindUserByID(tx *storage.Connection, id uuid.UUID) (*User, error) {
-	return findUser(tx, "id = ?", id)
+func FindUserByID(ctx context.Context, database *tigris.Database, id uuid.UUID) (*User, error) {
+	return findUser(ctx, database, filter.EqUUID("id", id))
 }
 
 // FindUserByInstanceIDAndID finds a user matching the provided ID.
-func FindUserByInstanceIDAndID(tx *storage.Connection, instanceID, id uuid.UUID) (*User, error) {
-	return findUser(tx, "instance_id = ? and id = ?", instanceID, id)
+func FindUserByInstanceIDAndID(ctx context.Context, database *tigris.Database, instanceID, id uuid.UUID) (*User, error) {
+	return findUser(ctx, database, filter.And(filter.EqUUID("instance_id", instanceID), filter.EqUUID("id", id)))
 }
 
 // FindUserByRecoveryToken finds a user with the matching recovery token.
-func FindUserByRecoveryToken(tx *storage.Connection, token string) (*User, error) {
-	return findUser(tx, "recovery_token = ?", token)
+func FindUserByRecoveryToken(ctx context.Context, database *tigris.Database, token string) (*User, error) {
+	return findUser(ctx, database, filter.Eq("recovery_token", token))
+
 }
 
 // FindUserWithRefreshToken finds a user from the provided refresh token.
-func FindUserWithRefreshToken(tx *storage.Connection, token string) (*User, *RefreshToken, error) {
+func FindUserWithRefreshToken(ctx context.Context, database *tigris.Database, token string) (*User, *RefreshToken, error) {
+	c := tigris.GetCollection[RefreshToken](database)
 	refreshToken := &RefreshToken{}
-	if err := tx.Where("token = ?", token).First(refreshToken); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
-			return nil, nil, RefreshTokenNotFoundError{}
-		}
-		return nil, nil, errors.Wrap(err, "error finding refresh token")
+	var err error
+	refreshToken, err = c.ReadOne(ctx, filter.Eq("token", token))
+	if refreshToken == nil || err != nil {
+		return nil, nil, RefreshTokenNotFoundError{}
 	}
 
-	user, err := findUser(tx, "id = ?", refreshToken.UserID)
+	user, err := findUser(ctx, database, filter.EqUUID("id", refreshToken.UserID))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -293,36 +328,55 @@ func FindUserWithRefreshToken(tx *storage.Connection, token string) (*User, *Ref
 }
 
 // FindUsersInAudience finds users with the matching audience.
-func FindUsersInAudience(tx *storage.Connection, instanceID uuid.UUID, aud string, pageParams *Pagination, sortParams *SortParams, filter string) ([]*User, error) {
-	users := []*User{}
-	q := tx.Q().Where("instance_id = ? and aud = ?", instanceID, aud)
-
-	if filter != "" {
-		lf := "%" + filter + "%"
-		// we must specify the collation in order to get case insensitive search for the JSON column
-		q = q.Where("(email LIKE ? OR raw_user_meta_data->>'$.full_name' COLLATE utf8mb4_unicode_ci LIKE ?)", lf, lf)
-	}
-
+func FindUsersInAudience(ctx context.Context, database *tigris.Database, instanceID uuid.UUID, aud string, pageParams *Pagination, sortParams *SortParams, qfilter string) ([]*User, error) {
+	//ToDo: sorting
+	/**
 	if sortParams != nil && len(sortParams.Fields) > 0 {
 		for _, field := range sortParams.Fields {
 			q = q.Order(field.Name + " " + string(field.Dir))
 		}
-	}
+	}*/
 
+	// ToDo: pagination
+	/**
 	var err error
 	if pageParams != nil {
 		err = q.Paginate(int(pageParams.Page), int(pageParams.PerPage)).All(&users)
 		pageParams.Count = uint64(q.Paginator.TotalEntriesSize)
 	} else {
 		err = q.All(&users)
+	}*/
+
+	it, err := tigris.GetCollection[User](database).Read(ctx, filter.And(filter.EqUUID("instance_id", instanceID), filter.Eq("aud", aud)))
+	if err != nil {
+		return nil, errors.Wrap(err, "reading user failed")
+	}
+
+	qfilter = strings.ToLower(qfilter)
+	var users []*User
+	var user User
+	for it.Next(&user) {
+		u := user
+		if qfilter != "" {
+			if len(u.Email) > 0 && strings.Contains(strings.ToLower(u.Email), qfilter) {
+				users = append(users, &u)
+			} else if u.UserMetaData != nil {
+				fullName := u.UserMetaData["full_name"]
+				if conv, ok := fullName.(string); ok && len(conv) > 0 && strings.Contains(strings.ToLower(conv), qfilter) {
+					users = append(users, &u)
+				}
+			}
+		} else {
+			users = append(users, &u)
+		}
 	}
 
 	return users, err
 }
 
 // IsDuplicatedEmail returns whether a user exists with a matching email and audience.
-func IsDuplicatedEmail(tx *storage.Connection, instanceID uuid.UUID, email, aud string) (bool, error) {
-	_, err := FindUserByEmailAndAudience(tx, instanceID, email, aud)
+func IsDuplicatedEmail(ctx context.Context, database *tigris.Database, instanceID uuid.UUID, email, aud string) (bool, error) {
+	_, err := FindUserByEmailAndAudience(ctx, database, instanceID, email, aud)
 	if err != nil {
 		if IsNotFoundError(err) {
 			return false, nil

@@ -1,7 +1,7 @@
 package metering
 
 import (
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 

@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
+	"github.com/tigrisdata/tigris-client-go/tigris"
 )
 
 // SignupParams are the parameters the Signup endpoint accepts
@@ -43,43 +43,43 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 
 	instanceID := getInstanceID(ctx)
 	params.Aud = a.requestAud(ctx, r)
-	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, params.Aud)
+	user, err := models.FindUserByEmailAndAudience(ctx, a.db, instanceID, params.Email, params.Aud)
 	if err != nil && !models.IsNotFoundError(err) {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	err = a.db.Transaction(func(tx *storage.Connection) error {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
 		var terr error
 		if user != nil {
 			if user.IsConfirmed() {
 				return badRequestError("A user with this email address has already been registered")
 			}
 
-			if err := user.UpdateUserMetaData(tx, params.Data); err != nil {
+			if err := user.UpdateUserMetaData(ctx, a.db, params.Data); err != nil {
 				return internalServerError("Database error updating user").WithInternalError(err)
 			}
 		} else {
 			params.Provider = "email"
-			user, terr = a.signupNewUser(ctx, tx, params)
+			user, terr = a.signupNewUser(ctx, params)
 			if terr != nil {
 				return terr
 			}
 		}
 
 		if config.Mailer.Autoconfirm {
-			if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
+			if terr = models.NewAuditLogEntry(ctx, a.db, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
 				return terr
 			}
-			if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
+			if terr = triggerEventHooks(ctx, a.db, SignupEvent, user, instanceID, config); terr != nil {
 				return terr
 			}
-			if terr = user.Confirm(tx); terr != nil {
+			if terr = user.Confirm(ctx, a.db); terr != nil {
 				return internalServerError("Database error updating user").WithInternalError(terr)
 			}
 		} else {
 			mailer := a.Mailer(ctx)
 			referrer := a.getReferrer(r)
-			if terr = sendConfirmation(tx, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
+			if terr = sendConfirmation(ctx, a.db, user, mailer, config.SMTP.MaxFrequency, referrer); terr != nil {
 				return internalServerError("Error sending confirmation mail").WithInternalError(terr)
 			}
 		}
@@ -93,7 +93,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	return sendJSON(w, http.StatusOK, user)
 }
 
-func (a *API) signupNewUser(ctx context.Context, conn *storage.Connection, params *SignupParams) (*models.User, error) {
+func (a *API) signupNewUser(ctx context.Context, params *SignupParams) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 
@@ -110,14 +110,15 @@ func (a *API) signupNewUser(ctx context.Context, conn *storage.Connection, param
 		user.EncryptedPassword = ""
 	}
 
-	err = conn.Transaction(func(tx *storage.Connection) error {
-		if terr := tx.Create(user); terr != nil {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
+		_, terr := tigris.GetCollection[models.User](a.db).Insert(ctx, user)
+		if terr != nil {
 			return internalServerError("Database error saving new user").WithInternalError(terr)
 		}
-		if terr := user.SetRole(tx, config.JWT.DefaultGroupName); terr != nil {
+		if terr := user.SetRole(ctx, a.db, config.JWT.DefaultGroupName); terr != nil {
 			return internalServerError("Database error updating user").WithInternalError(terr)
 		}
-		if terr := triggerEventHooks(ctx, tx, ValidateEvent, user, instanceID, config); terr != nil {
+		if terr := triggerEventHooks(ctx, a.db, ValidateEvent, user, instanceID, config); terr != nil {
 			return terr
 		}
 		return nil

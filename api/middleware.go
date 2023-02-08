@@ -10,7 +10,7 @@ import (
 
 	"github.com/didip/tollbooth/v5"
 	"github.com/didip/tollbooth/v5/limiter"
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/netlify/gotrue/models"
 )
@@ -100,14 +100,14 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 	if claims.InstanceID == "" {
 		return nil, badRequestError("Instance ID is missing")
 	}
-	instanceID, err := uuid.FromString(claims.InstanceID)
+	instanceID, err := uuid.Parse(claims.InstanceID)
 	if err != nil {
 		return nil, badRequestError("Instance ID is not a valid UUID")
 	}
 
 	logEntrySetField(r, "instance_id", instanceID)
 	logEntrySetField(r, "netlify_id", claims.NetlifyID)
-	instance, err := models.GetInstance(a.db, instanceID)
+	instance, err := models.GetInstance(r.Context(), a.db, instanceID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError("Unable to locate site configuration")

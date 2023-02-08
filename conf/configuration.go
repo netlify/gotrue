@@ -35,10 +35,9 @@ type SamlProviderConfiguration struct {
 
 // DBConfiguration holds all the database related configuration.
 type DBConfiguration struct {
-	Driver         string `json:"driver" required:"true"`
-	URL            string `json:"url" envconfig:"DATABASE_URL" required:"true"`
-	Namespace      string `json:"namespace"`
-	MigrationsPath string `json:"migrations_path" split_words:"true" default:"./migrations"`
+	URL       string `json:"url" envconfig:"DATABASE_URL" required:"true"`
+	Namespace string `json:"namespace"`
+	Project   string `json:"project" required:"true"`
 }
 
 // JWTConfiguration holds all the JWT related configuration.

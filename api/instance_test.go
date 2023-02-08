@@ -7,16 +7,18 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"context"
 )
 
-var testUUID = uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111"))
+var testUUID = uuid.Must(uuid.Parse("11111111-1111-1111-1111-111111111111"))
 
 const operatorToken = "operatorToken"
 
@@ -34,7 +36,6 @@ func TestInstance(t *testing.T) {
 	ts := &InstanceTestSuite{
 		API: api,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
@@ -70,14 +71,14 @@ func (ts *InstanceTestSuite) TestCreate() {
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&resp))
 	assert.NotNil(ts.T(), resp.BaseConfig)
 
-	i, err := models.GetInstanceByUUID(ts.API.db, testUUID)
+	i, err := models.GetInstanceByUUID(req.Context(), ts.API.db, testUUID)
 	require.NoError(ts.T(), err)
 	assert.NotNil(ts.T(), i.BaseConfig)
 }
 
 func (ts *InstanceTestSuite) TestGet() {
-	instanceID := uuid.Must(uuid.NewV4())
-	err := ts.API.db.Create(&models.Instance{
+	instanceID := uuid.Must(uuid.NewRandom())
+	_, err := tigris.GetCollection[models.Instance](ts.API.db).Insert(context.TODO(), &models.Instance{
 		ID:   instanceID,
 		UUID: testUUID,
 		BaseConfig: &conf.Configuration{
@@ -100,8 +101,8 @@ func (ts *InstanceTestSuite) TestGet() {
 }
 
 func (ts *InstanceTestSuite) TestUpdate() {
-	instanceID := uuid.Must(uuid.NewV4())
-	err := ts.API.db.Create(&models.Instance{
+	instanceID := uuid.Must(uuid.NewRandom())
+	_, err := tigris.GetCollection[models.Instance](ts.API.db).Insert(context.TODO(), &models.Instance{
 		ID:   instanceID,
 		UUID: testUUID,
 		BaseConfig: &conf.Configuration{
@@ -130,15 +131,15 @@ func (ts *InstanceTestSuite) TestUpdate() {
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), w.Code, http.StatusOK)
 
-	i, err := models.GetInstanceByUUID(ts.API.db, testUUID)
+	i, err := models.GetInstanceByUUID(req.Context(), ts.API.db, testUUID)
 	require.NoError(ts.T(), err)
 	require.Equal(ts.T(), i.BaseConfig.JWT.Secret, "testsecret")
 	require.Equal(ts.T(), i.BaseConfig.SiteURL, "https://test.mysite.com")
 }
 
 func (ts *InstanceTestSuite) TestUpdate_DisableEmail() {
-	instanceID := uuid.Must(uuid.NewV4())
-	err := ts.API.db.Create(&models.Instance{
+	instanceID := uuid.Must(uuid.NewRandom())
+	_, err := tigris.GetCollection[models.Instance](ts.API.db).Insert(context.TODO(), &models.Instance{
 		ID:   instanceID,
 		UUID: testUUID,
 		BaseConfig: &conf.Configuration{
@@ -170,14 +171,14 @@ func (ts *InstanceTestSuite) TestUpdate_DisableEmail() {
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), w.Code, http.StatusOK)
 
-	i, err := models.GetInstanceByUUID(ts.API.db, testUUID)
+	i, err := models.GetInstanceByUUID(req.Context(), ts.API.db, testUUID)
 	require.NoError(ts.T(), err)
 	require.True(ts.T(), i.BaseConfig.External.Email.Disabled)
 }
 
 func (ts *InstanceTestSuite) TestUpdate_PreserveSMTPConfig() {
-	instanceID := uuid.Must(uuid.NewV4())
-	err := ts.API.db.Create(&models.Instance{
+	instanceID := uuid.Must(uuid.NewRandom())
+	_, err := tigris.GetCollection[models.Instance](ts.API.db).Insert(context.TODO(), &models.Instance{
 		ID:   instanceID,
 		UUID: testUUID,
 		BaseConfig: &conf.Configuration{
@@ -208,14 +209,14 @@ func (ts *InstanceTestSuite) TestUpdate_PreserveSMTPConfig() {
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), w.Code, http.StatusOK)
 
-	i, err := models.GetInstanceByUUID(ts.API.db, testUUID)
+	i, err := models.GetInstanceByUUID(req.Context(), ts.API.db, testUUID)
 	require.NoError(ts.T(), err)
 	require.Equal(ts.T(), "password123", i.BaseConfig.SMTP.Pass)
 }
 
 func (ts *InstanceTestSuite) TestUpdate_ClearPassword() {
-	instanceID := uuid.Must(uuid.NewV4())
-	err := ts.API.db.Create(&models.Instance{
+	instanceID := uuid.Must(uuid.NewRandom())
+	_, err := tigris.GetCollection[models.Instance](ts.API.db).Insert(context.TODO(), &models.Instance{
 		ID:   instanceID,
 		UUID: testUUID,
 		BaseConfig: &conf.Configuration{
@@ -246,7 +247,7 @@ func (ts *InstanceTestSuite) TestUpdate_ClearPassword() {
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), w.Code, http.StatusOK)
 
-	i, err := models.GetInstanceByUUID(ts.API.db, testUUID)
+	i, err := models.GetInstanceByUUID(req.Context(), ts.API.db, testUUID)
 	require.NoError(ts.T(), err)
 	require.Equal(ts.T(), "", i.BaseConfig.SMTP.Pass)
 }

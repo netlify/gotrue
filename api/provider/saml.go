@@ -18,14 +18,14 @@ import (
 	"time"
 
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
-
 	"github.com/netlify/gotrue/conf"
 	saml2 "github.com/russellhaering/gosaml2"
 	"github.com/russellhaering/gosaml2/types"
 	dsig "github.com/russellhaering/goxmldsig"
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	"golang.org/x/oauth2"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"context"
 )
 
 type SamlProvider struct {
@@ -34,7 +34,7 @@ type SamlProvider struct {
 
 type ConfigX509KeyStore struct {
 	InstanceID uuid.UUID
-	DB         *storage.Connection
+	DB         *tigris.Database
 	Conf       conf.SamlProviderConfiguration
 }
 
@@ -65,7 +65,7 @@ func getMetadata(url string) (*types.EntityDescriptor, error) {
 }
 
 // NewSamlProvider creates a Saml account provider.
-func NewSamlProvider(ext conf.SamlProviderConfiguration, db *storage.Connection, instanceId uuid.UUID) (*SamlProvider, error) {
+func NewSamlProvider(ext conf.SamlProviderConfiguration, database *tigris.Database, instanceId uuid.UUID) (*SamlProvider, error) {
 	if !ext.Enabled {
 		return nil, errors.New("SAML Provider is not enabled")
 	}
@@ -122,7 +122,7 @@ func NewSamlProvider(ext conf.SamlProviderConfiguration, db *storage.Connection,
 
 	keyStore := &ConfigX509KeyStore{
 		InstanceID: instanceId,
-		DB:         db,
+		DB:         database,
 		Conf:       ext,
 	}
 
@@ -246,7 +246,7 @@ func (ks ConfigX509KeyStore) SaveConfig(cert []byte, key *rsa.PrivateKey) error 
 		return errors.New("Could not encode key")
 	}
 
-	instance, err := models.GetInstance(ks.DB, ks.InstanceID)
+	instance, err := models.GetInstance(context.TODO(), ks.DB, ks.InstanceID)
 	if err != nil {
 		return err
 	}
@@ -255,7 +255,7 @@ func (ks ConfigX509KeyStore) SaveConfig(cert []byte, key *rsa.PrivateKey) error 
 	conf.External.Saml.SigningCert = string(certBytes)
 	conf.External.Saml.SigningKey = string(keyBytes)
 
-	if err := instance.UpdateConfig(ks.DB, conf); err != nil {
+	if err := instance.UpdateConfig(context.TODO(), ks.DB, conf); err != nil {
 		return err
 	}
 

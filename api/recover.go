@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
+	"context"
 )
 
 // RecoverParams holds the parameters for a password recovery request
@@ -30,7 +30,7 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	aud := a.requestAud(ctx, r)
-	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
+	user, err := models.FindUserByEmailAndAudience(r.Context(), a.db, instanceID, params.Email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return notFoundError(err.Error())
@@ -38,14 +38,14 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	err = a.db.Transaction(func(tx *storage.Connection) error {
-		if terr := models.NewAuditLogEntry(tx, instanceID, user, models.UserRecoveryRequestedAction, nil); terr != nil {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
+		if terr := models.NewAuditLogEntry(ctx, a.db, instanceID, user, models.UserRecoveryRequestedAction, nil); terr != nil {
 			return terr
 		}
 
 		mailer := a.Mailer(ctx)
 		referrer := a.getReferrer(r)
-		return a.sendPasswordRecovery(tx, user, mailer, config.SMTP.MaxFrequency, referrer)
+		return a.sendPasswordRecovery(ctx, a.db, user, mailer, config.SMTP.MaxFrequency, referrer)
 	})
 	if err != nil {
 		return internalServerError("Error recovering user").WithInternalError(err)

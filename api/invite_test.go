@@ -10,13 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/google/uuid"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/tigrisdata/tigris-client-go/tigris"
+	"context"
+	"github.com/tigrisdata/tigris-client-go/filter"
 )
 
 type InviteTestSuite struct {
@@ -37,7 +40,6 @@ func TestInvite(t *testing.T) {
 		Config:     config,
 		instanceID: instanceID,
 	}
-	defer api.db.Close()
 
 	suite.Run(t, ts)
 }
@@ -51,15 +53,18 @@ func (ts *InviteTestSuite) SetupTest() {
 
 func (ts *InviteTestSuite) makeSuperAdmin(email string) string {
 	// Cleanup existing user, if they already exist
-	if u, _ := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, email, ts.Config.JWT.Aud); u != nil {
-		require.NoError(ts.T(), ts.API.db.Destroy(u), "Error deleting user")
+	ctx := context.TODO()
+	if u, _ := models.FindUserByEmailAndAudience(ctx, ts.API.db, ts.instanceID, email, ts.Config.JWT.Aud); u != nil {
+		_, err := tigris.GetCollection[models.User](ts.API.db).Delete(context.TODO(), filter.EqUUID("id", u.ID))
+		require.NoError(ts.T(), err, "Error deleting user")
 	}
 
 	u, err := models.NewUser(ts.instanceID, email, "test", ts.Config.JWT.Aud, map[string]interface{}{"full_name": "Test User"})
 	require.NoError(ts.T(), err, "Error making new user")
 
 	u.IsSuperAdmin = true
-	require.NoError(ts.T(), ts.API.db.Create(u), "Error creating user")
+	_, err = tigris.GetCollection[models.User](ts.API.db).Insert(context.TODO(), u)
+	require.NoError(ts.T(), err, "Error creating user")
 
 	tokenSigner := NewTokenSigner(ts.Config)
 
@@ -131,10 +136,12 @@ func (ts *InviteTestSuite) TestVerifyInvite() {
 	user.EncryptedPassword = ""
 	user.ConfirmationToken = "asdf"
 	require.NoError(ts.T(), err)
-	require.NoError(ts.T(), ts.API.db.Create(user))
+
+	_, err = tigris.GetCollection[models.User](ts.API.db).Insert(context.TODO(), user)
+	require.NoError(ts.T(), err)
 
 	// Find test user
-	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err := models.FindUserByEmailAndAudience(context.TODO(), ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// Request body
@@ -164,10 +171,13 @@ func (ts *InviteTestSuite) TestVerifyInvite_NoPassword() {
 	user.EncryptedPassword = ""
 	user.ConfirmationToken = "asdf2"
 	require.NoError(ts.T(), err)
-	require.NoError(ts.T(), ts.API.db.Create(user))
+	ctx := context.TODO()
+
+	_, err = tigris.GetCollection[models.User](ts.API.db).Insert(ctx, user)
+	require.NoError(ts.T(), err)
 
 	// Find test user
-	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	u, err := models.FindUserByEmailAndAudience(ctx, ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// Request body
@@ -231,7 +241,7 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab() {
 	ts.Require().Equal(http.StatusOK, w.Code)
 
 	// Find test user
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
+	user, err := models.FindUserByEmailAndAudience(req.Context(), ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// get redirect url w/ state
@@ -273,7 +283,7 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab() {
 	ts.Equal(1, userCount)
 
 	// ensure user has been created with metadata
-	user, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
+	user, err = models.FindUserByEmailAndAudience(req.Context(), ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
 	ts.Require().NoError(err)
 	ts.Equal("Gitlab Test", user.UserMetaData["full_name"])
 	ts.Equal("http://example.com/avatar", user.UserMetaData["avatar_url"])
@@ -322,7 +332,7 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab_MismatchedEmails() {
 	ts.Require().Equal(http.StatusOK, w.Code)
 
 	// Find test user
-	user, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
+	user, err := models.FindUserByEmailAndAudience(req.Context(), ts.API.db, ts.instanceID, "gitlab@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 
 	// get redirect url w/ state

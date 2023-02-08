@@ -5,12 +5,6 @@
   "repository": "https://github.com/netlify/gotrue",
   "env": {
     "DATABASE_URL": {},
-    "GOTRUE_DB_DRIVER": {
-      "value": "mysql"
-    },
-    "GOTRUE_DB_AUTOMIGRATE": {
-      "value": true
-    },
     "GOTRUE_DB_NAMESPACE": {
       "value": "auth"
     },

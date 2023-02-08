@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
+	"context"
 )
 
 // InviteParams are the parameters the Signup endpoint accepts
@@ -32,7 +32,7 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	aud := a.requestAud(ctx, r)
-	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
+	user, err := models.FindUserByEmailAndAudience(ctx, a.db, instanceID, params.Email, aud)
 	if err != nil && !models.IsNotFoundError(err) {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
@@ -40,19 +40,19 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 		return unprocessableEntityError("Email address already registered by another user")
 	}
 
-	err = a.db.Transaction(func(tx *storage.Connection) error {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
 		signupParams := SignupParams{
 			Email:    params.Email,
 			Data:     params.Data,
 			Aud:      aud,
 			Provider: "email",
 		}
-		user, err = a.signupNewUser(ctx, tx, &signupParams)
+		user, err = a.signupNewUser(ctx, &signupParams)
 		if err != nil {
 			return err
 		}
 
-		if terr := models.NewAuditLogEntry(tx, instanceID, adminUser, models.UserInvitedAction, map[string]interface{}{
+		if terr := models.NewAuditLogEntry(r.Context(), a.db, instanceID, adminUser, models.UserInvitedAction, map[string]interface{}{
 			"user_id":    user.ID,
 			"user_email": user.Email,
 		}); terr != nil {
@@ -61,7 +61,7 @@ func (a *API) Invite(w http.ResponseWriter, r *http.Request) error {
 
 		mailer := a.Mailer(ctx)
 		referrer := a.getReferrer(r)
-		if err := sendInvite(tx, user, mailer, referrer); err != nil {
+		if err := sendInvite(ctx, a.db, user, mailer, referrer); err != nil {
 			return internalServerError("Error inviting user").WithInternalError(err)
 		}
 		return nil

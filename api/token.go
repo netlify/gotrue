@@ -10,10 +10,9 @@ import (
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/metering"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/gotrue/storage"
 )
 
-// GoTrueClaims is a struct thats used for JWT claims
+// GoTrueClaims is a struct that used for JWT claims
 type GoTrueClaims struct {
 	jwt.StandardClaims
 	TigrisMetadata map[string]interface{} `json:"https://tigris"`
@@ -57,7 +56,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 
-	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, username, aud)
+	user, err := models.FindUserByEmailAndAudience(r.Context(), a.db, instanceID, username, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", "No user found with that email, or password invalid.")
@@ -74,16 +73,16 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	}
 
 	var token *AccessTokenResponse
-	err = a.db.Transaction(func(tx *storage.Connection) error {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
 		var terr error
-		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.LoginAction, nil); terr != nil {
+		if terr = models.NewAuditLogEntry(ctx, a.db, instanceID, user, models.LoginAction, nil); terr != nil {
 			return terr
 		}
-		if terr = triggerEventHooks(ctx, tx, LoginEvent, user, instanceID, config); terr != nil {
+		if terr = triggerEventHooks(ctx, a.db, LoginEvent, user, instanceID, config); terr != nil {
 			return terr
 		}
 
-		token, terr = a.issueRefreshToken(ctx, tx, user)
+		token, terr = a.issueRefreshToken(ctx, user)
 		if terr != nil {
 			return terr
 		}
@@ -113,7 +112,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		return oauthError("invalid_request", "refresh_token required")
 	}
 
-	user, token, err := models.FindUserWithRefreshToken(a.db, tokenStr)
+	user, token, err := models.FindUserWithRefreshToken(r.Context(), a.db, tokenStr)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", "Invalid Refresh Token")
@@ -129,13 +128,13 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 	var tokenString string
 	var newToken *models.RefreshToken
 
-	err = a.db.Transaction(func(tx *storage.Connection) error {
+	err = a.db.Tx(ctx, func(ctx context.Context) error {
 		var terr error
-		if terr = models.NewAuditLogEntry(tx, instanceID, user, models.TokenRefreshedAction, nil); terr != nil {
+		if terr = models.NewAuditLogEntry(ctx, a.db, instanceID, user, models.TokenRefreshedAction, nil); terr != nil {
 			return terr
 		}
 
-		newToken, terr = models.GrantRefreshTokenSwap(tx, user, token)
+		newToken, terr = models.GrantRefreshTokenSwap(ctx, a.db, user, token)
 		if terr != nil {
 			return internalServerError(terr.Error())
 		}
@@ -188,7 +187,7 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, config *con
 	}
 }
 
-func (a *API) issueRefreshToken(ctx context.Context, conn *storage.Connection, user *models.User) (*AccessTokenResponse, error) {
+func (a *API) issueRefreshToken(ctx context.Context, user *models.User) (*AccessTokenResponse, error) {
 	config := a.getConfig(ctx)
 
 	now := time.Now()
@@ -197,9 +196,9 @@ func (a *API) issueRefreshToken(ctx context.Context, conn *storage.Connection, u
 	var tokenString string
 	var refreshToken *models.RefreshToken
 
-	err := conn.Transaction(func(tx *storage.Connection) error {
+	err := a.db.Tx(ctx, func(ctx context.Context) error {
 		var terr error
-		refreshToken, terr = models.GrantAuthenticatedUser(tx, user)
+		refreshToken, terr = models.GrantAuthenticatedUser(ctx, a.db, user)
 		if terr != nil {
 			return internalServerError("Database error granting user").WithInternalError(terr)
 		}
