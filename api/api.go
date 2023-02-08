@@ -100,7 +100,7 @@ func (t *TokenSigner) signUsingRsa(token *jwt.Token) (string, error) {
 
 // Signs the token with HMAC+SHA
 func (t *TokenSigner) signUsingHmacWithSHA(token *jwt.Token) (string, error) {
-	return token.SignedString(t.jwtConfig.Secret)
+	return token.SignedString([]byte(t.jwtConfig.Secret))
 }
 
 // ListenAndServe starts the REST API
