@@ -1,9 +1,5 @@
-on:
-  push:
-    branches: [master]
-    tags: ["*"]
-  pull_request:
-    types: [opened, synchronize, reopened]
+on: [ push ]
+
 name: Test
 jobs:
   test:
@@ -33,13 +29,3 @@ jobs:
         run: make migrate_test
       - name: Lint and test
         run: make all
-      - name: Trigger CircleCI for deployment
-        env:
-          CIRCLE_API_USER_TOKEN: ${{ secrets.CIRCLE_API_USER_TOKEN }}
-        if: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == 'netlify/gotrue') && matrix.go-version == '1.15.x' && env.CIRCLE_API_USER_TOKEN != null }}
-        run: |
-          curl -X POST --silent --show-error --fail \
-            --user $CIRCLE_API_USER_TOKEN: \
-            -H 'content-type: application/json' \
-            --data '{ "branch": "master", "parameters": { "branch": "${{ github.event.pull_request.head.ref || github.ref_name }}", "commit": "${{ github.event.pull_request.head.sha || github.sha }}" } }' \
-            https://circleci.com/api/v2/project/gh/netlify/gotrue-ci/pipeline
