@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -43,20 +42,17 @@ func TestJWKS(t *testing.T) {
 
 // TestJWKS tests API /.well-known/jwk.json route
 func (ts *JWKSTestSuite) TestJWKS() {
-	// Setup request
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/.well-known/jwks.json", nil)
 
 	ts.API.handler.ServeHTTP(w, req)
 	require.Equal(ts.T(), http.StatusOK, w.Code)
 	respBody := string(w.Body.Bytes())
-	var respJson map[string]interface{}
-	err := json.Unmarshal([]byte(respBody), &respJson)
+	var respJSON map[string]interface{}
+	err := json.Unmarshal([]byte(respBody), &respJSON)
 	require.NoError(ts.T(), err, "Failed to parse jwks response to JSON")
 
-	fmt.Printf("%T", respJson["keys"])
-
-	keys, ok := respJson["keys"].([]interface{})
+	keys, ok := respJSON["keys"].([]interface{})
 	require.True(ts.T(), ok)
 	require.Equal(ts.T(), 1, len(keys))
 

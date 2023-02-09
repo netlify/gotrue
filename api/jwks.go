@@ -27,6 +27,7 @@ type JWKS struct {
 	response     map[string]interface{}
 }
 
+// NewJKWS - constructs newer JWKS endpoint
 func NewJKWS(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, version string) (*JWKS, error) {
 	result := &JWKS{
 		handler:      nil,

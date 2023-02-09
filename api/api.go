@@ -44,12 +44,14 @@ type API struct {
 	version     string
 }
 
+// TokenSigner is responsible to sign token, it supports HS256, RS256 algo
 type TokenSigner struct {
 	jwtConfig  *conf.JWTConfiguration
 	privateKey *rsa.PrivateKey
 	publicKey  *rsa.PublicKey
 }
 
+// NewTokenSigner - Returns new instance of TokenSinger
 func NewTokenSigner(config *conf.Configuration) *TokenSigner {
 	t := &TokenSigner{
 		jwtConfig: &config.JWT,
