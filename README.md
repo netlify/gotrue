@@ -1,17 +1,25 @@
-![GoTrue](gotrue.png)
+<p align="center">
+  <a href="https://www.tigrisdata.com/"><img src="https://www.tigrisdata.com/docs/logo/dark.png" alt="Tigris" width="298" /></a> 
+</p>
 
-<p align="center">User management for APIs</p>
+<p align="center">User authentication & management for APIs</p>
 
-GoTrue is a small open-source API written in Golang, that can act as a self-standing
-API service for handling user registration and authentication for Jamstack projects.
+GoTrue is used by [Tigris](https://www.tigrisdata.com/docs/) for managing machine to machine applications, user authentication and management. 
+The following are the features provided by this version of gotrue:
+- Managing machine to machine applications
+- Asymmetric key algorithm RS256 to issue JWTs
+- User authentication & management(user invitation/signup/signin/logout/etc)
+  - Sign in with email, password, magic link, phone number
+  - Sign in with external providers (Google, Apple, Facebook, Discord, ...)
+- Backend powered by Tigris
 
-It's based on OAuth2 and JWT and will handle user signup, authentication and custom
-user data.
+It is originally based on the excellent GoTrue [codebase](https://github.com/netlify/gotrue) by Netlify.
 
 ## Configuration
 
 You may configure GoTrue using either a configuration file named `.env`,
-environment variables, or a combination of both. Environment variables are prefixed with `GOTRUE_`, and will always have precedence over values provided via file.
+environment variables, or a combination of both. Environment variables are prefixed with `GOTRUE_`, and will 
+always have precedence over values provided via file.
 
 ### Top-Level
 
@@ -49,7 +57,7 @@ Hostname to listen on.
 
 `PORT` (no prefix) / `API_PORT` - `number`
 
-Port number to listen on. Defaults to `8081`.
+Port number to listen on. Defaults to `9999`.
 
 `API_ENDPOINT` - `string` _Multi-instance mode only_
 
@@ -60,31 +68,18 @@ Controls what endpoint Netlify can access this API on.
 If you wish to inherit a request ID from the incoming request, specify the name in this value.
 
 ### Database
+The backend is powered by Tigris. There is no need for external migration directory. Schemas are automatically applied
+when the model is updated.
 
 ```properties
-GOTRUE_DB_DRIVER=mysql
-DATABASE_URL=root@localhost/gotrue
+DATABASE_URL=localhost:8081
 ```
 
+`GOTRUE_DB_PROJECT` - string **required**
+
+The Tigris project.
+
 `DB_DRIVER` - `string` **required**
-
-Chooses what dialect of database you want. Must be `mysql`.
-
-`DATABASE_URL` (no prefix) / `DB_DATABASE_URL` - `string` **required**
-
-Connection string for the database.
-
-`DB_NAMESPACE` - `string`
-
-Adds a prefix to all table names.
-
-**Migrations Note**
-
-Migrations are not applied automatically, so you will need to run them after
-you've built gotrue.
-
-* If built locally: `./gotrue migrate`
-* Using Docker: `docker run --rm gotrue gotrue migrate`
 
 ### Logging
 
@@ -540,6 +535,33 @@ GoTrue exposes the following endpoints:
   This will revoke all refresh tokens for the user. Remember that the JWT tokens
   will still be valid for stateless auth until they expire.
 
-## TODO
+### Endpoints to read models from database
+**BASE URL**
+ - **Cloud**: api.preview.tigrisdata.cloud
+ - **Local** localhost:8081
 
-* Schema for custom user data in config file
+**POST** /v1/:project/database/collections/:table/documents/read
+
+* **Read all entries from users table**
+```shell
+curl 'localhost:8081/v1/projects/gotrue/database/collections/users/documents/read'\
+  -d '{
+  "filter": {}
+}'
+```
+
+* **Read all entries from audit_log_entries table**
+```shell
+curl 'localhost:8081/v1/projects/gotrue/database/collections/audit_log_entries/documents/read'\
+  -d '{
+  "filter": {}
+}'
+```
+
+* **Read all entries from refresh_tokens table**
+```shell
+curl 'localhost:8081/v1/projects/gotrue/database/collections/refresh_tokens/documents/read'\
+  -d '{
+  "filter": {}
+}'
+```
