@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -92,6 +93,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		token, err := p.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(ts.Config.Webhook.Secret), nil
 		})
+		assert.NoError(err)
 		assert.True(token.Valid)
 		assert.Equal(ts.instanceID.String(), claims.Subject) // not configured for multitenancy
 		assert.Equal("gotrue", claims.Issuer)
@@ -126,6 +128,16 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		require.True(ok)
 		assert.Len(usermeta, 1)
 		assert.EqualValues(1, usermeta["a"])
+
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush() // needed so we don't set a content-length
+
+		pl := `{
+			"app_metadata": {
+				"roles": ["dev"]
+			}
+		}`
+		fmt.Fprint(w, pl)
 	}))
 	defer svr.Close()
 
@@ -155,6 +167,11 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(http.StatusOK, w.Code)
 	assert.Equal(1, callCount)
+
+	var user models.User
+	require.NoError(json.NewDecoder(w.Body).Decode(&user))
+
+	assert.EqualValues(models.JSONMap{"roles": []interface{}{"dev"}}, user.AppMetaData)
 }
 
 func (ts *SignupTestSuite) TestFailingWebhook() {
