@@ -117,14 +117,15 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 		}
 		dur := time.Since(start)
 		rspLog := hooklog.WithFields(logrus.Fields{
-			"status_code": rsp.StatusCode,
-			"dur":         dur.Nanoseconds(),
+			"status_code":    rsp.StatusCode,
+			"dur":            dur.Nanoseconds(),
+			"content_length": rsp.ContentLength,
 		})
 		switch rsp.StatusCode {
 		case http.StatusOK, http.StatusNoContent, http.StatusAccepted:
-			rspLog.Infof("Finished processing webhook in %s", dur)
+			rspLog.Info("Finished processing webhook")
 			var body io.ReadCloser
-			if rsp.ContentLength > 0 {
+			if rsp.Body != http.NoBody && rsp.ContentLength != 0 {
 				body = rsp.Body
 			}
 			return body, nil
