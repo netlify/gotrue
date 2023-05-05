@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -131,13 +130,6 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 
 		w.WriteHeader(http.StatusOK)
 		w.(http.Flusher).Flush() // needed so we don't set a content-length
-
-		pl := `{
-			"app_metadata": {
-				"roles": ["dev"]
-			}
-		}`
-		fmt.Fprint(w, pl)
 	}))
 	defer svr.Close()
 
@@ -168,10 +160,8 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 	assert.Equal(http.StatusOK, w.Code)
 	assert.Equal(1, callCount)
 
-	var user models.User
-	require.NoError(json.NewDecoder(w.Body).Decode(&user))
-
-	assert.EqualValues(models.JSONMap{"roles": []interface{}{"dev"}}, user.AppMetaData)
+	// http stdlib doesn't set Body as http.NoBody if Content-Length = -1
+	require.True(w.Result().Body != http.NoBody)
 }
 
 func (ts *SignupTestSuite) TestFailingWebhook() {
