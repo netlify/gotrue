@@ -1,8 +1,10 @@
 package mailer
 
 import (
+	"bytes"
 	"net/url"
 	"regexp"
+	"text/template"
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
@@ -20,6 +22,28 @@ type Mailer interface {
 	ValidateEmail(email string) error
 }
 
+func interpretAsTemplate(templateString string, data map[string]interface{}) string {
+	t, err := template.New("email").Parse(templateString)
+	if err != nil {
+		panic(err)
+	}
+
+	var result bytes.Buffer
+	err = t.Execute(&result, data)
+	if err != nil {
+		panic(err)
+	}
+
+	return result.String()
+}
+
+func getEmailFrom(instanceConfig *conf.Configuration) string {
+	return interpretAsTemplate(instanceConfig.SMTP.AdminEmail, map[string]interface{}{
+		"SiteURL": instanceConfig.SiteURL,
+		"SiteID":  "something", // where do we get this from?
+	})
+}
+
 // NewMailer returns a new gotrue mailer
 func NewMailer(instanceConfig *conf.Configuration) Mailer {
 	if instanceConfig.SMTP.Host == "" {
@@ -34,7 +58,7 @@ func NewMailer(instanceConfig *conf.Configuration) Mailer {
 			Port:    instanceConfig.SMTP.Port,
 			User:    instanceConfig.SMTP.User,
 			Pass:    instanceConfig.SMTP.Pass,
-			From:    instanceConfig.SMTP.AdminEmail,
+			From:    getEmailFrom(instanceConfig),
 			BaseURL: instanceConfig.SiteURL,
 			Logger:  logrus.New(),
 		},
