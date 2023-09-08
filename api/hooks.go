@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -117,14 +118,15 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 		}
 		dur := time.Since(start)
 		rspLog := hooklog.WithFields(logrus.Fields{
-			"status_code": rsp.StatusCode,
-			"dur":         dur.Nanoseconds(),
+			"status_code":    rsp.StatusCode,
+			"dur":            dur.Nanoseconds(),
+			"content_length": rsp.ContentLength,
 		})
 		switch rsp.StatusCode {
 		case http.StatusOK, http.StatusNoContent, http.StatusAccepted:
-			rspLog.Infof("Finished processing webhook in %s", dur)
+			rspLog.Info("Finished processing webhook")
 			var body io.ReadCloser
-			if rsp.ContentLength > 0 {
+			if rsp.Body != http.NoBody && rsp.ContentLength != 0 {
 				body = rsp.Body
 			}
 			return body, nil
@@ -238,8 +240,20 @@ func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *sto
 		}
 	}()
 	if err == nil && body != nil {
+		// handle case where response from the trigger is streamed but has no
+		// Body
+		data, err := ioutil.ReadAll(body)
+		if err != nil {
+			return internalServerError("Webhook returned malformed BODY: %v", err).WithInternalError(err)
+		}
+
+		if len(data) == 0 {
+			return nil
+		}
+
+		bodyReader := bytes.NewReader(data)
 		webhookRsp := &WebhookResponse{}
-		decoder := json.NewDecoder(body)
+		decoder := json.NewDecoder(bodyReader)
 		if err = decoder.Decode(webhookRsp); err != nil {
 			return internalServerError("Webhook returned malformed JSON: %v", err).WithInternalError(err)
 		}

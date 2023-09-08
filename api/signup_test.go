@@ -92,6 +92,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		token, err := p.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(ts.Config.Webhook.Secret), nil
 		})
+		assert.NoError(err)
 		assert.True(token.Valid)
 		assert.Equal(ts.instanceID.String(), claims.Subject) // not configured for multitenancy
 		assert.Equal("gotrue", claims.Issuer)
@@ -126,6 +127,9 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		require.True(ok)
 		assert.Len(usermeta, 1)
 		assert.EqualValues(1, usermeta["a"])
+
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush() // needed so we don't set a content-length
 	}))
 	defer svr.Close()
 
@@ -155,6 +159,9 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(http.StatusOK, w.Code)
 	assert.Equal(1, callCount)
+
+	// http stdlib doesn't set Body as http.NoBody if Content-Length = -1
+	require.True(w.Result().Body != http.NoBody)
 }
 
 func (ts *SignupTestSuite) TestFailingWebhook() {
