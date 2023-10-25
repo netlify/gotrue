@@ -1,6 +1,6 @@
 module github.com/MalinYamato/gotrue
 
-replace github.com/netlify/gotrue => github.com/MalinYamato/gotrue
+replace github.com/netlify/gotrue => github.com/MalinYamato/gotrue debug
 
 require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.27.0
