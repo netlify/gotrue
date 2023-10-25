@@ -1,4 +1,4 @@
-module github.com/netlify/gotrue
+module github.com/MalinYamato/gotrue
 
 require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.27.0
