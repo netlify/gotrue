@@ -13,7 +13,7 @@ require (
 	github.com/imdario/mergo v0.0.0-20160216103600-3e95a51e0639
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/netlify/mailme v1.1.1
+	github.com/MalinYamato/mailme v1.1.1
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1
