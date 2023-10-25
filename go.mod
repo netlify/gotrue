@@ -1,5 +1,7 @@
 module github.com/MalinYamato/gotrue
 
+replace github.com/netlify/gotrue => /path/to/MalinYamato/gotrue
+
 require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.27.0
 	github.com/badoux/checkmail v0.0.0-20170203135005-d0a759655d62
