@@ -4,7 +4,7 @@ import (
 	"github.com/badoux/checkmail"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/NakinYamato/mailme"
+	"github.com/MalinYamato/mailme"
 )
 
 // TemplateMailer will send mail and use templates from the site for easy mail styling
