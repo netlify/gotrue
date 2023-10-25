@@ -6,7 +6,7 @@ import (
 
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/netlify/mailme"
+	"github.com/MalinYamato/mailme"
 	"github.com/sirupsen/logrus"
 )
 
