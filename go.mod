@@ -118,4 +118,4 @@ replace (
 	github.com/russellhaering/goxmldsig => github.com/russellhaering/goxmldsig v1.1.1
 )
 
-go 1.23.4
+go 1.23.1
