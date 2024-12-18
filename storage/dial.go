@@ -71,7 +71,7 @@ func getExcludedColumns(model interface{}, includeColumns ...string) ([]string, 
 		cols.Remove(f)
 	}
 
-	xcols := make([]string, len(cols.Cols))
+	xcols := make([]string, 0, len(cols.Cols))
 	for n := range cols.Cols {
 		xcols = append(xcols, n)
 	}
