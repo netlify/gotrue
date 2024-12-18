@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
 )
 
 type adminUserParams struct {
@@ -78,6 +78,42 @@ func (a *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 		"users": users,
 		"aud":   aud,
 	})
+}
+
+// adminUsers responds with a list of all users in a given audience
+func (a *API) adminExportUsers(exportSecret string) func(w http.ResponseWriter, r *http.Request) error {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		if r.Header.Get("EXPORT_SECRET") != exportSecret {
+			return unauthorizedError("Invalid export secret")
+		}
+
+		ctx := r.Context()
+		instanceID := getInstanceID(ctx)
+		aud := a.requestAud(ctx, r)
+
+		pageParams, err := paginate(r)
+		if err != nil {
+			return badRequestError("Bad Pagination Parameters: %v", err)
+		}
+
+		sortParams, err := sort(r, map[string]bool{models.CreatedAt: true}, []models.SortField{models.SortField{Name: models.CreatedAt, Dir: models.Descending}})
+		if err != nil {
+			return badRequestError("Bad Sort Parameters: %v", err)
+		}
+
+		filter := r.URL.Query().Get("filter")
+
+		users, err := models.FindUsersForExportInAudience(a.db, instanceID, aud, pageParams, sortParams, filter)
+		if err != nil {
+			return internalServerError("Database error finding users").WithInternalError(err)
+		}
+		addPaginationHeaders(w, r, pageParams)
+
+		return sendJSON(w, http.StatusOK, map[string]interface{}{
+			"users": users,
+			"aud":   aud,
+		})
+	}
 }
 
 // adminUserGet returns information about a single user

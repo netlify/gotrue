@@ -142,6 +142,9 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 			r.Route("/users", func(r *router) {
 				r.Get("/", api.adminUsers)
+				if globalConfig.API.ExportSecret != "" {
+					r.Get("/export", api.adminExportUsers(globalConfig.API.ExportSecret))
+				}
 				r.With(api.requireEmailProvider).Post("/", api.adminUserCreate)
 
 				r.Route("/{user_id}", func(r *router) {
