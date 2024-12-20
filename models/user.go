@@ -124,6 +124,16 @@ func (User) TableName() string {
 	return tableName
 }
 
+func (UserForExport) TableName() string {
+	tableName := "users"
+
+	if namespace.GetNamespace() != "" {
+		return namespace.GetNamespace() + "_" + tableName
+	}
+
+	return tableName
+}
+
 func (u *User) BeforeCreate(tx *pop.Connection) error {
 	return u.BeforeUpdate(tx)
 }
