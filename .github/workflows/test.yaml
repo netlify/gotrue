@@ -35,6 +35,8 @@ jobs:
         run: make all
       - name: Trigger CircleCI for deployment
         if: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == 'netlify/gotrue') }}
+        # using @rybit's personal token per https://circleci.com/docs/api/v2/index.html#tag/Pipeline/operation/triggerPipelineRun
+        # Project API tokens are not supported for API v2. Use a personal API token.
         run: |
           curl -X POST --silent --show-error --fail \
             -H 'Circle-Token: ${{ secrets.CIRCLE_TOKEN }}' \
