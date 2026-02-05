@@ -84,7 +84,7 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 	user, err := models.FindUserByConfirmationToken(conn, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return nil, notFoundError(err.Error())
+			return nil, notFoundError("%s", err.Error())
 		}
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
@@ -127,7 +127,7 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 	user, err := models.FindUserByRecoveryToken(conn, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return nil, notFoundError(err.Error())
+			return nil, notFoundError("%s", err.Error())
 		}
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}

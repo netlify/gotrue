@@ -45,7 +45,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		_, userErr := models.FindUserByConfirmationToken(a.db, inviteToken)
 		if userErr != nil {
 			if models.IsNotFoundError(userErr) {
-				return notFoundError(userErr.Error())
+				return notFoundError("%s", userErr.Error())
 			}
 			return internalServerError("Database error finding user").WithInternalError(userErr)
 		}
@@ -223,7 +223,7 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 	user, err := models.FindUserByConfirmationToken(tx, inviteToken)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return nil, notFoundError(err.Error())
+			return nil, notFoundError("%s", err.Error())
 		}
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
