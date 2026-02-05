@@ -71,11 +71,3 @@ func logEntrySetField(r *http.Request, key string, value interface{}) logrus.Fie
 	}
 	return nil
 }
-
-func logEntrySetFields(r *http.Request, fields logrus.Fields) logrus.FieldLogger {
-	if entry, ok := r.Context().Value(chimiddleware.LogEntryCtxKey).(*structuredLoggerEntry); ok {
-		entry.Logger = entry.Logger.WithFields(fields)
-		return entry.Logger
-	}
-	return nil
-}

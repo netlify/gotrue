@@ -43,7 +43,7 @@ func TestInvite(t *testing.T) {
 }
 
 func (ts *InviteTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	require.NoError(ts.T(), models.TruncateAll(ts.API.db))
 
 	// Setup response recorder with super admin privileges
 	ts.token = ts.makeSuperAdmin("admin@example.com")

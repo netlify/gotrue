@@ -102,7 +102,8 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupErrorWhenEmp
 func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("facebook@example.com", "Facebook Test", "http://example.com/avatar", "")
+	_, err := ts.createUser("facebook@example.com", "Facebook Test", "http://example.com/avatar", "")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -117,7 +118,8 @@ func (ts *ExternalTestSuite) TestSignupExternalFacebookDisableSignupSuccessWithP
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookSuccessWhenMatchingToken() {
 	// name and avatar should be populated from Facebook API
-	ts.createUser("facebook@example.com", "", "", "invite_token")
+	_, err := ts.createUser("facebook@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -142,7 +144,8 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenNoMatchingT
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenWrongToken() {
-	ts.createUser("facebook@example.com", "", "", "invite_token")
+	_, err := ts.createUser("facebook@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -155,7 +158,8 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenWrongToken(
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalFacebookErrorWhenEmailDoesntMatch() {
-	ts.createUser("facebook@example.com", "", "", "invite_token")
+	_, err := ts.createUser("facebook@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"

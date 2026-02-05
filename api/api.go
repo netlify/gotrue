@@ -51,7 +51,9 @@ func (a *API) ListenAndServe(hostAndPort string) {
 		waitForTermination(log, done)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
-		server.Shutdown(ctx)
+		if err := server.Shutdown(ctx); err != nil {
+			log.WithError(err).Error("server shutdown failed")
+		}
 	}()
 
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {

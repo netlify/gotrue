@@ -40,7 +40,7 @@ func TestInstance(t *testing.T) {
 }
 
 func (ts *InstanceTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	require.NoError(ts.T(), models.TruncateAll(ts.API.db))
 }
 
 func (ts *InstanceTestSuite) TestCreate() {

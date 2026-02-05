@@ -62,7 +62,13 @@ func getUserFromClaims(ctx context.Context, conn *storage.Connection) (*models.U
 	instanceID := getInstanceID(ctx)
 
 	if claims.Subject == models.SystemUserUUID.String() || claims.Subject == models.SystemUserID {
-		return models.NewSystemUser(instanceID, claims.Audience), nil
+		// Even though claims.Audience might include multiple audiences,
+		// GoTrue has always only supported single-audience tokens.
+		aud := ""
+		if len(claims.Audience) > 0 {
+			aud = claims.Audience[0]
+		}
+		return models.NewSystemUser(instanceID, aud), nil
 	}
 	userID, err := uuid.FromString(claims.Subject)
 	if err != nil {
@@ -87,9 +93,11 @@ func (a *API) requestAud(ctx context.Context, r *http.Request) string {
 	}
 
 	// Then check the token
+	// Even though claims.Audience might include multiple audiences,
+	// GoTrue has always only supported single-audience tokens.
 	claims := getClaims(ctx)
-	if claims != nil && claims.Audience != "" {
-		return claims.Audience
+	if claims != nil && len(claims.Audience) > 0 {
+		return claims.Audience[0]
 	}
 
 	// Finally, return the default of none of the above methods are successful

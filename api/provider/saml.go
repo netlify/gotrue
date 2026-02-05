@@ -10,7 +10,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -20,11 +20,11 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	saml2 "github.com/russellhaering/gosaml2"
 	"github.com/russellhaering/gosaml2/types"
 	dsig "github.com/russellhaering/goxmldsig"
-	"github.com/gobuffalo/uuid"
 	"golang.org/x/oauth2"
 )
 
@@ -48,7 +48,7 @@ func getMetadata(url string) (*types.EntityDescriptor, error) {
 		return nil, fmt.Errorf("Request failed with status %s", res.Status)
 	}
 
-	rawMetadata, err := ioutil.ReadAll(res.Body)
+	rawMetadata, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}

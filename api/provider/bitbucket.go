@@ -60,7 +60,7 @@ func NewBitbucketProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, e
 }
 
 func (g bitbucketProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
-	return g.Exchange(oauth2.NoContext, code)
+	return g.Exchange(context.Background(), code)
 }
 
 func (g bitbucketProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {

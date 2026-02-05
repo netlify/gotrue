@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -39,7 +39,7 @@ func TestVerify(t *testing.T) {
 }
 
 func (ts *VerifyTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	require.NoError(ts.T(), models.TruncateAll(ts.API.db))
 
 	// Create user
 	u, err := models.NewUser(ts.instanceID, "test@example.com", "password", ts.Config.JWT.Aud, nil)

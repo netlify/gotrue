@@ -66,7 +66,13 @@ func (a *API) SAMLMetadata(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	metadata, err := samlProvider.SPMetadata()
+	if err != nil {
+		return internalServerError("Could not get SAML metadata: %+v", err).WithInternalError(err)
+	}
 	w.Header().Set("Content-Type", "application/xml")
-	w.Write(metadata)
+	_, err = w.Write(metadata)
+	if err != nil {
+		return internalServerError("Could not write SAML metadata: %+v", err).WithInternalError(err)
+	}
 	return nil
 }

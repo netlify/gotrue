@@ -24,7 +24,6 @@ require (
 	github.com/spf13/cobra v0.0.6
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.31.0
-	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
 	gopkg.in/DataDog/dd-trace-go.v1 v1.12.1
 )

@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -32,7 +32,7 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
 		defer squash(r.Body.Close)
-		raw, err := ioutil.ReadAll(r.Body)
+		raw, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 
 		data := map[string]interface{}{}
@@ -75,7 +75,7 @@ func TestSignupHookFromClaims(t *testing.T) {
 	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
 		defer squash(r.Body.Close)
-		raw, err := ioutil.ReadAll(r.Body)
+		raw, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 
 		data := map[string]interface{}{}
@@ -99,7 +99,7 @@ func TestSignupHookFromClaims(t *testing.T) {
 
 	ctx := context.Background()
 	ctx = withFunctionHooks(ctx, map[string][]string{
-		"signup": []string{svr.URL},
+		"signup": {svr.URL},
 	})
 
 	require.NoError(t, triggerEventHooks(ctx, conn, SignupEvent, user, iid, config))

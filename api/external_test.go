@@ -38,7 +38,7 @@ func (ts *ExternalTestSuite) SetupTest() {
 	ts.Config.DisableSignup = false
 	ts.Config.Mailer.Autoconfirm = false
 
-	models.TruncateAll(ts.API.db)
+	require.NoError(ts.T(), models.TruncateAll(ts.API.db))
 }
 
 func (ts *ExternalTestSuite) createUser(email string, name string, avatar string, confirmationToken string) (*models.User, error) {

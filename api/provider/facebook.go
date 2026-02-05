@@ -57,7 +57,7 @@ func NewFacebookProvider(ext conf.OAuthProviderConfiguration) (OAuthProvider, er
 }
 
 func (p facebookProvider) GetOAuthToken(code string) (*oauth2.Token, error) {
-	return p.Exchange(oauth2.NoContext, code)
+	return p.Exchange(context.Background(), code)
 }
 
 func (p facebookProvider) GetUserData(ctx context.Context, tok *oauth2.Token) (*UserProvidedData, error) {

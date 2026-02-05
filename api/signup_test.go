@@ -3,7 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -41,7 +41,7 @@ func TestSignup(t *testing.T) {
 }
 
 func (ts *SignupTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	require.NoError(ts.T(), models.TruncateAll(ts.API.db))
 	ts.Config.Webhook = conf.WebhookConfig{}
 }
 
@@ -88,7 +88,7 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		// verify the signature
 		signature := r.Header.Get("x-webhook-signature")
 		p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
-		claims := new(jwt.StandardClaims)
+		claims := new(jwt.RegisteredClaims)
 		token, err := p.ParseWithClaims(signature, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(ts.Config.Webhook.Secret), nil
 		})
@@ -96,12 +96,12 @@ func (ts *SignupTestSuite) TestWebhookTriggered() {
 		assert.True(token.Valid)
 		assert.Equal(ts.instanceID.String(), claims.Subject) // not configured for multitenancy
 		assert.Equal("gotrue", claims.Issuer)
-		assert.WithinDuration(time.Now(), time.Unix(claims.IssuedAt, 0), 5*time.Second)
+		assert.WithinDuration(time.Now(), claims.IssuedAt.Time, 5*time.Second)
 
 		// verify the contents
 
 		defer squash(r.Body.Close)
-		raw, err := ioutil.ReadAll(r.Body)
+		raw, err := io.ReadAll(r.Body)
 		require.NoError(err)
 		data := map[string]interface{}{}
 		require.NoError(json.Unmarshal(raw, &data))

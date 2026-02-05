@@ -16,11 +16,11 @@ import (
 	"time"
 
 	"github.com/beevik/etree"
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/russellhaering/gosaml2/types"
 	dsig "github.com/russellhaering/goxmldsig"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -47,7 +47,7 @@ func TestExternalSaml(t *testing.T) {
 }
 
 func (ts *ExternalSamlTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	require.NoError(ts.T(), models.TruncateAll(ts.API.db))
 }
 
 func (ts *ExternalSamlTestSuite) docFromTemplate(path string, data interface{}) *etree.Document {
@@ -134,7 +134,7 @@ func (ts *ExternalSamlTestSuite) setupSamlMetadata() (*httptest.Server, dsig.X50
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
 		w.WriteHeader(200)
-		io.WriteString(w, metadata)
+		_, _ = io.WriteString(w, metadata)
 	}))
 	return server, idpKeyStore
 }

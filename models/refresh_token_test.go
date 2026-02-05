@@ -3,10 +3,10 @@ package models
 import (
 	"testing"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/test"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -17,7 +17,7 @@ type RefreshTokenTestSuite struct {
 }
 
 func (ts *RefreshTokenTestSuite) SetupTest() {
-	TruncateAll(ts.db)
+	require.NoError(ts.T(), TruncateAll(ts.db))
 }
 
 func TestRefreshToken(t *testing.T) {

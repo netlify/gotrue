@@ -103,7 +103,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupErrorWhenEmpty
 func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("github@example.com", "GitHub Test", "http://example.com/avatar", "")
+	_, err := ts.createUser("github@example.com", "GitHub Test", "http://example.com/avatar", "")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -119,7 +120,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithPri
 func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithNonPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("secondary@example.com", "GitHub Test", "http://example.com/avatar", "")
+	_, err := ts.createUser("secondary@example.com", "GitHub Test", "http://example.com/avatar", "")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -134,7 +136,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGitHubDisableSignupSuccessWithNon
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubSuccessWhenMatchingToken() {
 	// name and avatar should be populated from GitHub API
-	ts.createUser("github@example.com", "", "", "invite_token")
+	_, err := ts.createUser("github@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -159,7 +162,8 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenNoMatchingTok
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenWrongToken() {
-	ts.createUser("github@example.com", "", "", "invite_token")
+	_, err := ts.createUser("github@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -172,7 +176,8 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenWrongToken() 
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitHubErrorWhenEmailDoesntMatch() {
-	ts.createUser("github@example.com", "", "", "invite_token")
+	_, err := ts.createUser("github@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
