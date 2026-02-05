@@ -1,7 +1,8 @@
 package mailer
 
 import (
-	"github.com/badoux/checkmail"
+	"net/mail"
+
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/mailme"
@@ -37,7 +38,8 @@ const defaultEmailChangeMail = `<h2>Confirm email address change</h2>
 // ValidateEmail returns nil if the email is valid,
 // otherwise an error indicating the reason it is invalid
 func (m TemplateMailer) ValidateEmail(email string) error {
-	return checkmail.ValidateFormat(email)
+	_, err := mail.ParseAddress(email)
+	return err
 }
 
 // InviteMail sends a invite mail to a new user
