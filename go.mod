@@ -5,6 +5,7 @@ require (
 	github.com/beevik/etree v1.1.1-0.20200718192613-4a2f8b9d084c
 	github.com/didip/tollbooth/v5 v5.1.1
 	github.com/go-chi/chi v4.0.2+incompatible
+	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gobuffalo/pop/v5 v5.3.4
 	github.com/gobuffalo/uuid v2.0.5+incompatible
@@ -18,9 +19,8 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/russellhaering/gosaml2 v0.6.0
 	github.com/russellhaering/goxmldsig v1.1.0
-	github.com/sebest/xff v0.0.0-20160910043805-6c115e0ffa35
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/cobra v0.0.6
+	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.31.0
 	golang.org/x/oauth2 v0.34.0
@@ -68,7 +68,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.5 // indirect
 	github.com/googleapis/gax-go/v2 v2.11.0 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.8.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect

@@ -11,14 +11,13 @@ import (
 
 	"github.com/didip/tollbooth/v5"
 	"github.com/didip/tollbooth/v5/limiter"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobuffalo/uuid"
 	"github.com/imdario/mergo"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
 	"github.com/netlify/gotrue/storage"
 	"github.com/rs/cors"
-	"github.com/sebest/xff"
 	"github.com/sirupsen/logrus"
 )
 
@@ -82,11 +81,24 @@ func NewAPI(globalConfig *conf.GlobalConfiguration, db *storage.Connection) *API
 func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfiguration, db *storage.Connection, version string) *API {
 	api := &API{config: globalConfig, db: db, version: version}
 
-	xffmw, _ := xff.Default()
 	logger := newStructuredLogger(logrus.StandardLogger())
 
 	r := newRouter()
-	r.UseBypass(xffmw.Handler)
+	r.UseBypass(middleware.RealIP)
+	// Inject base context values into each request (replaces chi.ServerBaseContext from chi v4)
+	r.UseBypass(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			reqCtx := req.Context()
+			// Copy base context values to request context
+			if config := ctx.Value(configKey); config != nil {
+				reqCtx = context.WithValue(reqCtx, configKey, config)
+			}
+			if instanceID := ctx.Value(instanceIDKey); instanceID != nil {
+				reqCtx = context.WithValue(reqCtx, instanceIDKey, instanceID)
+			}
+			next.ServeHTTP(w, req.WithContext(reqCtx))
+		})
+	})
 	r.Use(addRequestID(globalConfig))
 	r.Use(recoverer)
 	r.UseBypass(tracer)
@@ -193,7 +205,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		AllowCredentials: true,
 	})
 
-	api.handler = corsHandler.Handler(chi.ServerBaseContext(ctx, r))
+	api.handler = corsHandler.Handler(r)
 	return api
 }
 

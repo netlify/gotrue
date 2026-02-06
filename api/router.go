@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 func newRouter() *router {
@@ -35,7 +35,7 @@ func (r *router) Delete(pattern string, fn apiHandler) {
 }
 
 func (r *router) With(fn middlewareHandler) *router {
-	c := r.chi.With(middleware(fn))
+	c := r.chi.With(wrapMiddleware(fn))
 	return &router{c}
 }
 
@@ -45,7 +45,7 @@ func (r *router) WithBypass(fn func(next http.Handler) http.Handler) *router {
 }
 
 func (r *router) Use(fn middlewareHandler) {
-	r.chi.Use(middleware(fn))
+	r.chi.Use(wrapMiddleware(fn))
 }
 func (r *router) UseBypass(fn func(next http.Handler) http.Handler) {
 	r.chi.Use(fn)
@@ -87,6 +87,6 @@ func (m middlewareHandler) serve(next http.Handler, w http.ResponseWriter, r *ht
 	next.ServeHTTP(w, r)
 }
 
-func middleware(fn middlewareHandler) func(http.Handler) http.Handler {
+func wrapMiddleware(fn middlewareHandler) func(http.Handler) http.Handler {
 	return fn.handler
 }
