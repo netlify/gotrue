@@ -1,0 +1,15 @@
+# GitHub Action to call workflow that checks if a Dockerfile is using an 
+# End-of-Life container
+#
+# Author: Mike Gualtieri <mike.gualtieri@netlify.com>
+#
+
+name: Scanning for Docker images that will be end-of-life soon
+
+on: [push]
+
+jobs:
+  call-workflow-docker-eol-scan:
+    uses: netlify/security-workflows/.github/workflows/docker-eol-scan.yml@main
+    with: 
+      soon: 1
