@@ -43,7 +43,7 @@ GOTRUE_API_HOST=localhost
 PORT=9999
 ```
 
-`API_HOST` - `string`
+`GOTRUE_API_HOST` - `string`
 
 Hostname to listen on.
 
@@ -51,13 +51,17 @@ Hostname to listen on.
 
 Port number to listen on. Defaults to `8081`.
 
-`API_ENDPOINT` - `string` _Multi-instance mode only_
+`GOTRUE_API_ENDPOINT` - `string` _Multi-instance mode only_
 
 Controls what endpoint Netlify can access this API on.
 
 `REQUEST_ID_HEADER` - `string`
 
 If you wish to inherit a request ID from the incoming request, specify the name in this value.
+
+`GOTRUE_API_EXPORT_SECRET` - `string`
+
+A secret that, if set, will allow exporting users for a migration to a different service.
 
 ### Database
 

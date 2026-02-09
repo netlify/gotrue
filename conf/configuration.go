@@ -57,6 +57,7 @@ type GlobalConfiguration struct {
 		Port            int `envconfig:"PORT" default:"8081"`
 		Endpoint        string
 		RequestIDHeader string `envconfig:"REQUEST_ID_HEADER"`
+		ExportSecret    string `split_words:"true"`
 	}
 	DB                DBConfiguration
 	External          ProviderConfiguration
