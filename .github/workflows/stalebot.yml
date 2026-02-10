@@ -7,7 +7,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v3.0.18
+      - uses: actions/stale@v9
         with:
           exempt-issue-labels: 'WIP,security,action_item,never_stale'
           days-before-issue-stale: 365
