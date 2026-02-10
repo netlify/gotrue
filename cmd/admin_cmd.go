@@ -1,10 +1,10 @@
 package cmd
 
 import (
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -57,13 +57,6 @@ var adminDeleteUserCmd = cobra.Command{
 		}
 
 		execWithConfigAndArgs(cmd, adminDeleteUser, args)
-	},
-}
-
-var adminEditRoleCmd = cobra.Command{
-	Use: "editrole",
-	Run: func(cmd *cobra.Command, args []string) {
-		execWithConfigAndArgs(cmd, adminEditRole, args)
 	},
 }
 
@@ -142,37 +135,4 @@ func adminDeleteUser(globalConfig *conf.GlobalConfiguration, config *conf.Config
 	}
 
 	logrus.Infof("Removed user: %s", args[0])
-}
-
-func adminEditRole(globalConfig *conf.GlobalConfiguration, config *conf.Configuration, args []string) {
-	iid := uuid.Must(uuid.FromString(instanceID))
-
-	db, err := storage.Dial(globalConfig)
-	if err != nil {
-		logrus.Fatalf("Error opening database: %+v", err)
-	}
-	defer db.Close()
-
-	user, err := models.FindUserByEmailAndAudience(db, iid, args[0], getAudience(config))
-	if err != nil {
-		userID := uuid.Must(uuid.FromString(args[0]))
-		user, err = models.FindUserByInstanceIDAndID(db, iid, userID)
-		if err != nil {
-			logrus.Fatalf("Error finding user (%s): %+v", userID, err)
-		}
-	}
-
-	user.IsSuperAdmin = isSuperAdmin
-
-	if len(args) > 0 {
-		user.Role = args[0]
-	} else if isAdmin {
-		user.Role = config.JWT.AdminGroupName
-	}
-
-	if err = db.UpdateOnly(user, "role", "is_super_admin"); err != nil {
-		logrus.Fatalf("Error updating role for user (%s): %+v", args[0], err)
-	}
-
-	logrus.Infof("Updated user: %s", args[0])
 }

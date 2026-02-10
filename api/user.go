@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
-	"github.com/gobuffalo/uuid"
 )
 
 // UserUpdateParams parameters for updating a user
@@ -31,8 +31,10 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read User ID claim")
 	}
 
+	// Even though claims.Audience might include multiple audiences,
+	// GoTrue has always only supported single-audience tokens.
 	aud := a.requestAud(ctx, r)
-	if aud != claims.Audience {
+	if len(claims.Audience) == 0 || aud != claims.Audience[0] {
 		return badRequestError("Token audience doesn't match request audience")
 	}
 

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/didip/tollbooth/v5"
@@ -22,7 +21,7 @@ const (
 type FunctionHooks map[string][]string
 
 type NetlifyMicroserviceClaims struct {
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 	SiteURL       string        `json:"site_url"`
 	InstanceID    string        `json:"id"`
 	NetlifyID     string        `json:"netlify_id"`
@@ -60,12 +59,12 @@ func addGetBody(w http.ResponseWriter, req *http.Request) (context.Context, erro
 		return nil, badRequestError("request must provide a body")
 	}
 
-	buf, err := ioutil.ReadAll(req.Body)
+	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, internalServerError("Error reading body").WithInternalError(err)
 	}
 	req.GetBody = func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewReader(buf)), nil
+		return io.NopCloser(bytes.NewReader(buf)), nil
 	}
 	req.Body, _ = req.GetBody()
 	return req.Context(), nil

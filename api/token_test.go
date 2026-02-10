@@ -20,7 +20,6 @@ type TokenTestSuite struct {
 	API    *API
 	Config *conf.Configuration
 
-	token      string
 	instanceID uuid.UUID
 }
 
@@ -40,7 +39,7 @@ func TestToken(t *testing.T) {
 }
 
 func (ts *TokenTestSuite) SetupTest() {
-	models.TruncateAll(ts.API.db)
+	require.NoError(ts.T(), models.TruncateAll(ts.API.db))
 }
 
 func (ts *TokenTestSuite) TestRateLimitToken() {

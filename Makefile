@@ -11,14 +11,14 @@ build: ## Build the binary.
 
 deps: ## Install dependencies.
 	@go install github.com/gobuffalo/pop/v5/soda
-	@go install golang.org/x/lint/golint
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@go mod download
 
 image: ## Build the Docker image.
 	docker build .
 
 lint: ## Lint the code.
-	golint $(CHECK_FILES)
+	golangci-lint run ./...
 
 migrate_dev: ## Run database migrations for development.
 	hack/migrate.sh development

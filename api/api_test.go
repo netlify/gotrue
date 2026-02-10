@@ -2,15 +2,13 @@ package api
 
 import (
 	"context"
-	"math/rand"
 	"testing"
-	"time"
 
+	"github.com/gobuffalo/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/test"
-	"github.com/gobuffalo/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,10 +16,6 @@ const (
 	apiTestVersion = "1"
 	apiTestConfig  = "../hack/test.env"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 // setupAPIForTest creates a new API to run tests with.
 // Using this function allows us to keep track of the database connection
@@ -97,14 +91,4 @@ func TestEmailEnabledByDefault(t *testing.T) {
 	require.NoError(t, err)
 
 	require.False(t, api.config.External.Email.Disabled)
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func randStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Int63()%int64(len(letterBytes))]
-	}
-	return string(b)
 }

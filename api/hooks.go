@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -38,7 +37,7 @@ const (
 var defaultTimeout = time.Second * 5
 
 type webhookClaims struct {
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 	SHA256 string `json:"sha256"`
 }
 
@@ -49,7 +48,6 @@ type Webhook struct {
 	jwtSecret  string
 	claims     jwt.Claims
 	payload    []byte
-	headers    map[string]string
 }
 
 type WebhookResponse struct {
@@ -184,6 +182,7 @@ func triggerEventHooks(ctx context.Context, conn *storage.Connection, event Hook
 	return nil
 }
 
+// TODO: use ctx for request cancellation in webhook calls
 func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *storage.Connection, event HookEvent, user *models.User, instanceID uuid.UUID, config *conf.Configuration) error {
 	if !hookURL.IsAbs() {
 		siteURL, err := url.Parse(config.SiteURL)
@@ -215,8 +214,8 @@ func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *sto
 	}
 
 	claims := webhookClaims{
-		StandardClaims: jwt.StandardClaims{
-			IssuedAt: time.Now().Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt: jwt.NewNumericDate(time.Now()),
 			Subject:  instanceID.String(),
 			Issuer:   gotrueIssuer,
 		},
@@ -242,7 +241,7 @@ func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *sto
 	if err == nil && body != nil {
 		// handle case where response from the trigger is streamed but has no
 		// Body
-		data, err := ioutil.ReadAll(body)
+		data, err := io.ReadAll(body)
 		if err != nil {
 			return internalServerError("Webhook returned malformed BODY: %v", err).WithInternalError(err)
 		}

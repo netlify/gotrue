@@ -108,7 +108,8 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupErrorWhenNo
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar", "")
+	_, err := ts.createUser("bitbucket@example.com", "Bitbucket Test", "http://example.com/avatar", "")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -125,7 +126,8 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWith
 func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWithSecondaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("secondary@example.com", "Bitbucket Test", "http://example.com/avatar", "")
+	_, err := ts.createUser("secondary@example.com", "Bitbucket Test", "http://example.com/avatar", "")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -141,7 +143,8 @@ func (ts *ExternalTestSuite) TestSignupExternalBitbucketDisableSignupSuccessWith
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketSuccessWhenMatchingToken() {
 	// name and avatar should be populated from Bitbucket API
-	ts.createUser("bitbucket@example.com", "", "", "invite_token")
+	_, err := ts.createUser("bitbucket@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -168,7 +171,8 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenNoMatching
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenWrongToken() {
-	ts.createUser("bitbucket@example.com", "", "", "invite_token")
+	_, err := ts.createUser("bitbucket@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -182,7 +186,8 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenWrongToken
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalBitbucketErrorWhenEmailDoesntMatch() {
-	ts.createUser("bitbucket@example.com", "", "", "invite_token")
+	_, err := ts.createUser("bitbucket@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"

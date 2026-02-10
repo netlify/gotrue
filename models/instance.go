@@ -12,8 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const baseConfigKey = ""
-
 type Instance struct {
 	ID uuid.UUID `json:"id" db:"id"`
 	// Netlify UUID
@@ -80,8 +78,8 @@ func GetInstanceByUUID(tx *storage.Connection, uuid uuid.UUID) (*Instance, error
 func DeleteInstance(conn *storage.Connection, instance *Instance) error {
 	return conn.Transaction(func(tx *storage.Connection) error {
 		delModels := map[string]*pop.Model{
-			"user":          &pop.Model{Value: &User{}},
-			"refresh token": &pop.Model{Value: &RefreshToken{}},
+			"user":          {Value: &User{}},
+			"refresh token": {Value: &RefreshToken{}},
 		}
 
 		for name, dm := range delModels {

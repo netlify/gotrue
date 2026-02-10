@@ -57,8 +57,8 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ExternalProviderClaims{
 		NetlifyMicroserviceClaims: NetlifyMicroserviceClaims{
-			StandardClaims: jwt.StandardClaims{
-				ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
 			},
 			SiteURL:    config.SiteURL,
 			InstanceID: getInstanceID(ctx).String(),

@@ -111,7 +111,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupErrorWhenEmpty
 func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithPrimaryEmail() {
 	ts.Config.DisableSignup = true
 
-	ts.createUser("gitlab@example.com", "GitLab Test", "http://example.com/avatar", "")
+	_, err := ts.createUser("gitlab@example.com", "GitLab Test", "http://example.com/avatar", "")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -130,7 +131,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithSec
 	ts.Config.Mailer.Autoconfirm = true
 	ts.Config.DisableSignup = true
 
-	ts.createUser("secondary@example.com", "GitLab Test", "http://example.com/avatar", "")
+	_, err := ts.createUser("secondary@example.com", "GitLab Test", "http://example.com/avatar", "")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -146,7 +148,8 @@ func (ts *ExternalTestSuite) TestSignupExternalGitLabDisableSignupSuccessWithSec
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabSuccessWhenMatchingToken() {
 	// name and avatar should be populated from GitLab API
-	ts.createUser("gitlab@example.com", "", "", "invite_token")
+	_, err := ts.createUser("gitlab@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -173,7 +176,8 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenNoMatchingTok
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenWrongToken() {
-	ts.createUser("gitlab@example.com", "", "", "invite_token")
+	_, err := ts.createUser("gitlab@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"
@@ -187,7 +191,8 @@ func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenWrongToken() 
 }
 
 func (ts *ExternalTestSuite) TestInviteTokenExternalGitLabErrorWhenEmailDoesntMatch() {
-	ts.createUser("gitlab@example.com", "", "", "invite_token")
+	_, err := ts.createUser("gitlab@example.com", "", "", "invite_token")
+	ts.Require().NoError(err)
 
 	tokenCount, userCount := 0, 0
 	code := "authcode"

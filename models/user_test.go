@@ -20,7 +20,7 @@ type UserTestSuite struct {
 }
 
 func (ts *UserTestSuite) SetupTest() {
-	TruncateAll(ts.db)
+	require.NoError(ts.T(), TruncateAll(ts.db))
 }
 
 func TestUser(t *testing.T) {
@@ -113,7 +113,7 @@ func (ts *UserTestSuite) TestFindUsersInAudience() {
 
 	sp := &SortParams{
 		Fields: []SortField{
-			SortField{Name: "created_at", Dir: Descending},
+			{Name: "created_at", Dir: Descending},
 		},
 	}
 	n, err = FindUsersInAudience(ts.db, u.InstanceID, u.Aud, nil, sp, "")
