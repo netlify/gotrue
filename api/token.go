@@ -117,7 +117,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", "Invalid Refresh Token")
 		}
-		return internalServerError(err.Error())
+		return internalServerError("%s", err.Error())
 	}
 
 	if token.Revoked {
@@ -136,7 +136,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 
 		newToken, terr = models.GrantRefreshTokenSwap(tx, user, token)
 		if terr != nil {
-			return internalServerError(terr.Error())
+			return internalServerError("%s", terr.Error())
 		}
 
 		tokenString, terr = generateAccessToken(user, time.Second*time.Duration(config.JWT.Exp), config.JWT.Secret)

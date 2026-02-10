@@ -41,7 +41,7 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 	user, err := models.FindUserByID(a.db, userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return notFoundError(err.Error())
+			return notFoundError("%s", err.Error())
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
@@ -71,7 +71,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	user, err := models.FindUserByID(a.db, userID)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return notFoundError(err.Error())
+			return notFoundError("%s", err.Error())
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}

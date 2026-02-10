@@ -77,7 +77,7 @@ func (a *API) validateEmail(ctx context.Context, email string) error {
 	}
 	mailer := a.Mailer(ctx)
 	if err := mailer.ValidateEmail(email); err != nil {
-		return unprocessableEntityError("Unable to validate email address: " + err.Error())
+		return unprocessableEntityError("Unable to validate email address: %s", err.Error())
 	}
 	return nil
 }
