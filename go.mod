@@ -9,7 +9,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gobuffalo/pop/v5 v5.3.4
 	github.com/gobuffalo/uuid v2.0.5+incompatible
-	github.com/golang-jwt/jwt/v4 v4.1.0
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/imdario/mergo v0.3.16
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
