@@ -20,7 +20,7 @@ require (
 	github.com/russellhaering/gosaml2 v0.6.0
 	github.com/russellhaering/goxmldsig v1.1.0
 	github.com/sebest/xff v0.0.0-20160910043805-6c115e0ffa35
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.8.3
 	github.com/spf13/cobra v0.0.6
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.31.0
@@ -67,7 +67,6 @@ require (
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/luna-duclos/instrumentedsql v1.1.3 // indirect
 	github.com/markbates/errx v1.1.0 // indirect
 	github.com/markbates/oncer v1.0.0 // indirect
