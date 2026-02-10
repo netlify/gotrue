@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/netlify/gotrue/api/provider"
 	"github.com/netlify/gotrue/models"

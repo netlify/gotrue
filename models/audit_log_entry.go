@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/storage"
 	"github.com/netlify/gotrue/storage/namespace"
 	"github.com/pkg/errors"

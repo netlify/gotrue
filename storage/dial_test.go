@@ -3,7 +3,7 @@ package storage
 import (
 	"testing"
 
-	"github.com/gobuffalo/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/stretchr/testify/require"
 )
 

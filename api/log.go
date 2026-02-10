@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	chimiddleware "github.com/go-chi/chi/middleware"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,7 +40,7 @@ type structuredLoggerEntry struct {
 	Logger logrus.FieldLogger
 }
 
-func (l *structuredLoggerEntry) Write(status, bytes int, elapsed time.Duration) {
+func (l *structuredLoggerEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra interface{}) {
 	l.Logger = l.Logger.WithFields(logrus.Fields{
 		"status":   status,
 		"duration": elapsed.Nanoseconds(),
