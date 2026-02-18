@@ -13,11 +13,15 @@ import (
 )
 
 // GoTrueClaims is a struct thats used for JWT claims
+// TODO: migrate from jwt.StandardClaims to jwt.RegisteredClaims. RegisteredClaims
+// serializes "aud" as a JSON array, but Git Gateway (and other consumers) expect a
+// string. A custom MarshalJSON/UnmarshalJSON on GoTrueClaims is needed to handle both
+// formats before switching.
 type GoTrueClaims struct {
-	jwt.RegisteredClaims
-	Email        string                 `json:"email"`
-	AppMetaData  map[string]interface{} `json:"app_metadata"`
-	UserMetaData map[string]interface{} `json:"user_metadata"`
+	jwt.StandardClaims                        //nolint:staticcheck // RegisteredClaims serializes aud as array, breaking Git Gateway
+	Email              string                 `json:"email"`
+	AppMetaData        map[string]interface{} `json:"app_metadata"`
+	UserMetaData       map[string]interface{} `json:"user_metadata"`
 }
 
 // AccessTokenResponse represents an OAuth2 success response
@@ -165,10 +169,10 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 
 func generateAccessToken(user *models.User, expiresIn time.Duration, secret string) (string, error) {
 	claims := &GoTrueClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
+		StandardClaims: jwt.StandardClaims{ //nolint:staticcheck
 			Subject:   user.ID.String(),
-			Audience:  jwt.ClaimStrings{user.Aud},
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
+			Audience:  user.Aud,
+			ExpiresAt: time.Now().Add(expiresIn).Unix(),
 		},
 		Email:        user.Email,
 		AppMetaData:  user.AppMetaData,
