@@ -2,10 +2,14 @@ package api
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
@@ -40,6 +44,35 @@ func TestToken(t *testing.T) {
 
 func (ts *TokenTestSuite) SetupTest() {
 	require.NoError(ts.T(), models.TruncateAll(ts.API.db))
+}
+
+// TestAccessTokenAudIsString verifies that the "aud" claim in generated JWTs is
+// a JSON string, not an array. Git Gateway and other consumers expect a string
+// and will fail to unmarshal an array.
+func TestAccessTokenAudIsString(t *testing.T) {
+	user := &models.User{Email: "test@example.com", Aud: "myapp"}
+	user.ID = uuid.Must(uuid.NewV4())
+
+	tokenStr, err := generateAccessToken(user, time.Hour, "test-secret")
+	require.NoError(t, err)
+
+	// Decode the payload (second segment) without signature validation
+	parts := strings.Split(tokenStr, ".")
+	require.Len(t, parts, 3, "JWT should have 3 segments")
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	require.NoError(t, err)
+
+	var raw map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(payload, &raw))
+
+	audRaw, ok := raw["aud"]
+	require.True(t, ok, "aud claim should be present")
+	assert.Equal(t, byte('"'), audRaw[0], "aud claim should be a JSON string, got: %s", string(audRaw))
+
+	var aud string
+	require.NoError(t, json.Unmarshal(audRaw, &aud), "aud claim should unmarshal as a string, got: %s", string(audRaw))
+	assert.Equal(t, "myapp", aud)
 }
 
 func (ts *TokenTestSuite) TestRateLimitToken() {
