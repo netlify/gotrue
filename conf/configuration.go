@@ -98,10 +98,11 @@ type SMTPConfiguration struct {
 }
 
 type MailerConfiguration struct {
-	Autoconfirm bool                      `json:"autoconfirm"`
-	Subjects    EmailContentConfiguration `json:"subjects"`
-	Templates   EmailContentConfiguration `json:"templates"`
-	URLPaths    EmailContentConfiguration `json:"url_paths"`
+	Autoconfirm    bool                      `json:"autoconfirm"`
+	Subjects       EmailContentConfiguration `json:"subjects"`
+	Templates      EmailContentConfiguration `json:"templates"`
+	URLPaths       EmailContentConfiguration `json:"url_paths"`
+	RecoveryMaxAge time.Duration             `json:"recovery_max_age" split_words:"true"`
 }
 
 // Configuration holds all the per-instance configuration.
@@ -212,6 +213,10 @@ func (config *Configuration) ApplyDefaults() {
 
 	if config.SMTP.MaxFrequency == 0 {
 		config.SMTP.MaxFrequency = 15 * time.Minute
+	}
+
+	if config.Mailer.RecoveryMaxAge == 0 {
+		config.Mailer.RecoveryMaxAge = 24 * time.Hour
 	}
 
 	if config.Cookie.Key == "" {
