@@ -39,11 +39,7 @@ func sendInvite(tx *storage.Connection, u *models.User, mailer mailer.Mailer, re
 	return errors.Wrap(tx.UpdateOnly(u, "confirmation_token", "invited_at"), "Database error updating user for invite")
 }
 
-func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
-	if u.RecoverySentAt != nil && !u.RecoverySentAt.Add(maxFrequency).Before(time.Now()) {
-		return nil
-	}
-
+func (a *API) sendPasswordRecovery(tx *storage.Connection, u *models.User, mailer mailer.Mailer, referrerURL string) error {
 	oldToken := u.RecoveryToken
 	u.RecoveryToken = crypto.SecureToken()
 	now := time.Now()

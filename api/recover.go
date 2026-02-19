@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -38,6 +39,10 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
+	if user.RecoverySentAt != nil && !user.RecoverySentAt.Add(config.SMTP.MaxFrequency).Before(time.Now()) {
+		return tooManyRequestsError("Rate limit exceeded, try again later")
+	}
+
 	err = a.db.Transaction(func(tx *storage.Connection) error {
 		if terr := models.NewAuditLogEntry(tx, instanceID, user, models.UserRecoveryRequestedAction, nil); terr != nil {
 			return terr
@@ -45,7 +50,7 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 
 		mailer := a.Mailer(ctx)
 		referrer := a.getReferrer(r)
-		return a.sendPasswordRecovery(tx, user, mailer, config.SMTP.MaxFrequency, referrer)
+		return a.sendPasswordRecovery(tx, user, mailer, referrer)
 	})
 	if err != nil {
 		return internalServerError("Error recovering user").WithInternalError(err)
