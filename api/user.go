@@ -31,10 +31,8 @@ func (a *API) UserGet(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read User ID claim")
 	}
 
-	// Even though claims.Audience might include multiple audiences,
-	// GoTrue has always only supported single-audience tokens.
 	aud := a.requestAud(ctx, r)
-	if len(claims.Audience) == 0 || aud != claims.Audience[0] {
+	if aud != claims.Audience {
 		return badRequestError("Token audience doesn't match request audience")
 	}
 
