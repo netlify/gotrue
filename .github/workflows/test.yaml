@@ -41,5 +41,5 @@ jobs:
           curl -X POST --silent --show-error --fail \
             -H 'Circle-Token: ${{ secrets.CIRCLE_TOKEN }}' \
             -H 'content-type: application/json' \
-            --data '{ "branch": "master", "parameters": { "branch": "${{ github.event.pull_request.head.ref || github.ref_name }}", "commit": "${{ github.event.pull_request.head.sha || github.sha }}" } }' \
+            --data '{ "branch": "main", "parameters": { "branch": "${{ github.event.pull_request.head.ref || github.ref_name }}", "commit": "${{ github.event.pull_request.head.sha || github.sha }}" } }' \
             https://circleci.com/api/v2/project/github/netlify/gotrue-ci/pipeline
