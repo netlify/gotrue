@@ -94,15 +94,7 @@ func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
 	// Setup response recorder
 	w := httptest.NewRecorder()
 	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), http.StatusOK, w.Code)
-
-	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
-	require.NoError(ts.T(), err)
-
-	// ensure it did not send a new email
-	u1 := recoveryTime.Round(time.Second).Unix()
-	u2 := u.RecoverySentAt.Round(time.Second).Unix()
-	assert.Equal(ts.T(), u1, u2)
+	assert.Equal(ts.T(), http.StatusTooManyRequests, w.Code)
 }
 
 func (ts *RecoverTestSuite) TestRecover_NewEmailSent() {

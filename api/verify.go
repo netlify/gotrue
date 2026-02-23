@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -130,6 +131,10 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 			return nil, notFoundError("%s", err.Error())
 		}
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
+	}
+
+	if user.RecoverySentAt != nil && time.Now().After(user.RecoverySentAt.Add(config.Mailer.RecoveryMaxAge)) {
+		return nil, unprocessableEntityError("Recovery token expired")
 	}
 
 	err = conn.Transaction(func(tx *storage.Connection) error {
