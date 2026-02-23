@@ -180,6 +180,7 @@ func generateAccessToken(user *models.User, expiresIn time.Duration, secret stri
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token.Header["kid"] = "nf-ident"
 	return token.SignedString([]byte(secret))
 }
 
