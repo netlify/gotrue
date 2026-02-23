@@ -75,6 +75,28 @@ func TestAccessTokenAudIsString(t *testing.T) {
 	assert.Equal(t, "myapp", aud)
 }
 
+// kid header is required to identify Identity tokens downstream
+func TestAccessTokenHasKidHeader(t *testing.T) {
+	user := &models.User{Email: "test@example.com", Aud: "myapp"}
+	user.ID = uuid.Must(uuid.NewV4())
+
+	tokenStr, err := generateAccessToken(user, time.Hour, "test-secret")
+	require.NoError(t, err)
+
+	parts := strings.Split(tokenStr, ".")
+	require.Len(t, parts, 3, "JWT should have 3 segments")
+
+	header, err := base64.RawURLEncoding.DecodeString(parts[0])
+	require.NoError(t, err)
+
+	var headerMap map[string]interface{}
+	require.NoError(t, json.Unmarshal(header, &headerMap))
+
+	kid, ok := headerMap["kid"]
+	require.True(t, ok, "kid field should be present in JWT header")
+	assert.Equal(t, "nf-ident", kid)
+}
+
 func (ts *TokenTestSuite) TestRateLimitToken() {
 	var buffer bytes.Buffer
 	req := httptest.NewRequest(http.MethodPost, "http://localhost/token", &buffer)
