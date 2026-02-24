@@ -61,3 +61,32 @@ func (ts *TracerTestSuite) TestTracer_Spans() {
 		assert.NotEmpty(ts.T(), spans[1].Tag("http.request_id"))
 	}
 }
+
+func (ts *TracerTestSuite) TestTracer_NfClientHeader() {
+	mt := mocktracer.New()
+	opentracing.SetGlobalTracer(mt)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/settings", nil)
+	req.Header.Set("X-Nf-Client", "netlify-identity-widget")
+	ts.API.handler.ServeHTTP(w, req)
+
+	spans := mt.FinishedSpans()
+	if assert.Equal(ts.T(), 1, len(spans)) {
+		assert.Equal(ts.T(), "netlify-identity-widget", spans[0].Tag("nf.client"))
+	}
+}
+
+func (ts *TracerTestSuite) TestTracer_NfClientHeaderAbsent() {
+	mt := mocktracer.New()
+	opentracing.SetGlobalTracer(mt)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/settings", nil)
+	ts.API.handler.ServeHTTP(w, req)
+
+	spans := mt.FinishedSpans()
+	if assert.Equal(ts.T(), 1, len(spans)) {
+		assert.Nil(ts.T(), spans[0].Tag("nf.client"))
+	}
+}

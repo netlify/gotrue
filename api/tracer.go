@@ -44,6 +44,10 @@ func tracer(next http.Handler) http.Handler {
 			span.SetTag("http.request_id", reqID)
 		}
 
+		if nfClient := r.Header.Get("X-Nf-Client"); nfClient != "" {
+			span.SetTag("nf.client", nfClient)
+		}
+
 		trw := newTracingResponseWriter(w)
 		next.ServeHTTP(trw, r.WithContext(traceCtx))
 

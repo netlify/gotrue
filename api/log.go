@@ -25,6 +25,7 @@ func (l *structuredLogger) NewLogEntry(r *http.Request) chimiddleware.LogEntry {
 		"path":        r.URL.Path,
 		"remote_addr": r.RemoteAddr,
 		"referer":     r.Referer(),
+		"nf_client":   r.Header.Get("X-Nf-Client"),
 	}
 
 	if reqID := getRequestID(r.Context()); reqID != "" {
