@@ -97,6 +97,25 @@ func (ts *RecoverTestSuite) TestRecover_NoEmailSent() {
 	assert.Equal(ts.T(), http.StatusTooManyRequests, w.Code)
 }
 
+func (ts *RecoverTestSuite) TestRecover_UnknownEmailReturnsGenericSuccess() {
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"email": "unknown@example.com",
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/recover", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+
+	response := map[string]string{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&response))
+
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
+	assert.Len(ts.T(), response, 0)
+}
+
 func (ts *RecoverTestSuite) TestRecover_NewEmailSent() {
 	recoveryTime := time.Now().UTC().Add(-20 * time.Minute)
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)

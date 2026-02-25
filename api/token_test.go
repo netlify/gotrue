@@ -127,3 +127,23 @@ func (ts *TokenTestSuite) TestRateLimitToken() {
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
 }
+
+func (ts *TokenTestSuite) TestPasswordGrant_UnconfirmedUserReturnsGenericError() {
+	user, err := models.NewUser(ts.instanceID, "test@example.com", "password", ts.Config.JWT.Aud, nil)
+	require.NoError(ts.T(), err)
+	require.NoError(ts.T(), ts.API.db.Create(user))
+
+	body := strings.NewReader("grant_type=password&username=test@example.com&password=password")
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/token", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+
+	response := map[string]string{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&response))
+
+	assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
+	assert.Equal(ts.T(), "invalid_grant", response["error"])
+	assert.Equal(ts.T(), "No user found with that email, or password invalid.", response["error_description"])
+}
