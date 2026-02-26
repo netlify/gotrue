@@ -190,45 +190,41 @@ func (ts *SignupTestSuite) TestFailingWebhook() {
 	require.Equal(ts.T(), http.StatusBadGateway, w.Code)
 }
 
-// TestSignupTwice checks to make sure the same email cannot be registered twice
+// TestSignupTwice checks that signing up again with a confirmed email returns a generic success response.
 func (ts *SignupTestSuite) TestSignupTwice() {
-	// Request body
-	var buffer bytes.Buffer
-
-	encode := func() {
+	sendSignup := func(metaValue int) *httptest.ResponseRecorder {
+		var buffer bytes.Buffer
 		require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
 			"email":    "test1@example.com",
 			"password": "test1",
 			"data": map[string]interface{}{
-				"a": 1,
+				"a": metaValue,
 			},
 		}))
+
+		req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		ts.API.handler.ServeHTTP(w, req)
+		return w
 	}
 
-	encode()
+	initialResponse := sendSignup(1)
+	require.Equal(ts.T(), http.StatusOK, initialResponse.Code)
 
-	// Setup request
-	req := httptest.NewRequest(http.MethodPost, "http://localhost/signup", &buffer)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Setup response recorder
-	w := httptest.NewRecorder()
-	y := httptest.NewRecorder()
-
-	ts.API.handler.ServeHTTP(y, req)
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test1@example.com", ts.Config.JWT.Aud)
 	if err == nil {
 		require.NoError(ts.T(), u.Confirm(ts.API.db))
 	}
 
-	encode()
-	ts.API.handler.ServeHTTP(w, req)
+	w := sendSignup(2)
+
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
 
 	data := make(map[string]interface{})
 	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-
-	assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
-	assert.Equal(ts.T(), float64(http.StatusBadRequest), data["code"])
+	assert.Empty(ts.T(), data)
 }
 
 func (ts *SignupTestSuite) TestVerifySignup() {

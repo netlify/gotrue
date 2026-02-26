@@ -55,6 +55,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 	cookie := r.Header.Get(useCookieHeader)
+	invalidLoginError := "No user found with that email, or password invalid."
 
 	aud := a.requestAud(ctx, r)
 	instanceID := getInstanceID(ctx)
@@ -63,17 +64,17 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, username, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return oauthError("invalid_grant", "No user found with that email, or password invalid.")
+			return oauthError("invalid_grant", invalidLoginError)
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}
 
 	if !user.IsConfirmed() {
-		return oauthError("invalid_grant", "Email not confirmed")
+		return oauthError("invalid_grant", invalidLoginError)
 	}
 
 	if !user.Authenticate(password) {
-		return oauthError("invalid_grant", "No user found with that email, or password invalid.")
+		return oauthError("invalid_grant", invalidLoginError)
 	}
 
 	var token *AccessTokenResponse
