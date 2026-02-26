@@ -49,7 +49,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if user != nil && user.IsConfirmed() {
-		return sendJSON(w, http.StatusOK, user)
+		return sendJSON(w, http.StatusOK, make(map[string]interface{}))
 	}
 
 	err = a.db.Transaction(func(tx *storage.Connection) error {

@@ -220,12 +220,11 @@ func (ts *SignupTestSuite) TestSignupTwice() {
 
 	w := sendSignup(2)
 
-	data := models.User{}
-	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
-
 	assert.Equal(ts.T(), http.StatusOK, w.Code)
-	assert.Equal(ts.T(), "test1@example.com", data.Email)
-	assert.Equal(ts.T(), 1.0, data.UserMetaData["a"])
+
+	data := make(map[string]interface{})
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&data))
+	assert.Empty(ts.T(), data)
 }
 
 func (ts *SignupTestSuite) TestVerifySignup() {
