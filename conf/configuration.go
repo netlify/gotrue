@@ -71,10 +71,11 @@ type GlobalConfiguration struct {
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.
 type EmailContentConfiguration struct {
-	Invite       string `json:"invite"`
-	Confirmation string `json:"confirmation"`
-	Recovery     string `json:"recovery"`
-	EmailChange  string `json:"email_change" split_words:"true"`
+	Invite        string `json:"invite"`
+	Confirmation  string `json:"confirmation"`
+	Recovery      string `json:"recovery"`
+	EmailChange   string `json:"email_change" split_words:"true"`
+	AccountExists string `json:"account_exists" split_words:"true"`
 }
 
 type ProviderConfiguration struct {

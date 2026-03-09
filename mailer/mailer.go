@@ -17,6 +17,7 @@ type Mailer interface {
 	ConfirmationMail(user *models.User, referrerURL string) error
 	RecoveryMail(user *models.User, referrerURL string) error
 	EmailChangeMail(user *models.User, referrerURL string) error
+	AccountExistsMail(user *models.User, referrerURL string) error
 	ValidateEmail(email string) error
 }
 

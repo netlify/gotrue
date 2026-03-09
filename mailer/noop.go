@@ -25,6 +25,10 @@ func (m *noopMailer) EmailChangeMail(user *models.User, referrerURL string) erro
 	return nil
 }
 
+func (m *noopMailer) AccountExistsMail(user *models.User, referrerURL string) error {
+	return nil
+}
+
 func (m noopMailer) Send(user *models.User, subject, body string, data map[string]interface{}) error {
 	return nil
 }

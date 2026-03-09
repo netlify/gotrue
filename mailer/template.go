@@ -35,6 +35,12 @@ const defaultEmailChangeMail = `<h2>Confirm email address change</h2>
 <p>Follow this link to confirm the update of your email address from {{ .Email }} to {{ .NewEmail }}:</p>
 <p><a href="{{ .ConfirmationURL }}">Change email address</a></p>`
 
+const defaultAccountExistsMail = `<h2>Account already exists</h2>
+
+<p>Someone tried to create an account with your email address on {{ .SiteURL }}.</p>
+<p>If this was you, you can <a href="{{ .SiteURL }}">log in to your existing account</a>.</p>
+<p>If you didn't request this, you can safely ignore this message.</p>`
+
 // ValidateEmail returns nil if the email is valid,
 // otherwise an error indicating the reason it is invalid
 func (m TemplateMailer) ValidateEmail(email string) error {
@@ -131,6 +137,23 @@ func (m *TemplateMailer) RecoveryMail(user *models.User, referrerURL string) err
 		string(withDefault(m.Config.Mailer.Subjects.Recovery, "Reset Your Password")),
 		enforceRelativeURL(m.Config.Mailer.Templates.Recovery),
 		defaultRecoveryMail,
+		data,
+	)
+}
+
+// AccountExistsMail sends a notification when someone tries to sign up with an existing email
+func (m *TemplateMailer) AccountExistsMail(user *models.User, referrerURL string) error {
+	data := map[string]interface{}{
+		"SiteURL": m.Config.SiteURL,
+		"Email":   user.Email,
+		"Data":    user.UserMetaData,
+	}
+
+	return m.Mailer.Mail(
+		user.Email,
+		string(withDefault(m.Config.Mailer.Subjects.AccountExists, "Account Already Exists")),
+		enforceRelativeURL(m.Config.Mailer.Templates.AccountExists),
+		defaultAccountExistsMail,
 		data,
 	)
 }

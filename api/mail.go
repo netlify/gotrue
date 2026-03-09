@@ -9,6 +9,7 @@ import (
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 func sendConfirmation(tx *storage.Connection, u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) error {
@@ -65,6 +66,16 @@ func (a *API) sendEmailChange(tx *storage.Connection, u *models.User, mailer mai
 
 	u.EmailChangeSentAt = &now
 	return errors.Wrap(tx.UpdateOnly(u, "email_change_token", "email_change", "email_change_sent_at"), "Database error updating user for email change")
+}
+
+func sendAccountExistsNotification(u *models.User, mailer mailer.Mailer, maxFrequency time.Duration, referrerURL string) {
+	if u.ConfirmationSentAt != nil && !u.ConfirmationSentAt.Add(maxFrequency).Before(time.Now()) {
+		return
+	}
+
+	if err := mailer.AccountExistsMail(u, referrerURL); err != nil {
+		logrus.WithError(err).Warn("Failed to send account exists notification")
+	}
 }
 
 func (a *API) validateEmail(ctx context.Context, email string) error {

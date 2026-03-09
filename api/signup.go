@@ -49,6 +49,9 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if user != nil && user.IsConfirmed() {
+		mailer := a.Mailer(ctx)
+		referrer := a.getReferrer(r)
+		sendAccountExistsNotification(user, mailer, config.SMTP.MaxFrequency, referrer)
 		return sendJSON(w, http.StatusOK, make(map[string]interface{}))
 	}
 
