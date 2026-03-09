@@ -222,15 +222,16 @@ func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *sto
 		SHA256: sha,
 	}
 
+	webhookConfig := config.Webhook
+	webhookConfig.URL = hookURL.String()
+
 	w := Webhook{
-		WebhookConfig: &config.Webhook,
+		WebhookConfig: &webhookConfig,
 		jwtSecret:     secret,
 		instanceID:    instanceID,
 		claims:        claims,
 		payload:       data,
 	}
-
-	w.URL = hookURL.String()
 
 	body, err := w.trigger()
 	defer func() {
