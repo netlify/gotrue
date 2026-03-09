@@ -33,6 +33,34 @@ func (ts *ExternalTestSuite) TestSignupExternalGithub() {
 	ts.Equal(ts.Config.SiteURL, claims.SiteURL)
 }
 
+func (ts *ExternalTestSuite) TestSignupExternalGithubForwardsFunctionHooks() {
+	expectedHooks := map[string][]string{
+		"signup": {"http://localhost/functions/identity-signup"},
+		"login":  {"http://localhost/functions/identity-login"},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/authorize?provider=github", nil)
+	ctx := withFunctionHooks(req.Context(), expectedHooks)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	ts.Require().Equal(http.StatusFound, w.Code)
+
+	u, err := url.Parse(w.Header().Get("Location"))
+	ts.Require().NoError(err, "redirect url parse failed")
+	q := u.Query()
+
+	claims := ExternalProviderClaims{}
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	_, err = p.ParseWithClaims(q.Get("state"), &claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(ts.API.config.OperatorToken), nil
+	})
+	ts.Require().NoError(err)
+
+	ts.Equal("github", claims.Provider)
+	ts.Equal(FunctionHooks(expectedHooks), claims.FunctionHooks)
+}
+
 func GitHubTestSignupSetup(ts *ExternalTestSuite, tokenCount *int, userCount *int, code string, emails string) *httptest.Server {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {

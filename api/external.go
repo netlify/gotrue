@@ -60,9 +60,10 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 			RegisteredClaims: jwt.RegisteredClaims{
 				ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
 			},
-			SiteURL:    config.SiteURL,
-			InstanceID: getInstanceID(ctx).String(),
-			NetlifyID:  getNetlifyID(ctx),
+			SiteURL:       config.SiteURL,
+			InstanceID:    getInstanceID(ctx).String(),
+			NetlifyID:     getNetlifyID(ctx),
+			FunctionHooks: getFunctionHooks(ctx),
 		},
 		Provider:    providerType,
 		InviteToken: inviteToken,
