@@ -288,6 +288,9 @@ func (a *API) loadExternalState(ctx context.Context, state string) (context.Cont
 	if claims.Referrer != "" {
 		ctx = withExternalReferrer(ctx, claims.Referrer)
 	}
+	if len(claims.FunctionHooks) > 0 {
+		ctx = withFunctionHooks(ctx, claims.FunctionHooks)
+	}
 
 	ctx = withExternalProviderType(ctx, claims.Provider)
 	return withSignature(ctx, state), nil
