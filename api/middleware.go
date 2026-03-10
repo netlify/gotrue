@@ -11,6 +11,7 @@ import (
 	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/gofrs/uuid"
 	jwt "github.com/golang-jwt/jwt/v4"
+	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/models"
 )
 
@@ -159,7 +160,7 @@ func (a *API) extractOperatorRequest(w http.ResponseWriter, req *http.Request) (
 	if err != nil {
 		return nil, token, err
 	}
-	if token == "" || token != a.config.OperatorToken {
+	if !crypto.SecureCompare(token, a.config.OperatorToken) {
 		return nil, token, unauthorizedError("Request does not include an Operator token")
 	}
 	return withAdminUser(req.Context(), &models.User{ID: uuid.Nil, Email: "operator@netlify.com"}), token, nil

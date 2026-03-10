@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gofrs/uuid"
+	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 )
@@ -104,7 +105,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		if params.EmailChangeToken != "" {
 			log.Debugf("Got change token %v", params.EmailChangeToken)
 
-			if params.EmailChangeToken != user.EmailChangeToken {
+			if !crypto.SecureCompare(params.EmailChangeToken, user.EmailChangeToken) {
 				return unauthorizedError("Email Change Token didn't match token on file")
 			}
 
