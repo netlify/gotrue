@@ -242,4 +242,90 @@ func TestTriggerHookDoesNotMutateConfig(t *testing.T) {
 	assert.Equal(t, 1, signupCalls, "signup hook must fire after validate hook")
 }
 
+func TestUserDeletedHookSendInstanceID(t *testing.T) {
+	globalConfig, err := conf.LoadGlobal(apiTestConfig)
+	require.NoError(t, err)
+
+	conn, err := test.SetupDBConnection(globalConfig)
+	require.NoError(t, err)
+
+	iid := uuid.Must(uuid.NewV4())
+	user, err := models.NewUser(iid, "test@truth.com", "thisisapassword", "", nil)
+	require.NoError(t, err)
+
+	var callCount int
+	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		defer squash(r.Body.Close)
+		raw, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		data := map[string]interface{}{}
+		require.NoError(t, json.Unmarshal(raw, &data))
+
+		assert.Len(t, data, 3)
+		assert.Equal(t, "user_deleted", data["event"])
+		assert.Equal(t, iid.String(), data["instance_id"])
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer svr.Close()
+
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
+
+	config := &conf.Configuration{
+		Webhook: conf.WebhookConfig{
+			URL:    svr.URL,
+			Events: []string{UserDeletedEvent},
+		},
+	}
+
+	require.NoError(t, triggerEventHooks(context.Background(), conn, UserDeletedEvent, user, iid, config))
+
+	assert.Equal(t, 1, callCount)
+}
+
+func TestUserModifiedHookSendInstanceID(t *testing.T) {
+	globalConfig, err := conf.LoadGlobal(apiTestConfig)
+	require.NoError(t, err)
+
+	conn, err := test.SetupDBConnection(globalConfig)
+	require.NoError(t, err)
+
+	iid := uuid.Must(uuid.NewV4())
+	user, err := models.NewUser(iid, "test@truth.com", "thisisapassword", "", nil)
+	require.NoError(t, err)
+
+	var callCount int
+	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		defer squash(r.Body.Close)
+		raw, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		data := map[string]interface{}{}
+		require.NoError(t, json.Unmarshal(raw, &data))
+
+		assert.Len(t, data, 3)
+		assert.Equal(t, "user_modified", data["event"])
+		assert.Equal(t, iid.String(), data["instance_id"])
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer svr.Close()
+
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
+
+	config := &conf.Configuration{
+		Webhook: conf.WebhookConfig{
+			URL:    svr.URL,
+			Events: []string{UserModifiedEvent},
+		},
+	}
+
+	require.NoError(t, triggerEventHooks(context.Background(), conn, UserModifiedEvent, user, iid, config))
+
+	assert.Equal(t, 1, callCount)
+}
+
 func squash(f func() error) { _ = f }

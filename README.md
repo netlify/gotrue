@@ -328,7 +328,7 @@ Default Content (if template is unavailable):
 
 `WEBHOOK_URL` - `string`
 
-Url of the webhook receiver endpoint. This will be called when events like `validate`, `signup` or `login` occur.
+Url of the webhook receiver endpoint. This will be called when events like `validate`, `signup`, `login`, `user_deleted` or `user_modified` occur.
 
 `WEBHOOK_SECRET` - `string`
 
@@ -345,7 +345,7 @@ Time between retries (in seconds).
 `WEBHOOK_EVENTS` - `list`
 
 Which events should trigger a webhook. You can provide a comma separated list.
-For example to listen to all events, provide the values `validate,signup,login`.
+For example to listen to all events, provide the values `validate,signup,login,user_deleted,user_modified`.
 
 ## Endpoints
 
