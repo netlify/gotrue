@@ -184,11 +184,6 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Error updating user").WithInternalError(err)
 	}
 
-	config := a.getConfig(ctx)
-	if err := triggerEventHooks(ctx, a.db, UserModifiedEvent, user, instanceID, config); err != nil {
-		return err
-	}
-
 	return sendJSON(w, http.StatusOK, user)
 }
 
@@ -284,11 +279,6 @@ func (a *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	})
 	if err != nil {
-		return err
-	}
-
-	config := a.getConfig(ctx)
-	if err := triggerEventHooks(ctx, a.db, UserDeletedEvent, user, instanceID, config); err != nil {
 		return err
 	}
 
