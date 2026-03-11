@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid"
+	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 )
@@ -83,7 +84,7 @@ func (a *API) adminUsers(w http.ResponseWriter, r *http.Request) error {
 // adminUsers responds with a list of all users in a given audience
 func (a *API) adminExportUsers(exportSecret string) func(w http.ResponseWriter, r *http.Request) error {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		if r.Header.Get("EXPORT_SECRET") != exportSecret {
+		if !crypto.SecureCompare(r.Header.Get("EXPORT_SECRET"), exportSecret) {
 			return unauthorizedError("Invalid export secret")
 		}
 
