@@ -186,4 +186,60 @@ func TestHookNoServer(t *testing.T) {
 	assert.Equal(t, http.StatusBadGateway, herr.Code)
 }
 
+func TestTriggerHookDoesNotMutateConfig(t *testing.T) {
+	globalConfig, err := conf.LoadGlobal(apiTestConfig)
+	require.NoError(t, err)
+
+	conn, err := test.SetupDBConnection(globalConfig)
+	require.NoError(t, err)
+
+	iid := uuid.Must(uuid.NewV4())
+	user, err := models.NewUser(iid, "test@truth.com", "thisisapassword", "", nil)
+	require.NoError(t, err)
+
+	var validateCalls, signupCalls int
+	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer squash(r.Body.Close)
+		raw, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		data := map[string]interface{}{}
+		require.NoError(t, json.Unmarshal(raw, &data))
+
+		event := data["event"].(string)
+		switch event {
+		case "validate":
+			validateCalls++
+		case "signup":
+			signupCalls++
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer svr.Close()
+
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
+
+	config := &conf.Configuration{
+		SiteURL: svr.URL,
+	}
+
+	ctx := context.Background()
+	ctx = withFunctionHooks(ctx, map[string][]string{
+		"validate": {"/.netlify/functions/identity-validate"},
+		"signup":   {"/.netlify/functions/identity-signup"},
+	})
+
+	// Simulate signupNewUser calling validate hook
+	require.NoError(t, triggerEventHooks(ctx, conn, "validate", user, iid, config))
+	assert.Equal(t, 1, validateCalls)
+
+	// config.Webhook.URL must still be empty after triggerHook
+	assert.Empty(t, config.Webhook.URL, "triggerHook must not mutate config.Webhook.URL")
+
+	// Simulate internalExternalProviderCallback calling signup hook
+	require.NoError(t, triggerEventHooks(ctx, conn, SignupEvent, user, iid, config))
+	assert.Equal(t, 1, signupCalls, "signup hook must fire after validate hook")
+}
+
 func squash(f func() error) { _ = f }
