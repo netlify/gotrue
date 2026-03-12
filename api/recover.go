@@ -34,7 +34,7 @@ func (a *API) Recover(w http.ResponseWriter, r *http.Request) error {
 	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, params.Email, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
-			return notFoundError("%s", err.Error())
+			return sendJSON(w, http.StatusOK, &map[string]string{})
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
 	}

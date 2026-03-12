@@ -47,6 +47,29 @@ func (ts *RecoverTestSuite) SetupTest() {
 	require.NoError(ts.T(), ts.API.db.Create(u), "Error saving new test user")
 }
 
+func (ts *RecoverTestSuite) TestRecover_UnknownEmailReturnsGenericSuccess() {
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"email": "unknown@example.com",
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/recover", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
+
+	// Verify empty JSON object response
+	var response map[string]string
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&response))
+	assert.Empty(ts.T(), response)
+
+	// Verify no user was created or modified
+	_, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "unknown@example.com", ts.Config.JWT.Aud)
+	require.True(ts.T(), models.IsNotFoundError(err))
+}
+
 func (ts *RecoverTestSuite) TestRecover_FirstRecovery() {
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
