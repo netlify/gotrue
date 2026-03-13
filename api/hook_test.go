@@ -366,13 +366,13 @@ func TestUserDeletedHookFromClaims(t *testing.T) {
 
 	config := &conf.Configuration{
 		Webhook: conf.WebhookConfig{
-			Events: []string{"user_deleted"},
+			Events: []string{"userdeleted"},
 		},
 	}
 
 	ctx := context.Background()
 	ctx = withFunctionHooks(ctx, map[string][]string{
-		"user_deleted": {svr.URL},
+		"userdeleted": {svr.URL},
 	})
 
 	require.NoError(t, triggerEventHooks(ctx, conn, UserDeletedEvent, user, iid, config))
@@ -413,13 +413,13 @@ func TestUserModifiedHookFromClaims(t *testing.T) {
 
 	config := &conf.Configuration{
 		Webhook: conf.WebhookConfig{
-			Events: []string{"user_modified"},
+			Events: []string{"usermodified"},
 		},
 	}
 
 	ctx := context.Background()
 	ctx = withFunctionHooks(ctx, map[string][]string{
-		"user_modified": {svr.URL},
+		"usermodified": {svr.URL},
 	})
 
 	require.NoError(t, triggerEventHooks(ctx, conn, UserModifiedEvent, user, iid, config))

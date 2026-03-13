@@ -32,8 +32,8 @@ const (
 	ValidateEvent       = "validate"
 	SignupEvent         = "signup"
 	LoginEvent          = "login"
-	UserDeletedEvent    = "user_deleted"
-	UserModifiedEvent   = "user_modified"
+	UserDeletedEvent    = "userdeleted"
+	UserModifiedEvent   = "usermodified"
 )
 
 var defaultTimeout = time.Second * 5

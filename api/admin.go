@@ -189,7 +189,7 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 
 	config := a.getConfig(ctx)
 	if herr := triggerEventHooks(ctx, a.db, UserModifiedEvent, user, instanceID, config); herr != nil {
-		logrus.WithError(herr).WithField("user_id", user.ID).Warn("Error processing user_modified webhook")
+		logrus.WithError(herr).WithField("user_id", user.ID).Warn("Error processing usermodified webhook")
 	}
 
 	return sendJSON(w, http.StatusOK, user)
@@ -292,7 +292,7 @@ func (a *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
 
 	config := a.getConfig(ctx)
 	if herr := triggerEventHooks(ctx, a.db, UserDeletedEvent, user, instanceID, config); herr != nil {
-		logrus.WithError(herr).WithField("user_id", user.ID).Warn("Error processing user_deleted webhook")
+		logrus.WithError(herr).WithField("user_id", user.ID).Warn("Error processing userdeleted webhook")
 	}
 
 	return sendJSON(w, http.StatusOK, map[string]interface{}{})
