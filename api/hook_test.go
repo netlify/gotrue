@@ -40,7 +40,7 @@ func TestSignupHookSendInstanceID(t *testing.T) {
 
 		assert.Len(t, data, 3)
 		assert.Equal(t, iid.String(), data["instance_id"])
-		assert.Equal(t, "identity-signup", r.Header.Get("X-Netlify-Event"))
+		assert.Equal(t, "identity_signup", r.Header.Get("X-Netlify-Event"))
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer svr.Close()
@@ -84,7 +84,7 @@ func TestSignupHookFromClaims(t *testing.T) {
 
 		assert.Len(t, data, 3)
 		assert.Equal(t, iid.String(), data["instance_id"])
-		assert.Equal(t, "identity-signup", r.Header.Get("X-Netlify-Event"))
+		assert.Equal(t, "identity_signup", r.Header.Get("X-Netlify-Event"))
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer svr.Close()
@@ -213,10 +213,10 @@ func TestTriggerHookDoesNotMutateConfig(t *testing.T) {
 		switch event {
 		case "validate":
 			validateCalls++
-			assert.Equal(t, "identity-validate", eventHeader)
+			assert.Equal(t, "identity_validate", eventHeader)
 		case "signup":
 			signupCalls++
-			assert.Equal(t, "identity-signup", eventHeader)
+			assert.Equal(t, "identity_signup", eventHeader)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
