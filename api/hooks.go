@@ -242,6 +242,10 @@ func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *sto
 		}
 	}()
 	if err == nil && body != nil {
+		if event == UserDeletedEvent {
+			return nil
+		}
+
 		// handle case where response from the trigger is streamed but has no
 		// Body
 		data, err := io.ReadAll(body)
