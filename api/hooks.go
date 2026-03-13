@@ -48,6 +48,7 @@ type Webhook struct {
 	jwtSecret  string
 	claims     jwt.Claims
 	payload    []byte
+	event      HookEvent
 }
 
 type WebhookResponse struct {
@@ -85,6 +86,9 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 			return nil, internalServerError("Failed to make request object").WithInternalError(err)
 		}
 		req.Header.Set("Content-Type", "application/json")
+		if w.event != "" {
+			req.Header.Set("X-Netlify-Event", "identity-"+string(w.event))
+		}
 		watcher, req := watchForConnection(req)
 
 		if w.jwtSecret != "" {
@@ -231,6 +235,7 @@ func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *sto
 		instanceID:    instanceID,
 		claims:        claims,
 		payload:       data,
+		event:         event,
 	}
 
 	body, err := w.trigger()
