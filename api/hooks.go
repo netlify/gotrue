@@ -89,7 +89,7 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 		}
 		req.Header.Set("Content-Type", "application/json")
 		if w.event != "" {
-			req.Header.Set("X-Netlify-Event", "identity-"+string(w.event))
+			req.Header.Set("X-Netlify-Event", "identity_"+string(w.event))
 		}
 		watcher, req := watchForConnection(req)
 
