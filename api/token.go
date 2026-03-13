@@ -10,7 +10,15 @@ import (
 	"github.com/netlify/gotrue/metering"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
+	"golang.org/x/crypto/bcrypt"
 )
+
+// dummyHash is compared against when the user is not found, to prevent timing-based user enumeration.
+var dummyHash []byte
+
+func init() {
+	dummyHash, _ = bcrypt.GenerateFromPassword([]byte("dummy-password-for-timing"), bcrypt.DefaultCost)
+}
 
 // GoTrueClaims is a struct thats used for JWT claims
 // TODO: migrate from jwt.StandardClaims to jwt.RegisteredClaims. RegisteredClaims
@@ -63,6 +71,7 @@ func (a *API) ResourceOwnerPasswordGrant(ctx context.Context, w http.ResponseWri
 	user, err := models.FindUserByEmailAndAudience(a.db, instanceID, username, aud)
 	if err != nil {
 		if models.IsNotFoundError(err) {
+			_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 			return oauthError("invalid_grant", "No user found with that email, or password invalid.")
 		}
 		return internalServerError("Database error finding user").WithInternalError(err)
