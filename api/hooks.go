@@ -32,6 +32,8 @@ const (
 	ValidateEvent       = "validate"
 	SignupEvent         = "signup"
 	LoginEvent          = "login"
+	UserDeletedEvent    = "userdeleted"
+	UserModifiedEvent   = "usermodified"
 )
 
 var defaultTimeout = time.Second * 5
@@ -245,6 +247,10 @@ func triggerHook(ctx context.Context, hookURL *url.URL, secret string, conn *sto
 		}
 	}()
 	if err == nil && body != nil {
+		if event == UserDeletedEvent {
+			return nil
+		}
+
 		// handle case where response from the trigger is streamed but has no
 		// Body
 		data, err := io.ReadAll(body)

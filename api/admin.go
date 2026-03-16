@@ -7,6 +7,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid"
+	"github.com/sirupsen/logrus"
+
 	"github.com/netlify/gotrue/crypto"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -185,6 +187,11 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return internalServerError("Error updating user").WithInternalError(err)
 	}
 
+	config := a.getConfig(ctx)
+	if herr := triggerEventHooks(ctx, a.db, UserModifiedEvent, user, instanceID, config); herr != nil {
+		logrus.WithError(herr).WithField("user_id", user.ID).Warn("Error processing usermodified webhook")
+	}
+
 	return sendJSON(w, http.StatusOK, user)
 }
 
@@ -281,6 +288,11 @@ func (a *API) adminUserDelete(w http.ResponseWriter, r *http.Request) error {
 	})
 	if err != nil {
 		return err
+	}
+
+	config := a.getConfig(ctx)
+	if herr := triggerEventHooks(ctx, a.db, UserDeletedEvent, user, instanceID, config); herr != nil {
+		logrus.WithError(herr).WithField("user_id", user.ID).Warn("Error processing userdeleted webhook")
 	}
 
 	return sendJSON(w, http.StatusOK, map[string]interface{}{})
