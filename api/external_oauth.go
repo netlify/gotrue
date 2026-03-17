@@ -41,12 +41,11 @@ func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType s
 	log := getLogEntry(r)
 	log.WithFields(logrus.Fields{
 		"provider": providerType,
-		"code":     oauthCode,
 	}).Debug("Exchanging oauth code")
 
 	tok, err := oAuthProvider.GetOAuthToken(oauthCode)
 	if err != nil {
-		return nil, internalServerError("Unable to exchange external code: %s", oauthCode).WithInternalError(err)
+		return nil, internalServerError("Unable to exchange external code").WithInternalError(err)
 	}
 
 	userData, err := oAuthProvider.GetUserData(ctx, tok)
