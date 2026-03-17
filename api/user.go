@@ -76,7 +76,8 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	log := getLogEntry(r)
-	log.Debugf("Checking params for token %v", params)
+	log.Debugf("Checking params for user update: email=%t password=%t email_change_token=%t data=%t app_data=%t",
+		params.Email != "", params.Password != "", params.EmailChangeToken != "", params.Data != nil, params.AppData != nil)
 
 	err = a.db.Transaction(func(tx *storage.Connection) error {
 		var terr error
@@ -103,7 +104,7 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		if params.EmailChangeToken != "" {
-			log.Debugf("Got change token %v", params.EmailChangeToken)
+			log.Debugf("Got email change token")
 
 			if !crypto.SecureCompare(params.EmailChangeToken, user.EmailChangeToken) {
 				return unauthorizedError("Email Change Token didn't match token on file")
