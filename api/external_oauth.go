@@ -45,7 +45,7 @@ func (a *API) oAuthCallback(ctx context.Context, r *http.Request, providerType s
 
 	tok, err := oAuthProvider.GetOAuthToken(oauthCode)
 	if err != nil {
-		return nil, internalServerError("Unable to exchange external code").WithInternalError(err)
+		return nil, internalServerError("Unable to exchange external code for %s provider", providerType)
 	}
 
 	userData, err := oAuthProvider.GetUserData(ctx, tok)
