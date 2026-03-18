@@ -114,6 +114,9 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 		}
 		return nil, internalServerError("Database error loading instance").WithInternalError(err)
 	}
+	if instance.UUID != uuid.Nil {
+		logEntrySetField(r, "site_uuid", instance.UUID)
+	}
 
 	config, err := instance.Config()
 	if err != nil {
