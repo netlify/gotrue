@@ -90,6 +90,17 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
+	maxAge := config.Mailer.ConfirmationMaxAge
+	if user.InvitedAt != nil {
+		maxAge = config.Mailer.InviteMaxAge
+	}
+	if user.ConfirmationSentAt != nil {
+		expiresAt := user.ConfirmationSentAt.Add(maxAge)
+		if time.Now().After(expiresAt) {
+			return nil, unprocessableEntityError("Confirmation token expired")
+		}
+	}
+
 	err = conn.Transaction(func(tx *storage.Connection) error {
 		var terr error
 		if user.EncryptedPassword == "" {
@@ -133,8 +144,11 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 		return nil, internalServerError("Database error finding user").WithInternalError(err)
 	}
 
-	if user.RecoverySentAt != nil && time.Now().After(user.RecoverySentAt.Add(config.Mailer.RecoveryMaxAge)) {
-		return nil, unprocessableEntityError("Recovery token expired")
+	if user.RecoverySentAt != nil {
+		expiresAt := user.RecoverySentAt.Add(config.Mailer.RecoveryMaxAge)
+		if time.Now().After(expiresAt) {
+			return nil, unprocessableEntityError("Recovery token expired")
+		}
 	}
 
 	err = conn.Transaction(func(tx *storage.Connection) error {
