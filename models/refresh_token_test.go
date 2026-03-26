@@ -2,6 +2,7 @@ package models
 
 import (
 	"testing"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
@@ -72,6 +73,21 @@ func (ts *RefreshTokenTestSuite) TestLogout() {
 	require.Errorf(ts.T(), err, "expected error when there are no refresh tokens to authenticate. user: %v token: %v", u, r)
 
 	require.True(ts.T(), IsNotFoundError(err), "expected NotFoundError")
+}
+
+func (ts *RefreshTokenTestSuite) TestExpired() {
+	u := ts.createUser()
+	r, err := GrantAuthenticatedUser(ts.db, u)
+	require.NoError(ts.T(), err)
+
+	thirtyDays := 30 * 24 * 60 * 60
+
+	require.False(ts.T(), r.Expired(0), "zero lifetime should never expire")
+	require.False(ts.T(), r.Expired(-1), "negative lifetime should never expire")
+	require.False(ts.T(), r.Expired(thirtyDays), "fresh token should not be expired")
+
+	r.CreatedAt = time.Now().Add(-31 * 24 * time.Hour)
+	require.True(ts.T(), r.Expired(thirtyDays), "token older than lifetime should be expired")
 }
 
 func (ts *RefreshTokenTestSuite) createUser() *User {

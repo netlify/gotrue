@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -95,6 +96,41 @@ func TestAccessTokenHasKidHeader(t *testing.T) {
 	kid, ok := headerMap["kid"]
 	require.True(t, ok, "kid field should be present in JWT header")
 	assert.Equal(t, "nf-ident", kid)
+}
+
+func (ts *TokenTestSuite) TestRefreshTokenGrantExpired() {
+	// Create a confirmed user
+	u, err := models.NewUser(ts.instanceID, "test@example.com", "password", ts.Config.JWT.Aud, nil)
+	require.NoError(ts.T(), err)
+	now := time.Now()
+	u.ConfirmedAt = &now
+	require.NoError(ts.T(), ts.API.db.Create(u))
+
+	// Create a refresh token
+	r, err := models.GrantAuthenticatedUser(ts.API.db, u)
+	require.NoError(ts.T(), err)
+
+	// Backdate the token to make it older than the default 30-day lifetime
+	tableName := (&models.RefreshToken{}).TableName()
+	require.NoError(ts.T(), ts.API.db.RawQuery(
+		"UPDATE "+tableName+" SET created_at = ? WHERE id = ?",
+		time.Now().Add(-31*24*time.Hour), r.ID,
+	).Exec())
+
+	// Attempt to use the expired refresh token
+	body := strings.NewReader(url.Values{"refresh_token": {r.Token}}.Encode())
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/token?grant_type=refresh_token", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
+
+	// Verify the error message indicates expiry
+	var response map[string]interface{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&response))
+	assert.Equal(ts.T(), "invalid_grant", response["error"])
+	assert.Equal(ts.T(), "Refresh token expired", response["error_description"])
 }
 
 func (ts *TokenTestSuite) TestRateLimitToken() {
