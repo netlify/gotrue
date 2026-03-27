@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/crypto"
@@ -105,6 +106,13 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 
 		if params.EmailChangeToken != "" {
 			log.Debugf("Got email change token")
+
+			if user.EmailChangeSentAt != nil {
+				expiresAt := user.EmailChangeSentAt.Add(config.Mailer.ConfirmationMaxAge)
+				if time.Now().After(expiresAt) {
+					return unprocessableEntityError("Email change token expired")
+				}
+			}
 
 			if !crypto.SecureCompare(params.EmailChangeToken, user.EmailChangeToken) {
 				return unauthorizedError("Email Change Token didn't match token on file")

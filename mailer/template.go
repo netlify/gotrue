@@ -18,22 +18,26 @@ type TemplateMailer struct {
 const defaultInviteMail = `<h2>You have been invited</h2>
 
 <p>You have been invited to create a user on {{ .SiteURL }}. Follow this link to accept the invite:</p>
-<p><a href="{{ .ConfirmationURL }}">Accept the invite</a></p>`
+<p><a href="{{ .ConfirmationURL }}">Accept the invite</a></p>
+<p>This link is valid for 7 days.</p>`
 
 const defaultConfirmationMail = `<h2>Confirm your signup</h2>
 
 <p>Follow this link to confirm your user:</p>
-<p><a href="{{ .ConfirmationURL }}">Confirm your email address</a></p>`
+<p><a href="{{ .ConfirmationURL }}">Confirm your email address</a></p>
+<p>This link is valid for 24 hours.</p>`
 
 const defaultRecoveryMail = `<h2>Reset password</h2>
 
 <p>Follow this link to reset the password for your user:</p>
-<p><a href="{{ .ConfirmationURL }}">Reset password</a></p>`
+<p><a href="{{ .ConfirmationURL }}">Reset password</a></p>
+<p>This link is valid for 24 hours.</p>`
 
 const defaultEmailChangeMail = `<h2>Confirm email address change</h2>
 
 <p>Follow this link to confirm the update of your email address from {{ .Email }} to {{ .NewEmail }}:</p>
-<p><a href="{{ .ConfirmationURL }}">Change email address</a></p>`
+<p><a href="{{ .ConfirmationURL }}">Change email address</a></p>
+<p>This link is valid for 24 hours.</p>`
 
 // ValidateEmail returns nil if the email is valid,
 // otherwise an error indicating the reason it is invalid

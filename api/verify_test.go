@@ -93,6 +93,29 @@ func (ts *VerifyTestSuite) TestVerify_PasswordRecovery() {
 	assert.True(ts.T(), u.IsConfirmed())
 }
 
+func (ts *VerifyTestSuite) TestVerify_Confirmation_Expired() {
+	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
+	require.NoError(ts.T(), err)
+
+	u.ConfirmationToken = "expired-confirmation-token"
+	expired := time.Now().Add(-48 * time.Hour)
+	u.ConfirmationSentAt = &expired
+	require.NoError(ts.T(), ts.API.db.Update(u))
+
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"type":  "signup",
+		"token": u.ConfirmationToken,
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code)
+}
+
 func (ts *VerifyTestSuite) TestVerify_PasswordRecovery_Expired() {
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
