@@ -86,6 +86,58 @@ func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *conf.Config
 	return NewAPIWithVersion(ctx, globalConfig, conn, apiTestVersion), config, nil
 }
 
+func TestGetConfigDoesNotMergeInstanceSMTPWhenHostEmpty(t *testing.T) {
+	api := &API{config: &conf.GlobalConfiguration{
+		SMTP: conf.SMTPConfiguration{
+			Host: "smtp.global.com",
+			Port: 587,
+			User: "global-user",
+			Pass: "global-pass",
+		},
+	}}
+
+	ctx := withConfig(context.Background(), &conf.Configuration{
+		SMTP: conf.SMTPConfiguration{
+			Host: "",
+			User: "",
+			Pass: "leftover-password",
+		},
+	})
+
+	result := api.getConfig(ctx)
+	require.NotNil(t, result)
+
+	require.Equal(t, "smtp.global.com", result.SMTP.Host)
+	require.Equal(t, "global-user", result.SMTP.User)
+	require.Equal(t, "global-pass", result.SMTP.Pass)
+}
+
+func TestGetConfigMergesInstanceSMTPWhenHostSet(t *testing.T) {
+	api := &API{config: &conf.GlobalConfiguration{
+		SMTP: conf.SMTPConfiguration{
+			Host: "smtp.global.com",
+			Port: 587,
+			User: "global-user",
+			Pass: "global-pass",
+		},
+	}}
+
+	ctx := withConfig(context.Background(), &conf.Configuration{
+		SMTP: conf.SMTPConfiguration{
+			Host: "smtp.custom.com",
+			User: "custom-user",
+			Pass: "custom-pass",
+		},
+	})
+
+	result := api.getConfig(ctx)
+	require.NotNil(t, result)
+
+	require.Equal(t, "smtp.custom.com", result.SMTP.Host)
+	require.Equal(t, "custom-user", result.SMTP.User)
+	require.Equal(t, "custom-pass", result.SMTP.Pass)
+}
+
 func TestEmailEnabledByDefault(t *testing.T) {
 	api, _, err := setupAPIForTest()
 	require.NoError(t, err)
