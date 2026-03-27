@@ -268,8 +268,10 @@ func (a *API) getConfig(ctx context.Context) *conf.Configuration {
 	config.External = extConfig
 
 	smtpConfig := (*a.config).SMTP
-	if err := mergo.MergeWithOverwrite(&smtpConfig, config.SMTP); err != nil {
-		return nil
+	if config.SMTP.Host != "" {
+		if err := mergo.MergeWithOverwrite(&smtpConfig, config.SMTP); err != nil {
+			return nil
+		}
 	}
 	config.SMTP = smtpConfig
 
