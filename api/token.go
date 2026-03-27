@@ -138,6 +138,11 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		return oauthError("invalid_grant", "Invalid Refresh Token").WithInternalMessage("Possible abuse attempt: %v", r)
 	}
 
+	if token.Expired(config.JWT.RefreshTokenLifetime) {
+		a.clearCookieToken(ctx, w)
+		return oauthError("invalid_grant", "Refresh token expired")
+	}
+
 	var tokenString string
 	var newToken *models.RefreshToken
 

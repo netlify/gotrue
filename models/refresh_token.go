@@ -65,6 +65,15 @@ func Logout(tx *storage.Connection, instanceID uuid.UUID, id uuid.UUID) error {
 	return tx.RawQuery("DELETE FROM "+(&pop.Model{Value: RefreshToken{}}).TableName()+" WHERE instance_id = ? AND user_id = ?", instanceID, id).Exec()
 }
 
+func (r *RefreshToken) Expired(lifetimeSeconds int) bool {
+	if lifetimeSeconds <= 0 {
+		return false
+	}
+	lifetime := time.Second * time.Duration(lifetimeSeconds)
+	expiresAt := r.CreatedAt.Add(lifetime)
+	return time.Now().After(expiresAt)
+}
+
 func createRefreshToken(tx *storage.Connection, user *User) (*RefreshToken, error) {
 	token := &RefreshToken{
 		InstanceID: user.InstanceID,
