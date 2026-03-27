@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strings"
 	"syscall"
 	"time"
 
@@ -268,7 +269,7 @@ func (a *API) getConfig(ctx context.Context) *conf.Configuration {
 	config.External = extConfig
 
 	smtpConfig := (*a.config).SMTP
-	if config.SMTP.Host != "" {
+	if strings.TrimSpace(config.SMTP.Host) != "" {
 		if err := mergo.MergeWithOverwrite(&smtpConfig, config.SMTP); err != nil {
 			return nil
 		}
