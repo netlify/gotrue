@@ -116,6 +116,66 @@ func (ts *VerifyTestSuite) TestVerify_Confirmation_Expired() {
 	assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code)
 }
 
+func (ts *VerifyTestSuite) TestVerify_WhitespaceToken_Signup() {
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"type":  "signup",
+		"token": " ",
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code)
+}
+
+func (ts *VerifyTestSuite) TestVerify_WhitespaceToken_Recovery() {
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"type":  "recovery",
+		"token": " ",
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code)
+}
+
+func (ts *VerifyTestSuite) TestVerify_TabToken() {
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"type":  "signup",
+		"token": "\t",
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code)
+}
+
+func (ts *VerifyTestSuite) TestVerify_MultipleSpacesToken() {
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"type":  "signup",
+		"token": "   ",
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code)
+}
+
 func (ts *VerifyTestSuite) TestVerify_PasswordRecovery_Expired() {
 	u, err := models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)

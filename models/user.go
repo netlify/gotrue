@@ -294,6 +294,9 @@ func findUser(tx *storage.Connection, query string, args ...interface{}) (*User,
 
 // FindUserByConfirmationToken finds users with the matching confirmation token.
 func FindUserByConfirmationToken(tx *storage.Connection, token string) (*User, error) {
+	if strings.TrimSpace(token) == "" {
+		return nil, UserNotFoundError{}
+	}
 	return findUser(tx, "confirmation_token = ?", token)
 }
 
@@ -314,6 +317,9 @@ func FindUserByInstanceIDAndID(tx *storage.Connection, instanceID, id uuid.UUID)
 
 // FindUserByRecoveryToken finds a user with the matching recovery token.
 func FindUserByRecoveryToken(tx *storage.Connection, token string) (*User, error) {
+	if strings.TrimSpace(token) == "" {
+		return nil, UserNotFoundError{}
+	}
 	return findUser(tx, "recovery_token = ?", token)
 }
 
