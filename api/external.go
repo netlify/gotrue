@@ -40,7 +40,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 		return badRequestError("Unsupported provider: %+v", err).WithInternalError(err)
 	}
 
-	inviteToken := r.URL.Query().Get("invite_token")
+	inviteToken := strings.TrimSpace(r.URL.Query().Get("invite_token"))
 	if inviteToken != "" {
 		_, userErr := models.FindUserByConfirmationToken(a.db, inviteToken)
 		if userErr != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/netlify/gotrue/models"
@@ -34,7 +35,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read verification params: %v", err)
 	}
 
-	if params.Token == "" {
+	if strings.TrimSpace(params.Token) == "" {
 		return unprocessableEntityError("Verify requires a token")
 	}
 
