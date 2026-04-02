@@ -79,9 +79,15 @@ func (ts *UserTestSuite) TestUpdateUserMetadata() {
 func (ts *UserTestSuite) TestFindUserByConfirmationToken() {
 	u := ts.createUser()
 
+	u.ConfirmationToken = "test-confirmation-token"
+	require.NoError(ts.T(), ts.db.Update(u))
+
 	n, err := FindUserByConfirmationToken(ts.db, u.ConfirmationToken)
 	require.NoError(ts.T(), err)
 	require.Equal(ts.T(), u.ID, n.ID)
+
+	_, err = FindUserByConfirmationToken(ts.db, " ")
+	require.EqualError(ts.T(), err, UserNotFoundError{}.Error())
 }
 
 func (ts *UserTestSuite) TestFindUserByEmailAndAudience() {
