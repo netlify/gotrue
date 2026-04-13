@@ -127,7 +127,12 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 		r.Get("/authorize", api.ExternalProviderRedirect)
 
-		r.With(api.requireAdminCredentials).Post("/invite", api.Invite)
+		r.With(api.requireAdminCredentials).With(api.limitHandler(
+			// Allow requests at a rate of 10 per minute.
+			tollbooth.NewLimiter(10.0/60, &limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Hour,
+			}).SetBurst(10),
+		)).Post("/invite", api.Invite)
 
 		r.With(api.requireEmailProvider).Post("/signup", api.Signup)
 		r.With(api.requireEmailProvider).Post("/recover", api.Recover)

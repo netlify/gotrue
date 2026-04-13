@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -29,6 +30,7 @@ type InviteTestSuite struct {
 }
 
 func TestInvite(t *testing.T) {
+	os.Setenv("GOTRUE_RATE_LIMIT_HEADER", "My-Custom-Header")
 	api, config, instanceID, err := setupAPIForTestForInstance()
 	require.NoError(t, err)
 
@@ -147,6 +149,38 @@ func (ts *InviteTestSuite) TestVerifyInvite() {
 	ts.API.handler.ServeHTTP(w, req)
 
 	assert.Equal(ts.T(), http.StatusOK, w.Code, w.Body.String())
+}
+
+func (ts *InviteTestSuite) TestInviteRateLimit() {
+	for i := 0; i < 10; i++ {
+		var buffer bytes.Buffer
+		require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+			"email": fmt.Sprintf("test%d@example.com", i),
+		}))
+
+		req := httptest.NewRequest(http.MethodPost, "http://localhost/invite", &buffer)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+		req.Header.Set("My-Custom-Header", "1.2.3.4") // add this
+
+		w := httptest.NewRecorder()
+		ts.API.handler.ServeHTTP(w, req)
+		assert.Equal(ts.T(), http.StatusOK, w.Code)
+	}
+
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"email": "ratelimited@example.com",
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/invite", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ts.token))
+	req.Header.Set("My-Custom-Header", "1.2.3.4") // add this
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusTooManyRequests, w.Code)
 }
 
 func (ts *InviteTestSuite) TestVerifyInvite_NoPassword() {
