@@ -2,7 +2,7 @@ module github.com/netlify/gotrue
 
 require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.27.0
-	github.com/beevik/etree v1.1.1-0.20200718192613-4a2f8b9d084c
+	github.com/beevik/etree v1.6.0
 	github.com/didip/tollbooth/v5 v5.1.1
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-sql-driver/mysql v1.8.1
@@ -16,11 +16,11 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.11.0
-	github.com/russellhaering/gosaml2 v0.9.0
-	github.com/russellhaering/goxmldsig v1.2.0
+	github.com/russellhaering/gosaml2 v0.11.0
+	github.com/russellhaering/goxmldsig v1.6.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.46.0
 	golang.org/x/oauth2 v0.34.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.54.1
@@ -76,7 +76,7 @@ require (
 	github.com/jackc/pgtype v1.14.0 // indirect
 	github.com/jackc/pgx/v4 v4.18.2 // indirect
 	github.com/jmoiron/sqlx v1.3.5 // indirect
-	github.com/jonboulle/clockwork v0.2.2 // indirect
+	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/luna-duclos/instrumentedsql v1.1.3 // indirect
@@ -124,12 +124,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace (
-	github.com/beevik/etree => github.com/beevik/etree v1.1.1-0.20200718192613-4a2f8b9d084c
-	github.com/gobuffalo/github_flavored_markdown => github.com/gobuffalo/github_flavored_markdown v1.1.1
-	github.com/russellhaering/goxmldsig => github.com/russellhaering/goxmldsig v1.2.0
-)
+replace github.com/gobuffalo/github_flavored_markdown => github.com/gobuffalo/github_flavored_markdown v1.1.1
 
-go 1.24.0
-
-toolchain go1.24.13
+go 1.25.0
