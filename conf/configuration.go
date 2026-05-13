@@ -4,7 +4,9 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"net/mail"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -280,6 +282,27 @@ func (o *OAuthProviderConfiguration) Validate() error {
 	}
 	if o.RedirectURI == "" {
 		return errors.New("Missing redirect URI")
+	}
+	return nil
+}
+
+var reservedDomains = []string{"netlify.com", "netlify.app"}
+
+func (s *SMTPConfiguration) Validate() error {
+	if s.AdminEmail != "" {
+		addr, err := mail.ParseAddress(s.AdminEmail)
+		if err != nil {
+			return errors.New("invalid admin_email address")
+		}
+		parts := strings.Split(addr.Address, "@")
+		if len(parts) == 2 {
+			domain := strings.ToLower(parts[1])
+			for _, reserved := range reservedDomains {
+				if domain == reserved || strings.HasSuffix(domain, "."+reserved) {
+					return errors.New("admin_email cannot use a Netlify-owned domain")
+				}
+			}
+		}
 	}
 	return nil
 }

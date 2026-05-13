@@ -108,6 +108,12 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Error decoding params: %v", err)
 	}
 
+	if params.BaseConfig != nil {
+		if err := params.BaseConfig.SMTP.Validate(); err != nil {
+			return badRequestError("Invalid SMTP configuration: %v", err)
+		}
+	}
+
 	if err := i.UpdateConfig(a.db, params.BaseConfig); err != nil {
 		return internalServerError("Database error updating instance").WithInternalError(err)
 	}
