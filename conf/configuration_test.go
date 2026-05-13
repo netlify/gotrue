@@ -30,12 +30,13 @@ func TestSMTPConfigurationValidate(t *testing.T) {
 		adminEmail string
 		wantErr    bool
 	}{
-		{"", false},                     // empty is fine
-		{"noreply@example.com", false},  // valid non-Netlify domain
-		{"team@netlify.com", true},      // reserved domain
-		{"user@netlify.app", true},      // reserved domain
-		{"user@sub.netlify.com", true},  // subdomain of reserved
-		{"not-an-email", true},          // invalid format
+		{"", false},                    // empty is fine
+		{"noreply@example.com", false}, // valid non-Netlify domain
+		{"team@netlify.com", true},     // reserved domain
+		{"user@netlify.app", true},     // reserved domain
+		{"user@sub.netlify.com", true}, // subdomain of reserved
+		{"not-an-email", true},         // invalid format
+		{"\"a@b\"@netlify.com", true},  // quoted local-part containing @
 	}
 
 	for _, tc := range cases {

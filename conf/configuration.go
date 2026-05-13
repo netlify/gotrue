@@ -294,9 +294,9 @@ func (s *SMTPConfiguration) Validate() error {
 		if err != nil {
 			return errors.New("invalid admin_email address")
 		}
-		parts := strings.Split(addr.Address, "@")
-		if len(parts) == 2 {
-			domain := strings.ToLower(parts[1])
+		idx := strings.LastIndex(addr.Address, "@")
+		if idx >= 0 {
+			domain := strings.ToLower(addr.Address[idx+1:])
 			for _, reserved := range reservedDomains {
 				if domain == reserved || strings.HasSuffix(domain, "."+reserved) {
 					return errors.New("admin_email cannot use a Netlify-owned domain")

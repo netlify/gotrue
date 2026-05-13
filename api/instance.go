@@ -70,6 +70,12 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		return errors.Wrap(err, "Error generating id")
 	}
 
+	if params.BaseConfig != nil {
+		if err := params.BaseConfig.SMTP.Validate(); err != nil {
+			return badRequestError("Invalid SMTP configuration: %v", err)
+		}
+	}
+
 	i := models.Instance{
 		ID:         id,
 		UUID:       params.UUID,
