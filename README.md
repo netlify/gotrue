@@ -234,6 +234,10 @@ If the mail server requires authentication, the password to use.
 
 Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email. The value is the number of seconds. Defaults to 900 (15 minutes).
 
+`SMTP_RESERVED_DOMAINS` - `string`
+
+A comma-separated list of domains that cannot be used as the `admin_email` sender address (e.g. `example.com,example.app`). Use this to prevent spoofing of domains your service owns. If not set, no domain restrictions are enforced.
+
 `MAILER_AUTOCONFIRM` - `bool`
 
 If you do not require email confirmation, you may set this to `true`. Defaults to `false`.

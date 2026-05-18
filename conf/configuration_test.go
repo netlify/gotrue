@@ -31,16 +31,19 @@ func TestSMTPConfigurationValidate(t *testing.T) {
 		wantErr    bool
 	}{
 		{"", false},                    // empty is fine
-		{"noreply@example.com", false}, // valid non-Netlify domain
-		{"team@netlify.com", true},     // reserved domain
-		{"user@netlify.app", true},     // reserved domain
-		{"user@sub.netlify.com", true}, // subdomain of reserved
+		{"noreply@foobar.com", false},  // valid non-reserved domain
+		{"team@example.com", true},     // reserved domain
+		{"user@example.app", true},     // reserved domain
+		{"user@sub.example.com", true}, // subdomain of reserved
 		{"not-an-email", true},         // invalid format
-		{"\"a@b\"@netlify.com", true},  // quoted local-part containing @
+		{"\"a@b\"@example.com", true},  // quoted local-part containing @
+		{"user@example.com", true},     // matches unnormalized reserved entry " Example.COM."
 	}
 
+	reservedDomains := []string{"example.com", "example.app", " Example.COM."} // last entry tests normalization
+
 	for _, tc := range cases {
-		s := &SMTPConfiguration{AdminEmail: tc.adminEmail}
+		s := &SMTPConfiguration{AdminEmail: tc.adminEmail, ReservedDomains: reservedDomains}
 		err := s.Validate()
 		if tc.wantErr {
 			assert.Error(t, err, "expected error for admin_email %q", tc.adminEmail)

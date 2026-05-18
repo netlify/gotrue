@@ -92,12 +92,13 @@ type ProviderConfiguration struct {
 }
 
 type SMTPConfiguration struct {
-	MaxFrequency time.Duration `json:"max_frequency" split_words:"true"`
-	Host         string        `json:"host"`
-	Port         int           `json:"port,omitempty" default:"587"`
-	User         string        `json:"user"`
-	Pass         string        `json:"pass,omitempty"`
-	AdminEmail   string        `json:"admin_email" split_words:"true"`
+	MaxFrequency    time.Duration `json:"max_frequency" split_words:"true"`
+	Host            string        `json:"host"`
+	Port            int           `json:"port,omitempty" default:"587"`
+	User            string        `json:"user"`
+	Pass            string        `json:"pass,omitempty"`
+	AdminEmail      string        `json:"admin_email" split_words:"true"`
+	ReservedDomains []string      `json:"reserved_domains" split_words:"true"`
 }
 
 type MailerConfiguration struct {
@@ -286,8 +287,6 @@ func (o *OAuthProviderConfiguration) Validate() error {
 	return nil
 }
 
-var reservedDomains = []string{"netlify.com", "netlify.app"}
-
 func (s *SMTPConfiguration) Validate() error {
 	if s.AdminEmail != "" {
 		addr, err := mail.ParseAddress(s.AdminEmail)
@@ -297,9 +296,10 @@ func (s *SMTPConfiguration) Validate() error {
 		idx := strings.LastIndex(addr.Address, "@")
 		if idx >= 0 {
 			domain := strings.ToLower(addr.Address[idx+1:])
-			for _, reserved := range reservedDomains {
-				if domain == reserved || strings.HasSuffix(domain, "."+reserved) {
-					return errors.New("admin_email cannot use a Netlify-owned domain")
+			for _, reserved := range s.ReservedDomains {
+				normalizedReserved := strings.ToLower(strings.TrimRight(strings.TrimSpace(reserved), "."))
+				if domain == normalizedReserved || strings.HasSuffix(domain, "."+normalizedReserved) {
+					return errors.New("admin_email cannot use a reserved domain")
 				}
 			}
 		}
