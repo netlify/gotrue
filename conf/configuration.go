@@ -287,8 +287,6 @@ func (o *OAuthProviderConfiguration) Validate() error {
 	return nil
 }
 
-var reservedDomains = []string{"netlify.com", "netlify.app"}
-
 func (s *SMTPConfiguration) Validate() error {
 	if s.AdminEmail != "" {
 		addr, err := mail.ParseAddress(s.AdminEmail)
@@ -298,9 +296,10 @@ func (s *SMTPConfiguration) Validate() error {
 		idx := strings.LastIndex(addr.Address, "@")
 		if idx >= 0 {
 			domain := strings.ToLower(addr.Address[idx+1:])
-			for _, reserved := range reservedDomains {
-				if domain == reserved || strings.HasSuffix(domain, "."+reserved) {
-					return errors.New("admin_email cannot use a Netlify-owned domain")
+			for _, reserved := range s.ReservedDomains {
+				normalizedReserved := strings.ToLower(strings.TrimRight(strings.TrimSpace(reserved), "."))
+				if domain == normalizedReserved || strings.HasSuffix(domain, "."+normalizedReserved) {
+					return errors.New("admin_email cannot use a reserved domain")
 				}
 			}
 		}
