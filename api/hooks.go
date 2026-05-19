@@ -80,6 +80,9 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 	client.Transport = SafeRoundtripper(client.Transport, hooklog)
 
 	for i := 0; i < w.Retries; i++ {
+		if i > 0 {
+			time.Sleep(backoffDelay(i))
+		}
 		hooklog = hooklog.WithField("attempt", i+1)
 		hooklog.Info("Starting to perform signup hook request")
 
@@ -319,4 +322,14 @@ type connectionWatcher struct {
 
 func (c *connectionWatcher) GotConn(_ httptrace.GotConnInfo) {
 	c.gotConn = true
+}
+
+func backoffDelay(attempt int) time.Duration {
+	const base = 100 * time.Millisecond
+	const max = 2 * time.Second
+	delay := base * time.Duration(1<<(attempt-1))
+	if delay > max {
+		delay = max
+	}
+	return delay
 }
