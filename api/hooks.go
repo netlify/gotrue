@@ -141,10 +141,12 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 
 		if rsp.StatusCode == http.StatusTooManyRequests || rsp.StatusCode >= 500 {
 			rspLog.Infof("Retriable response from webhook %d in %s", rsp.StatusCode, dur)
+			closeBody(rsp)
 			continue
 		}
 
 		rspLog.Infof("Non-retriable response from webhook %d in %s", rsp.StatusCode, dur)
+		closeBody(rsp)
 		return nil, httpError(rsp.StatusCode, "Webhook returned status %d", rsp.StatusCode)
 	}
 
