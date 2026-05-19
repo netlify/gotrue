@@ -134,9 +134,15 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 				body = rsp.Body
 			}
 			return body, nil
-		default:
-			rspLog.Infof("Bad response for webhook %d in %s", rsp.StatusCode, dur)
 		}
+
+		if rsp.StatusCode == http.StatusTooManyRequests || rsp.StatusCode >= 500 {
+			rspLog.Infof("Retriable response from webhook %d in %s", rsp.StatusCode, dur)
+			continue
+		}
+
+		rspLog.Infof("Non-retriable response from webhook %d in %s", rsp.StatusCode, dur)
+		return nil, httpError(rsp.StatusCode, "Webhook returned status %d", rsp.StatusCode)
 	}
 
 	hooklog.Infof("Failed to process webhook for %s after %d attempts", w.URL, w.Retries)
