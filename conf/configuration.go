@@ -287,7 +287,7 @@ func (o *OAuthProviderConfiguration) Validate() error {
 	return nil
 }
 
-func (s *SMTPConfiguration) Validate() error {
+func (s *SMTPConfiguration) Validate(reservedDomains []string) error {
 	if s.AdminEmail != "" {
 		addr, err := mail.ParseAddress(s.AdminEmail)
 		if err != nil {
@@ -296,7 +296,7 @@ func (s *SMTPConfiguration) Validate() error {
 		idx := strings.LastIndex(addr.Address, "@")
 		if idx >= 0 {
 			domain := strings.ToLower(addr.Address[idx+1:])
-			for _, reserved := range s.ReservedDomains {
+			for _, reserved := range reservedDomains {
 				normalizedReserved := strings.ToLower(strings.TrimRight(strings.TrimSpace(reserved), "."))
 				if domain == normalizedReserved || strings.HasSuffix(domain, "."+normalizedReserved) {
 					return errors.New("admin_email cannot use a reserved domain")

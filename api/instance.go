@@ -71,7 +71,7 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.BaseConfig != nil {
-		if err := params.BaseConfig.SMTP.Validate(); err != nil {
+		if err := params.BaseConfig.SMTP.Validate(a.config.SMTP.ReservedDomains); err != nil {
 			return badRequestError("Invalid SMTP configuration: %v", err)
 		}
 	}
@@ -115,7 +115,7 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if params.BaseConfig != nil {
-		if err := params.BaseConfig.SMTP.Validate(); err != nil {
+		if err := params.BaseConfig.SMTP.Validate(a.config.SMTP.ReservedDomains); err != nil {
 			return badRequestError("Invalid SMTP configuration: %v", err)
 		}
 	}

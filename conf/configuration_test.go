@@ -43,8 +43,8 @@ func TestSMTPConfigurationValidate(t *testing.T) {
 	reservedDomains := []string{"example.com", "example.app", " Example.COM."} // last entry tests normalization
 
 	for _, tc := range cases {
-		s := &SMTPConfiguration{AdminEmail: tc.adminEmail, ReservedDomains: reservedDomains}
-		err := s.Validate()
+		s := &SMTPConfiguration{AdminEmail: tc.adminEmail}
+		err := s.Validate(reservedDomains)
 		if tc.wantErr {
 			assert.Error(t, err, "expected error for admin_email %q", tc.adminEmail)
 		} else {
