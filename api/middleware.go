@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 
 	"github.com/didip/tollbooth/v5"
@@ -142,15 +143,30 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 func (a *API) limitHandler(lmt *limiter.Limiter) middlewareHandler {
 	return func(w http.ResponseWriter, req *http.Request) (context.Context, error) {
 		c := req.Context()
-		if limitHeader := a.config.RateLimitHeader; limitHeader != "" {
-			key := req.Header.Get(a.config.RateLimitHeader)
-			err := tollbooth.LimitByKeys(lmt, []string{key})
-			if err != nil {
-				return c, httpError(http.StatusTooManyRequests, "Rate limit exceeded")
-			}
+		key := a.rateLimitKey(req)
+		if err := tollbooth.LimitByKeys(lmt, []string{key}); err != nil {
+			return c, tooManyRequestsError("Rate limit exceeded")
 		}
 		return c, nil
 	}
+}
+
+// rateLimitKey returns the value to bucket rate limits by. It prefers the
+// configured header (typically set by an upstream proxy) and falls back to the
+// client IP so requests are always rate limited even when the header is
+// missing or unset. chi/middleware.RealIP rewrites RemoteAddr from
+// X-Forwarded-For, so this remains correct behind a proxy.
+func (a *API) rateLimitKey(req *http.Request) string {
+	if h := a.config.RateLimitHeader; h != "" {
+		if v := req.Header.Get(h); v != "" {
+			return v
+		}
+	}
+	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		return req.RemoteAddr
+	}
+	return host
 }
 
 func (a *API) verifyOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {
