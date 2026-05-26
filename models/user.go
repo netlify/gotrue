@@ -15,6 +15,16 @@ import (
 
 const SystemUserID = "0"
 
+// MaxPasswordLength is the largest password (in bytes) GoTrue will hash.
+// bcrypt silently truncates any input beyond 72 bytes, so anything longer
+// would only have its prefix validated on sign-in. CJK characters and emoji
+// are multi-byte in UTF-8, so this is a byte limit rather than a rune limit.
+const MaxPasswordLength = 72
+
+// ErrPasswordTooLong is returned by hashPassword when the supplied password
+// exceeds MaxPasswordLength. API handlers translate this into a 422 response.
+var ErrPasswordTooLong = errors.New("password exceeds the maximum length of 72 bytes")
+
 var SystemUserUUID = uuid.Nil
 
 // User respresents a registered user with email/password authentication
@@ -230,6 +240,9 @@ func (u *User) SetEmail(tx *storage.Connection, email string) error {
 
 // hashPassword generates a hashed password from a plaintext string
 func hashPassword(password string) (string, error) {
+	if len(password) > MaxPasswordLength {
+		return "", ErrPasswordTooLong
+	}
 	pw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err

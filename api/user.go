@@ -62,6 +62,12 @@ func (a *API) UserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read User Update params: %v", err)
 	}
 
+	if params.Password != "" {
+		if err := validatePassword(params.Password); err != nil {
+			return err
+		}
+	}
+
 	claims := getClaims(ctx)
 	userID, err := uuid.FromString(claims.Subject)
 	if err != nil {
