@@ -53,6 +53,83 @@ func TestSMTPConfigurationValidate(t *testing.T) {
 	}
 }
 
+func TestSecurityConfigurationDefaults(t *testing.T) {
+	defer os.Clearenv()
+
+	baseEnv := func() {
+		os.Clearenv()
+		os.Setenv("GOTRUE_DB_DRIVER", "mysql")
+		os.Setenv("GOTRUE_DB_DATABASE_URL", "fake")
+		os.Setenv("GOTRUE_OPERATOR_TOKEN", "token")
+		os.Setenv("GOTRUE_SITE_URL", "https://example.com")
+		os.Setenv("GOTRUE_JWT_SECRET", "secret")
+	}
+
+	t.Run("disabled by default", func(t *testing.T) {
+		baseEnv()
+		c, err := LoadConfig("")
+		require.NoError(t, err)
+		assert.False(t, c.Security.Enabled)
+		assert.Zero(t, c.Security.MinPasswordLength)
+		assert.Empty(t, c.Security.AllowedRedirectURIs)
+		assert.Empty(t, c.Security.AllowedCORSOrigins)
+	})
+
+	t.Run("min password length defaults to 8 when enabled", func(t *testing.T) {
+		baseEnv()
+		os.Setenv("GOTRUE_SECURITY_ENABLED", "true")
+		c, err := LoadConfig("")
+		require.NoError(t, err)
+		assert.True(t, c.Security.Enabled)
+		assert.Equal(t, 8, c.Security.MinPasswordLength)
+	})
+
+	t.Run("respects explicit min password length", func(t *testing.T) {
+		baseEnv()
+		os.Setenv("GOTRUE_SECURITY_ENABLED", "true")
+		os.Setenv("GOTRUE_SECURITY_MIN_PASSWORD_LENGTH", "12")
+		c, err := LoadConfig("")
+		require.NoError(t, err)
+		assert.Equal(t, 12, c.Security.MinPasswordLength)
+	})
+
+	t.Run("loads allowlists from env", func(t *testing.T) {
+		baseEnv()
+		os.Setenv("GOTRUE_SECURITY_ENABLED", "true")
+		os.Setenv("GOTRUE_SECURITY_ALLOWED_REDIRECT_URIS", "https://app.example.com,https://app.example.com/cb")
+		os.Setenv("GOTRUE_SECURITY_ALLOWED_CORS_ORIGINS", "https://app.example.com,https://preview.example.com")
+		c, err := LoadConfig("")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"https://app.example.com", "https://app.example.com/cb"}, c.Security.AllowedRedirectURIs)
+		assert.Equal(t, []string{"https://app.example.com", "https://preview.example.com"}, c.Security.AllowedCORSOrigins)
+	})
+}
+
+func TestNewInstancesSecureByDefault(t *testing.T) {
+	defer os.Clearenv()
+
+	t.Run("defaults to false", func(t *testing.T) {
+		os.Clearenv()
+		os.Setenv("GOTRUE_DB_DRIVER", "mysql")
+		os.Setenv("GOTRUE_DB_DATABASE_URL", "fake")
+		os.Setenv("GOTRUE_OPERATOR_TOKEN", "token")
+		gc, err := LoadGlobal("")
+		require.NoError(t, err)
+		assert.False(t, gc.NewInstancesSecureByDefault)
+	})
+
+	t.Run("loads from env", func(t *testing.T) {
+		os.Clearenv()
+		os.Setenv("GOTRUE_DB_DRIVER", "mysql")
+		os.Setenv("GOTRUE_DB_DATABASE_URL", "fake")
+		os.Setenv("GOTRUE_OPERATOR_TOKEN", "token")
+		os.Setenv("GOTRUE_NEW_INSTANCES_SECURE_BY_DEFAULT", "true")
+		gc, err := LoadGlobal("")
+		require.NoError(t, err)
+		assert.True(t, gc.NewInstancesSecureByDefault)
+	})
+}
+
 func TestTracing(t *testing.T) {
 	os.Setenv("GOTRUE_DB_DRIVER", "mysql")
 	os.Setenv("GOTRUE_DB_DATABASE_URL", "fake")

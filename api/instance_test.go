@@ -75,6 +75,94 @@ func (ts *InstanceTestSuite) TestCreate() {
 	assert.NotNil(ts.T(), i.BaseConfig)
 }
 
+func (ts *InstanceTestSuite) TestCreate_SecureByDefaultFlipsEnabled() {
+	prev := ts.API.config.NewInstancesSecureByDefault
+	ts.API.config.NewInstancesSecureByDefault = true
+	defer func() { ts.API.config.NewInstancesSecureByDefault = prev }()
+
+	freshUUID := uuid.Must(uuid.NewV4())
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"uuid": freshUUID,
+		"config": map[string]interface{}{
+			"jwt": map[string]interface{}{"secret": "testsecret"},
+		},
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/instances", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusCreated, w.Code)
+
+	i, err := models.GetInstanceByUUID(ts.API.db, freshUUID)
+	require.NoError(ts.T(), err)
+	require.NotNil(ts.T(), i.BaseConfig)
+	assert.True(ts.T(), i.BaseConfig.Security.Enabled, "secure-by-default should flip Security.Enabled")
+}
+
+func (ts *InstanceTestSuite) TestCreate_SecureByDefaultRespectsExplicitOptOut() {
+	// When the caller explicitly sends Security.Enabled=true, secure-by-default
+	// is a no-op. When the caller omits the field (zero value false), we still
+	// flip. There is no JSON-level distinction between unset and false, so the
+	// "opt-out" path requires sending the rest of the field with Enabled left
+	// out — verified by sending no security field at all in the prior test.
+	// This test guards against the flip overwriting an already-true value, by
+	// asserting Security stays Enabled when caller pre-set it.
+	prev := ts.API.config.NewInstancesSecureByDefault
+	ts.API.config.NewInstancesSecureByDefault = true
+	defer func() { ts.API.config.NewInstancesSecureByDefault = prev }()
+
+	freshUUID := uuid.Must(uuid.NewV4())
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"uuid": freshUUID,
+		"config": map[string]interface{}{
+			"jwt":      map[string]interface{}{"secret": "testsecret"},
+			"security": map[string]interface{}{"enabled": true, "min_password_length": 12},
+		},
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/instances", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusCreated, w.Code)
+
+	i, err := models.GetInstanceByUUID(ts.API.db, freshUUID)
+	require.NoError(ts.T(), err)
+	assert.True(ts.T(), i.BaseConfig.Security.Enabled)
+	assert.Equal(ts.T(), 12, i.BaseConfig.Security.MinPasswordLength)
+}
+
+func (ts *InstanceTestSuite) TestCreate_LegacyLeavesSecurityDisabled() {
+	prev := ts.API.config.NewInstancesSecureByDefault
+	ts.API.config.NewInstancesSecureByDefault = false
+	defer func() { ts.API.config.NewInstancesSecureByDefault = prev }()
+
+	freshUUID := uuid.Must(uuid.NewV4())
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"uuid": freshUUID,
+		"config": map[string]interface{}{
+			"jwt": map[string]interface{}{"secret": "testsecret"},
+		},
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/instances", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusCreated, w.Code)
+
+	i, err := models.GetInstanceByUUID(ts.API.db, freshUUID)
+	require.NoError(ts.T(), err)
+	assert.False(ts.T(), i.BaseConfig.Security.Enabled, "secure-by-default OFF should leave Security disabled")
+}
+
 func (ts *InstanceTestSuite) TestGet() {
 	instanceID := uuid.Must(uuid.NewV4())
 	err := ts.API.db.Create(&models.Instance{

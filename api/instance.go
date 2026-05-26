@@ -74,6 +74,9 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		if err := params.BaseConfig.SMTP.Validate(a.config.SMTP.ReservedDomains); err != nil {
 			return badRequestError("Invalid SMTP configuration: %v", err)
 		}
+		if a.config.NewInstancesSecureByDefault && !params.BaseConfig.Security.Enabled {
+			params.BaseConfig.Security.Enabled = true
+		}
 	}
 
 	i := models.Instance{

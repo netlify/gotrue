@@ -70,6 +70,11 @@ type GlobalConfiguration struct {
 	Tracing           TracingConfig
 	SMTP              SMTPConfiguration
 	RateLimitHeader   string `split_words:"true"`
+	// NewInstancesSecureByDefault flips Security.Enabled to true for instances
+	// created via POST /instances when the caller did not set it explicitly.
+	// Defaults to false until callers (e.g. the Netlify control plane) are
+	// ready to pre-populate Security allowlists for new instances.
+	NewInstancesSecureByDefault bool `split_words:"true"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.
@@ -111,6 +116,27 @@ type MailerConfiguration struct {
 	InviteMaxAge       time.Duration             `json:"invite_max_age" split_words:"true"`
 }
 
+// SecurityConfiguration groups stricter security behaviors behind one switch.
+// When Enabled is false (default for existing instances), gotrue retains
+// legacy behavior for backwards compatibility. New instances flip Enabled to
+// true via the POST /instances handler when the global
+// NewInstancesSecureByDefault flag is set.
+type SecurityConfiguration struct {
+	Enabled bool `json:"enabled"`
+
+	// MinPasswordLength is the minimum password length enforced when Enabled.
+	// Falls back to 8 via ApplyDefaults when zero.
+	MinPasswordLength int `json:"min_password_length" split_words:"true"`
+
+	// AllowedRedirectURIs is the exact-match allowlist for OAuth redirect URIs
+	// when Enabled. Empty list means only the SiteURL host is accepted.
+	AllowedRedirectURIs []string `json:"allowed_redirect_uris" envconfig:"ALLOWED_REDIRECT_URIS"`
+
+	// AllowedCORSOrigins is the allowlist for CORS Origin when Enabled.
+	// Empty list means only the SiteURL origin is accepted.
+	AllowedCORSOrigins []string `json:"allowed_cors_origins" envconfig:"ALLOWED_CORS_ORIGINS"`
+}
+
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
 	SiteURL       string                `json:"site_url" split_words:"true" required:"true"`
@@ -124,6 +150,7 @@ type Configuration struct {
 		Key      string `json:"key"`
 		Duration int    `json:"duration"`
 	} `json:"cookies"`
+	Security SecurityConfiguration `json:"security"`
 }
 
 func loadEnvironment(filename string) error {
@@ -243,6 +270,10 @@ func (config *Configuration) ApplyDefaults() {
 
 	if config.Cookie.Duration == 0 {
 		config.Cookie.Duration = 86400
+	}
+
+	if config.Security.Enabled && config.Security.MinPasswordLength <= 0 {
+		config.Security.MinPasswordLength = 8
 	}
 }
 

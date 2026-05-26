@@ -58,6 +58,42 @@ func TestSettings_EmailDisabled(t *testing.T) {
 	require.False(t, p.Email)
 }
 
+func TestSettings_SecurityEnabledExposed(t *testing.T) {
+	api, _, _, err := setupAPIForTestForInstance()
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/settings", nil)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	api.handler.ServeHTTP(w, req)
+	require.Equal(t, w.Code, http.StatusOK)
+
+	resp := Settings{}
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.False(t, resp.SecurityEnabled, "default config should report security_enabled=false")
+}
+
+func TestSettings_SecurityEnabledReflectsConfig(t *testing.T) {
+	api, config, instanceID, err := setupAPIForTestForInstance()
+	require.NoError(t, err)
+
+	config.Security.Enabled = true
+
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/settings", nil)
+	req.Header.Set("Content-Type", "application/json")
+	ctx, err := WithInstanceConfig(context.Background(), config, instanceID)
+	require.NoError(t, err)
+	req = req.WithContext(ctx)
+
+	w := httptest.NewRecorder()
+	api.handler.ServeHTTP(w, req)
+	require.Equal(t, w.Code, http.StatusOK)
+
+	resp := Settings{}
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.True(t, resp.SecurityEnabled)
+}
+
 func TestSettings_ExternalName(t *testing.T) {
 	api, _, _, err := setupAPIForTestForInstance()
 	require.NoError(t, err)
