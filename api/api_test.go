@@ -92,3 +92,54 @@ func TestEmailEnabledByDefault(t *testing.T) {
 
 	require.False(t, api.config.External.Email.Disabled)
 }
+
+func TestOriginAllowed(t *testing.T) {
+	cases := []struct {
+		name    string
+		config  *conf.Configuration
+		origin  string
+		allowed bool
+	}{
+		{
+			name:    "matches configured allowlist",
+			config:  &conf.Configuration{Security: conf.SecurityConfiguration{AllowedCORSOrigins: []string{"https://app.example.com"}}},
+			origin:  "https://app.example.com",
+			allowed: true,
+		},
+		{
+			name:    "rejects non-listed origin",
+			config:  &conf.Configuration{Security: conf.SecurityConfiguration{AllowedCORSOrigins: []string{"https://app.example.com"}}},
+			origin:  "https://evil.com",
+			allowed: false,
+		},
+		{
+			name:    "case-insensitive match",
+			config:  &conf.Configuration{Security: conf.SecurityConfiguration{AllowedCORSOrigins: []string{"https://APP.example.com"}}},
+			origin:  "https://app.example.com",
+			allowed: true,
+		},
+		{
+			name:    "empty allowlist falls back to SiteURL origin",
+			config:  &conf.Configuration{SiteURL: "https://app.example.com/some/path"},
+			origin:  "https://app.example.com",
+			allowed: true,
+		},
+		{
+			name:    "empty allowlist rejects non-SiteURL origin",
+			config:  &conf.Configuration{SiteURL: "https://app.example.com"},
+			origin:  "https://other.example.com",
+			allowed: false,
+		},
+		{
+			name:    "empty allowlist with invalid SiteURL rejects all",
+			config:  &conf.Configuration{SiteURL: "not-a-url"},
+			origin:  "https://app.example.com",
+			allowed: false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.allowed, originAllowed(tc.config, tc.origin))
+		})
+	}
+}

@@ -3,9 +3,11 @@ package api
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"regexp"
+	"strings"
 	"syscall"
 	"time"
 
@@ -13,9 +15,11 @@ import (
 	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gofrs/uuid"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/imdario/mergo"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
+	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
@@ -223,10 +227,80 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", audHeaderName, useCookieHeader},
 		AllowCredentials: true,
+		AllowOriginRequestFunc: func(req *http.Request, origin string) bool {
+			return api.allowOriginForRequest(ctx, req, origin)
+		},
 	})
 
 	api.handler = corsHandler.Handler(r)
 	return api
+}
+
+// allowOriginForRequest resolves the per-instance config for a CORS request
+// and applies Security.AllowedCORSOrigins. The CORS handler wraps the chi
+// router, so this runs before any per-request middleware including
+// loadInstanceConfig — we resolve the instance config ourselves from the
+// JWS signature header in multi-instance mode.
+func (a *API) allowOriginForRequest(baseCtx context.Context, r *http.Request, origin string) bool {
+	cfg := a.configForCORS(baseCtx, r)
+	if cfg == nil {
+		return false
+	}
+	if !cfg.Security.Enabled {
+		return true
+	}
+	return originAllowed(cfg, origin)
+}
+
+func (a *API) configForCORS(baseCtx context.Context, r *http.Request) *conf.Configuration {
+	if !a.config.MultiInstanceMode {
+		if cfg, ok := baseCtx.Value(configKey).(*conf.Configuration); ok {
+			return cfg
+		}
+		return nil
+	}
+	sig := r.Header.Get(jwsSignatureHeaderName)
+	if sig == "" {
+		return nil
+	}
+	claims := NetlifyMicroserviceClaims{}
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	if _, err := p.ParseWithClaims(sig, &claims, func(*jwt.Token) (interface{}, error) {
+		return []byte(a.config.OperatorToken), nil
+	}); err != nil {
+		return nil
+	}
+	instanceID, err := uuid.FromString(claims.InstanceID)
+	if err != nil {
+		return nil
+	}
+	instance, err := models.GetInstance(a.db, instanceID)
+	if err != nil {
+		return nil
+	}
+	cfg, err := instance.Config()
+	if err != nil {
+		return nil
+	}
+	if claims.SiteURL != "" {
+		cfg.SiteURL = claims.SiteURL
+	}
+	return cfg
+}
+
+func originAllowed(config *conf.Configuration, origin string) bool {
+	allowed := config.Security.AllowedCORSOrigins
+	if len(allowed) == 0 {
+		if su, err := url.Parse(config.SiteURL); err == nil && su.Scheme != "" && su.Host != "" {
+			allowed = []string{su.Scheme + "://" + su.Host}
+		}
+	}
+	for _, entry := range allowed {
+		if strings.EqualFold(entry, origin) {
+			return true
+		}
+	}
+	return false
 }
 
 // NewAPIFromConfigFile creates a new REST API using the provided configuration file.
