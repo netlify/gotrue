@@ -9,9 +9,37 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
+
+func TestIsAllowedRedirectURI(t *testing.T) {
+	cases := []struct {
+		name      string
+		candidate string
+		allowed   []string
+		want      bool
+	}{
+		{"exact host", "https://app.example.com/cb", []string{"https://app.example.com"}, true},
+		{"empty path on entry matches any candidate path", "https://app.example.com/auth/cb?x=1", []string{"https://app.example.com"}, true},
+		{"path prefix", "https://app.example.com/auth/cb", []string{"https://app.example.com/auth"}, true},
+		{"path prefix mismatch", "https://app.example.com/other/cb", []string{"https://app.example.com/auth"}, false},
+		{"scheme mismatch", "http://app.example.com/cb", []string{"https://app.example.com"}, false},
+		{"host mismatch", "https://evil.com/cb", []string{"https://app.example.com"}, false},
+		{"subdomain not allowed", "https://evil.app.example.com/cb", []string{"https://app.example.com"}, false},
+		{"empty candidate", "", []string{"https://app.example.com"}, false},
+		{"candidate without scheme", "/relative/path", []string{"https://app.example.com"}, false},
+		{"case-insensitive host", "https://APP.EXAMPLE.COM/cb", []string{"https://app.example.com"}, true},
+		{"matches second entry", "https://preview.example.com/cb", []string{"https://app.example.com", "https://preview.example.com"}, true},
+		{"empty allowlist", "https://app.example.com/cb", nil, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isAllowedRedirectURI(tc.candidate, tc.allowed))
+		})
+	}
+}
 
 type ExternalTestSuite struct {
 	suite.Suite

@@ -363,11 +363,58 @@ func getErrorQueryString(err error, errorID string, log logrus.FieldLogger) *url
 func (a *API) getExternalRedirectURL(r *http.Request) string {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
+
+	candidates := []string{}
 	if config.External.RedirectURL != "" {
-		return config.External.RedirectURL
+		candidates = append(candidates, config.External.RedirectURL)
 	}
 	if er := getExternalReferrer(ctx); er != "" {
-		return er
+		candidates = append(candidates, er)
+	}
+	candidates = append(candidates, config.SiteURL)
+
+	if !config.Security.Enabled {
+		return candidates[0]
+	}
+
+	allowed := config.Security.AllowedRedirectURIs
+	if len(allowed) == 0 {
+		allowed = []string{config.SiteURL}
+	}
+
+	for _, candidate := range candidates {
+		if isAllowedRedirectURI(candidate, allowed) {
+			return candidate
+		}
 	}
 	return config.SiteURL
+}
+
+// isAllowedRedirectURI matches candidate against allowed by exact scheme,
+// case-insensitive host, and path prefix. An allowlist entry with empty path
+// or path "/" matches any path on that host. Subdomains do NOT match.
+func isAllowedRedirectURI(candidate string, allowed []string) bool {
+	cu, err := url.Parse(candidate)
+	if err != nil || cu.Scheme == "" || cu.Host == "" {
+		return false
+	}
+	for _, entry := range allowed {
+		au, err := url.Parse(entry)
+		if err != nil || au.Scheme == "" || au.Host == "" {
+			continue
+		}
+		if cu.Scheme != au.Scheme {
+			continue
+		}
+		if !strings.EqualFold(cu.Host, au.Host) {
+			continue
+		}
+		if au.Path == "" || au.Path == "/" {
+			return true
+		}
+		if strings.HasPrefix(cu.Path, au.Path) {
+			return true
+		}
+	}
+	return false
 }
