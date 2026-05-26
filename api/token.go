@@ -240,6 +240,7 @@ func (a *API) setCookieToken(config *conf.Configuration, tokenString string, ses
 		Secure:   true,
 		HttpOnly: true,
 		Path:     "/",
+		SameSite: http.SameSiteLaxMode,
 	}
 	if !session {
 		cookie.Expires = time.Now().Add(exp)
@@ -260,5 +261,6 @@ func (a *API) clearCookieToken(ctx context.Context, w http.ResponseWriter) {
 		Secure:   true,
 		HttpOnly: true,
 		Path:     "/",
+		SameSite: http.SameSiteLaxMode,
 	})
 }
