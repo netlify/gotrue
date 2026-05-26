@@ -37,7 +37,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) error {
 	if params.Password == "" {
 		return unprocessableEntityError("Signup requires a valid password")
 	}
-	if err := validatePassword(params.Password); err != nil {
+	if err := validatePassword(config, params.Password); err != nil {
 		return err
 	}
 	if err := a.validateEmail(ctx, params.Email); err != nil {
