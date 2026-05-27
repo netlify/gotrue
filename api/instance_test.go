@@ -102,14 +102,10 @@ func (ts *InstanceTestSuite) TestCreate_SecureByDefaultFlipsEnabled() {
 	assert.True(ts.T(), i.BaseConfig.Security.Enabled, "secure-by-default should flip Security.Enabled")
 }
 
-func (ts *InstanceTestSuite) TestCreate_SecureByDefaultRespectsExplicitOptOut() {
-	// When the caller explicitly sends Security.Enabled=true, secure-by-default
-	// is a no-op. When the caller omits the field (zero value false), we still
-	// flip. There is no JSON-level distinction between unset and false, so the
-	// "opt-out" path requires sending the rest of the field with Enabled left
-	// out — verified by sending no security field at all in the prior test.
-	// This test guards against the flip overwriting an already-true value, by
-	// asserting Security stays Enabled when caller pre-set it.
+func (ts *InstanceTestSuite) TestCreate_SecureByDefaultPreservesExplicitConfig() {
+	// The secure-by-default flip only fires when Security.Enabled is false, so a
+	// caller that explicitly enables it (and sets other Security fields) keeps
+	// those values untouched.
 	prev := ts.API.config.NewInstancesSecureByDefault
 	ts.API.config.NewInstancesSecureByDefault = true
 	defer func() { ts.API.config.NewInstancesSecureByDefault = prev }()

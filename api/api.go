@@ -279,6 +279,9 @@ func (a *API) configForCORS(baseCtx context.Context, r *http.Request) *conf.Conf
 	}); err != nil {
 		return nil
 	}
+	if claims.InstanceID == "" {
+		return nil
+	}
 	instanceID, err := uuid.FromString(claims.InstanceID)
 	if err != nil {
 		return nil

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gofrs/uuid"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
@@ -139,6 +140,62 @@ func TestCORS_FlagOnRestrictsOrigin(t *testing.T) {
 	wa := httptest.NewRecorder()
 	api.handler.ServeHTTP(wa, allowed)
 	require.Equal(t, "https://app.example.com", wa.Header().Get("Access-Control-Allow-Origin"))
+}
+
+// TestCORS_MultiInstanceStrict exercises the multi-instance CORS path, where
+// configForCORS resolves the instance config by parsing the x-nf-sign JWS
+// header (the route middleware does not run for preflight requests). It
+// asserts the per-instance allowlist is enforced.
+func TestCORS_MultiInstanceStrict(t *testing.T) {
+	api, _, err := setupAPIForMultiinstanceTest()
+	require.NoError(t, err)
+	defer api.db.Close()
+	require.NoError(t, models.TruncateAll(api.db))
+
+	instanceID := uuid.Must(uuid.NewV4())
+	require.NoError(t, api.db.Create(&models.Instance{
+		ID:   instanceID,
+		UUID: uuid.Must(uuid.NewV4()),
+		BaseConfig: &conf.Configuration{
+			SiteURL: "https://app.example.com",
+			Security: conf.SecurityConfiguration{
+				Enabled:            true,
+				AllowedCORSOrigins: []string{"https://app.example.com"},
+			},
+		},
+	}))
+
+	signature := func() string {
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, NetlifyMicroserviceClaims{
+			InstanceID: instanceID.String(),
+			SiteURL:    "https://app.example.com",
+		})
+		signed, signErr := token.SignedString([]byte(api.config.OperatorToken))
+		require.NoError(t, signErr)
+		return signed
+	}()
+
+	preflight := func(origin string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodOptions, "/settings", nil)
+		req.Header.Set("Origin", origin)
+		req.Header.Set("Access-Control-Request-Method", "GET")
+		req.Header.Set(jwsSignatureHeaderName, signature)
+		w := httptest.NewRecorder()
+		api.handler.ServeHTTP(w, req)
+		return w
+	}
+
+	require.Equal(t, "https://app.example.com", preflight("https://app.example.com").Header().Get("Access-Control-Allow-Origin"))
+	require.Empty(t, preflight("https://evil.example.com").Header().Get("Access-Control-Allow-Origin"))
+
+	// A preflight without the signature cannot be attributed to an instance, so
+	// it falls back to the permissive (wildcard) handler.
+	noSig := httptest.NewRequest(http.MethodOptions, "/settings", nil)
+	noSig.Header.Set("Origin", "https://evil.example.com")
+	noSig.Header.Set("Access-Control-Request-Method", "GET")
+	w := httptest.NewRecorder()
+	api.handler.ServeHTTP(w, noSig)
+	require.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
 }
 
 func TestOriginAllowed(t *testing.T) {
