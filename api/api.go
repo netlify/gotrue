@@ -40,8 +40,12 @@ type API struct {
 func (a *API) ListenAndServe(hostAndPort string) {
 	log := logrus.WithField("component", "api")
 	server := &http.Server{
-		Addr:    hostAndPort,
-		Handler: a.handler,
+		Addr:              hostAndPort,
+		Handler:           a.handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	done := make(chan struct{})
