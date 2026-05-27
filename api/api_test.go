@@ -116,12 +116,12 @@ func TestCORS_FlagOffPreservesWildcard(t *testing.T) {
 	require.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
 }
 
-// TestCORS_FlagOnRestrictsOrigin verifies that with Security.Enabled the
+// TestCORS_FlagOnRestrictsOrigin verifies that with Security.Strict the
 // allowlist is enforced: a non-listed origin gets no Allow-Origin header, and
 // the SiteURL origin is reflected.
 func TestCORS_FlagOnRestrictsOrigin(t *testing.T) {
 	config := &conf.Configuration{SiteURL: "https://app.example.com"}
-	config.Security.Enabled = true
+	config.Security.Strict = true
 	config.ApplyDefaults()
 	ctx, err := WithInstanceConfig(context.Background(), config, uuid.Nil)
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestCORS_MultiInstanceStrict(t *testing.T) {
 		BaseConfig: &conf.Configuration{
 			SiteURL: "https://app.example.com",
 			Security: conf.SecurityConfiguration{
-				Enabled:            true,
+				Strict:             true,
 				AllowedCORSOrigins: []string{"https://app.example.com"},
 			},
 		},

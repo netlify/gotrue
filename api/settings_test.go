@@ -58,7 +58,7 @@ func TestSettings_EmailDisabled(t *testing.T) {
 	require.False(t, p.Email)
 }
 
-func TestSettings_SecurityEnabledExposed(t *testing.T) {
+func TestSettings_SecurityStrictExposed(t *testing.T) {
 	api, _, _, err := setupAPIForTestForInstance()
 	require.NoError(t, err)
 
@@ -70,14 +70,14 @@ func TestSettings_SecurityEnabledExposed(t *testing.T) {
 
 	resp := Settings{}
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
-	require.False(t, resp.SecurityEnabled, "default config should report security_enabled=false")
+	require.False(t, resp.SecurityStrict, "default config should report security_strict=false")
 }
 
-func TestSettings_SecurityEnabledReflectsConfig(t *testing.T) {
+func TestSettings_SecurityStrictReflectsConfig(t *testing.T) {
 	api, config, instanceID, err := setupAPIForTestForInstance()
 	require.NoError(t, err)
 
-	config.Security.Enabled = true
+	config.Security.Strict = true
 
 	req := httptest.NewRequest(http.MethodGet, "http://localhost/settings", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -91,7 +91,7 @@ func TestSettings_SecurityEnabledReflectsConfig(t *testing.T) {
 
 	resp := Settings{}
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
-	require.True(t, resp.SecurityEnabled)
+	require.True(t, resp.SecurityStrict)
 }
 
 func TestSettings_ExternalName(t *testing.T) {

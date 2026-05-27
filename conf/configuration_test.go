@@ -69,7 +69,7 @@ func TestSecurityConfigurationDefaults(t *testing.T) {
 		baseEnv()
 		c, err := LoadConfig("")
 		require.NoError(t, err)
-		assert.False(t, c.Security.Enabled)
+		assert.False(t, c.Security.Strict)
 		assert.Zero(t, c.Security.MinPasswordLength)
 		assert.Empty(t, c.Security.AllowedRedirectURIs)
 		assert.Empty(t, c.Security.AllowedCORSOrigins)
@@ -77,16 +77,16 @@ func TestSecurityConfigurationDefaults(t *testing.T) {
 
 	t.Run("min password length defaults to 8 when enabled", func(t *testing.T) {
 		baseEnv()
-		os.Setenv("GOTRUE_SECURITY_ENABLED", "true")
+		os.Setenv("GOTRUE_SECURITY_STRICT", "true")
 		c, err := LoadConfig("")
 		require.NoError(t, err)
-		assert.True(t, c.Security.Enabled)
+		assert.True(t, c.Security.Strict)
 		assert.Equal(t, 8, c.Security.MinPasswordLength)
 	})
 
 	t.Run("respects explicit min password length", func(t *testing.T) {
 		baseEnv()
-		os.Setenv("GOTRUE_SECURITY_ENABLED", "true")
+		os.Setenv("GOTRUE_SECURITY_STRICT", "true")
 		os.Setenv("GOTRUE_SECURITY_MIN_PASSWORD_LENGTH", "12")
 		c, err := LoadConfig("")
 		require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestSecurityConfigurationDefaults(t *testing.T) {
 
 	t.Run("loads allowlists from env", func(t *testing.T) {
 		baseEnv()
-		os.Setenv("GOTRUE_SECURITY_ENABLED", "true")
+		os.Setenv("GOTRUE_SECURITY_STRICT", "true")
 		os.Setenv("GOTRUE_SECURITY_ALLOWED_REDIRECT_URIS", "https://app.example.com,https://app.example.com/cb")
 		os.Setenv("GOTRUE_SECURITY_ALLOWED_CORS_ORIGINS", "https://app.example.com,https://preview.example.com")
 		c, err := LoadConfig("")

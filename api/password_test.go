@@ -11,7 +11,7 @@ import (
 
 func TestValidatePassword(t *testing.T) {
 	strict := &conf.Configuration{Security: conf.SecurityConfiguration{
-		Enabled:           true,
+		Strict:            true,
 		MinPasswordLength: 8,
 	}}
 	legacy := &conf.Configuration{}

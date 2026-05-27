@@ -21,7 +21,7 @@ type Settings struct {
 	ExternalLabels    ProviderLabels   `json:"external_labels"`
 	DisableSignup     bool             `json:"disable_signup"`
 	Autoconfirm       bool             `json:"autoconfirm"`
-	SecurityEnabled   bool             `json:"security_enabled"`
+	SecurityStrict    bool             `json:"security_strict"`
 }
 
 func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
@@ -40,8 +40,8 @@ func (a *API) Settings(w http.ResponseWriter, r *http.Request) error {
 		ExternalLabels: ProviderLabels{
 			SAML: config.External.Saml.Name,
 		},
-		DisableSignup:   config.DisableSignup,
-		Autoconfirm:     config.Mailer.Autoconfirm,
-		SecurityEnabled: config.Security.Enabled,
+		DisableSignup:  config.DisableSignup,
+		Autoconfirm:    config.Mailer.Autoconfirm,
+		SecurityStrict: config.Security.Strict,
 	})
 }

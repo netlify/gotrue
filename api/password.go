@@ -18,7 +18,7 @@ func validatePassword(config *conf.Configuration, password string) error {
 	if len(password) > models.MaxPasswordLength {
 		return unprocessableEntityError("Password exceeds the maximum length of %d bytes", models.MaxPasswordLength)
 	}
-	if config.Security.Enabled && len(password) < config.Security.MinPasswordLength {
+	if config.Security.Strict && len(password) < config.Security.MinPasswordLength {
 		return unprocessableEntityError(
 			"Password must be at least %d characters long",
 			config.Security.MinPasswordLength,

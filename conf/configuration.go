@@ -70,7 +70,7 @@ type GlobalConfiguration struct {
 	Tracing           TracingConfig
 	SMTP              SMTPConfiguration
 	RateLimitHeader   string `split_words:"true"`
-	// NewInstancesSecureByDefault flips Security.Enabled to true for instances
+	// NewInstancesSecureByDefault flips Security.Strict to true for instances
 	// created via POST /instances when the caller did not set it explicitly.
 	// Defaults to false until callers (e.g. the Netlify control plane) are
 	// ready to pre-populate Security allowlists for new instances.
@@ -117,22 +117,22 @@ type MailerConfiguration struct {
 }
 
 // SecurityConfiguration groups stricter security behaviors behind one switch.
-// When Enabled is false (default for existing instances), gotrue retains
-// legacy behavior for backwards compatibility. New instances flip Enabled to
-// true via the POST /instances handler when the global
-// NewInstancesSecureByDefault flag is set.
+// When Strict is false (default for existing instances), gotrue retains legacy
+// behavior for backwards compatibility. New instances flip Strict to true via
+// the POST /instances handler when the global NewInstancesSecureByDefault flag
+// is set.
 type SecurityConfiguration struct {
-	Enabled bool `json:"enabled"`
+	Strict bool `json:"strict"`
 
-	// MinPasswordLength is the minimum password length enforced when Enabled.
+	// MinPasswordLength is the minimum password length enforced when Strict.
 	// Falls back to 8 via ApplyDefaults when zero.
 	MinPasswordLength int `json:"min_password_length" split_words:"true"`
 
 	// AllowedRedirectURIs is the exact-match allowlist for OAuth redirect URIs
-	// when Enabled. Empty list means only the SiteURL host is accepted.
+	// when Strict. Empty list means only the SiteURL host is accepted.
 	AllowedRedirectURIs []string `json:"allowed_redirect_uris" envconfig:"ALLOWED_REDIRECT_URIS"`
 
-	// AllowedCORSOrigins is the allowlist for CORS Origin when Enabled.
+	// AllowedCORSOrigins is the allowlist for CORS Origin when Strict.
 	// Empty list means only the SiteURL origin is accepted.
 	AllowedCORSOrigins []string `json:"allowed_cors_origins" envconfig:"ALLOWED_CORS_ORIGINS"`
 }
@@ -272,7 +272,7 @@ func (config *Configuration) ApplyDefaults() {
 		config.Cookie.Duration = 86400
 	}
 
-	if config.Security.Enabled && config.Security.MinPasswordLength <= 0 {
+	if config.Security.Strict && config.Security.MinPasswordLength <= 0 {
 		config.Security.MinPasswordLength = 8
 	}
 }

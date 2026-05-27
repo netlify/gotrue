@@ -99,11 +99,11 @@ func (ts *InstanceTestSuite) TestCreate_SecureByDefaultFlipsEnabled() {
 	i, err := models.GetInstanceByUUID(ts.API.db, freshUUID)
 	require.NoError(ts.T(), err)
 	require.NotNil(ts.T(), i.BaseConfig)
-	assert.True(ts.T(), i.BaseConfig.Security.Enabled, "secure-by-default should flip Security.Enabled")
+	assert.True(ts.T(), i.BaseConfig.Security.Strict, "secure-by-default should flip Security.Strict")
 }
 
 func (ts *InstanceTestSuite) TestCreate_SecureByDefaultPreservesExplicitConfig() {
-	// The secure-by-default flip only fires when Security.Enabled is false, so a
+	// The secure-by-default flip only fires when Security.Strict is false, so a
 	// caller that explicitly enables it (and sets other Security fields) keeps
 	// those values untouched.
 	prev := ts.API.config.NewInstancesSecureByDefault
@@ -116,7 +116,7 @@ func (ts *InstanceTestSuite) TestCreate_SecureByDefaultPreservesExplicitConfig()
 		"uuid": freshUUID,
 		"config": map[string]interface{}{
 			"jwt":      map[string]interface{}{"secret": "testsecret"},
-			"security": map[string]interface{}{"enabled": true, "min_password_length": 12},
+			"security": map[string]interface{}{"strict": true, "min_password_length": 12},
 		},
 	}))
 
@@ -129,7 +129,7 @@ func (ts *InstanceTestSuite) TestCreate_SecureByDefaultPreservesExplicitConfig()
 
 	i, err := models.GetInstanceByUUID(ts.API.db, freshUUID)
 	require.NoError(ts.T(), err)
-	assert.True(ts.T(), i.BaseConfig.Security.Enabled)
+	assert.True(ts.T(), i.BaseConfig.Security.Strict)
 	assert.Equal(ts.T(), 12, i.BaseConfig.Security.MinPasswordLength)
 }
 
@@ -156,7 +156,7 @@ func (ts *InstanceTestSuite) TestCreate_LegacyLeavesSecurityDisabled() {
 
 	i, err := models.GetInstanceByUUID(ts.API.db, freshUUID)
 	require.NoError(ts.T(), err)
-	assert.False(ts.T(), i.BaseConfig.Security.Enabled, "secure-by-default OFF should leave Security disabled")
+	assert.False(ts.T(), i.BaseConfig.Security.Strict, "secure-by-default OFF should leave Security disabled")
 }
 
 func (ts *InstanceTestSuite) TestGet() {

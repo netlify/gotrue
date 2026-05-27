@@ -373,7 +373,7 @@ func (a *API) getExternalRedirectURL(r *http.Request) string {
 	}
 	candidates = append(candidates, config.SiteURL)
 
-	if !config.Security.Enabled {
+	if !config.Security.Strict {
 		return candidates[0]
 	}
 

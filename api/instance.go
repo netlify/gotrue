@@ -77,8 +77,8 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		// Secure-by-default only applies to instances created with a config.
 		// A config-less instance has no SiteURL to fall back to, so leaving it
 		// permissive avoids locking out CORS/redirects with an empty allowlist.
-		if a.config.NewInstancesSecureByDefault && !params.BaseConfig.Security.Enabled {
-			params.BaseConfig.Security.Enabled = true
+		if a.config.NewInstancesSecureByDefault && !params.BaseConfig.Security.Strict {
+			params.BaseConfig.Security.Strict = true
 		}
 	}
 

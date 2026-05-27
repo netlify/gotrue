@@ -234,7 +234,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	permissiveCors := cors.New(corsOptions).Handler(r)
 
 	// strictCors reflects only allowlisted origins. Used per-instance when
-	// Security.Enabled is set. The wrapper below stashes the resolved config on
+	// Security.Strict is set. The wrapper below stashes the resolved config on
 	// the request context so this func does not look it up again.
 	strictOptions := corsOptions
 	strictOptions.AllowOriginVaryRequestFunc = func(req *http.Request, origin string) (bool, []string) {
@@ -248,7 +248,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 	api.handler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		cfg := api.configForCORS(ctx, req)
-		if cfg != nil && cfg.Security.Enabled {
+		if cfg != nil && cfg.Security.Strict {
 			strictCors.ServeHTTP(w, req.WithContext(withCORSConfig(req.Context(), cfg)))
 			return
 		}

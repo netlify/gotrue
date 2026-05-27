@@ -264,7 +264,7 @@ func (ts *SignupTestSuite) TestVerifySignup() {
 // TestSignup_StrictRejectsShortPassword exercises the validatePassword call
 // at the signup entry point under the strict policy.
 func (ts *SignupTestSuite) TestSignup_StrictRejectsShortPassword() {
-	ts.Config.Security.Enabled = true
+	ts.Config.Security.Strict = true
 	ts.Config.Security.MinPasswordLength = 8
 
 	var buf bytes.Buffer
