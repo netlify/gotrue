@@ -391,8 +391,11 @@ func (a *API) getExternalRedirectURL(r *http.Request) string {
 }
 
 // isAllowedRedirectURI matches candidate against allowed by exact scheme,
-// case-insensitive host, and path prefix. An allowlist entry with empty path
-// or path "/" matches any path on that host. Subdomains do NOT match.
+// case-insensitive host, and path-segment prefix. An allowlist entry with an
+// empty path or path "/" matches any path on that host. A path-scoped entry
+// matches the exact path or a sub-path, but not a path that merely shares a
+// string prefix (entry "/auth" matches "/auth" and "/auth/cb" but not
+// "/authorize"). Subdomains do NOT match.
 func isAllowedRedirectURI(candidate string, allowed []string) bool {
 	cu, err := url.Parse(candidate)
 	if err != nil || cu.Scheme == "" || cu.Host == "" {
@@ -409,10 +412,11 @@ func isAllowedRedirectURI(candidate string, allowed []string) bool {
 		if !strings.EqualFold(cu.Host, au.Host) {
 			continue
 		}
-		if au.Path == "" || au.Path == "/" {
+		allowedPath := strings.TrimSuffix(au.Path, "/")
+		if allowedPath == "" {
 			return true
 		}
-		if strings.HasPrefix(cu.Path, au.Path) {
+		if cu.Path == allowedPath || strings.HasPrefix(cu.Path, allowedPath+"/") {
 			return true
 		}
 	}
