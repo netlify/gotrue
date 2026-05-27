@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gofrs/uuid"
@@ -91,6 +93,52 @@ func TestEmailEnabledByDefault(t *testing.T) {
 	require.NoError(t, err)
 
 	require.False(t, api.config.External.Email.Disabled)
+}
+
+// TestCORS_FlagOffPreservesWildcard guards the core safety property: when an
+// instance has not opted in, the CORS response is byte-for-byte the historical
+// default (Access-Control-Allow-Origin: *), not a reflected origin. Runs
+// without a database because preflight handling never reaches the router.
+func TestCORS_FlagOffPreservesWildcard(t *testing.T) {
+	config := &conf.Configuration{}
+	config.ApplyDefaults()
+	ctx, err := WithInstanceConfig(context.Background(), config, uuid.Nil)
+	require.NoError(t, err)
+	api := NewAPIWithVersion(ctx, &conf.GlobalConfiguration{}, nil, "test")
+
+	req := httptest.NewRequest(http.MethodOptions, "/settings", nil)
+	req.Header.Set("Origin", "https://anything.example.com")
+	req.Header.Set("Access-Control-Request-Method", "GET")
+	w := httptest.NewRecorder()
+	api.handler.ServeHTTP(w, req)
+
+	require.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+// TestCORS_FlagOnRestrictsOrigin verifies that with Security.Enabled the
+// allowlist is enforced: a non-listed origin gets no Allow-Origin header, and
+// the SiteURL origin is reflected.
+func TestCORS_FlagOnRestrictsOrigin(t *testing.T) {
+	config := &conf.Configuration{SiteURL: "https://app.example.com"}
+	config.Security.Enabled = true
+	config.ApplyDefaults()
+	ctx, err := WithInstanceConfig(context.Background(), config, uuid.Nil)
+	require.NoError(t, err)
+	api := NewAPIWithVersion(ctx, &conf.GlobalConfiguration{}, nil, "test")
+
+	disallowed := httptest.NewRequest(http.MethodOptions, "/settings", nil)
+	disallowed.Header.Set("Origin", "https://evil.example.com")
+	disallowed.Header.Set("Access-Control-Request-Method", "GET")
+	wd := httptest.NewRecorder()
+	api.handler.ServeHTTP(wd, disallowed)
+	require.Empty(t, wd.Header().Get("Access-Control-Allow-Origin"))
+
+	allowed := httptest.NewRequest(http.MethodOptions, "/settings", nil)
+	allowed.Header.Set("Origin", "https://app.example.com")
+	allowed.Header.Set("Access-Control-Request-Method", "GET")
+	wa := httptest.NewRecorder()
+	api.handler.ServeHTTP(wa, allowed)
+	require.Equal(t, "https://app.example.com", wa.Header().Get("Access-Control-Allow-Origin"))
 }
 
 func TestOriginAllowed(t *testing.T) {

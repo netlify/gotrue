@@ -223,35 +223,44 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		})
 	}
 
-	corsHandler := cors.New(cors.Options{
+	corsOptions := cors.Options{
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", audHeaderName, useCookieHeader},
 		AllowCredentials: true,
-		AllowOriginRequestFunc: func(req *http.Request, origin string) bool {
-			return api.allowOriginForRequest(ctx, req, origin)
-		},
-	})
+	}
 
-	api.handler = corsHandler.Handler(r)
+	// permissiveCors preserves the historical default: Access-Control-Allow-Origin: *.
+	// Used for instances that have not opted in to strict security.
+	permissiveCors := cors.New(corsOptions).Handler(r)
+
+	// strictCors reflects only allowlisted origins. Used per-instance when
+	// Security.Enabled is set. The wrapper below stashes the resolved config on
+	// the request context so this func does not look it up again.
+	strictOptions := corsOptions
+	strictOptions.AllowOriginRequestFunc = func(req *http.Request, origin string) bool {
+		cfg := getCORSConfig(req.Context())
+		if cfg == nil {
+			return false
+		}
+		return originAllowed(cfg, origin)
+	}
+	strictCors := cors.New(strictOptions).Handler(r)
+
+	api.handler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		cfg := api.configForCORS(ctx, req)
+		if cfg != nil && cfg.Security.Enabled {
+			strictCors.ServeHTTP(w, req.WithContext(withCORSConfig(req.Context(), cfg)))
+			return
+		}
+		permissiveCors.ServeHTTP(w, req)
+	})
 	return api
 }
 
-// allowOriginForRequest resolves the per-instance config for a CORS request
-// and applies Security.AllowedCORSOrigins. The CORS handler wraps the chi
-// router, so this runs before any per-request middleware including
-// loadInstanceConfig — we resolve the instance config ourselves from the
-// JWS signature header in multi-instance mode.
-func (a *API) allowOriginForRequest(baseCtx context.Context, r *http.Request, origin string) bool {
-	cfg := a.configForCORS(baseCtx, r)
-	if cfg == nil {
-		return false
-	}
-	if !cfg.Security.Enabled {
-		return true
-	}
-	return originAllowed(cfg, origin)
-}
-
+// configForCORS resolves the per-instance config for a CORS request. The CORS
+// wrapper runs before any per-request middleware including loadInstanceConfig,
+// so in multi-instance mode we resolve the instance config ourselves from the
+// JWS signature header.
 func (a *API) configForCORS(baseCtx context.Context, r *http.Request) *conf.Configuration {
 	if !a.config.MultiInstanceMode {
 		if cfg, ok := baseCtx.Value(configKey).(*conf.Configuration); ok {
