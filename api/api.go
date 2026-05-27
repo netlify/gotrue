@@ -237,12 +237,12 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	// Security.Enabled is set. The wrapper below stashes the resolved config on
 	// the request context so this func does not look it up again.
 	strictOptions := corsOptions
-	strictOptions.AllowOriginRequestFunc = func(req *http.Request, origin string) bool {
+	strictOptions.AllowOriginVaryRequestFunc = func(req *http.Request, origin string) (bool, []string) {
 		cfg := getCORSConfig(req.Context())
 		if cfg == nil {
-			return false
+			return false, nil
 		}
-		return originAllowed(cfg, origin)
+		return originAllowed(cfg, origin), nil
 	}
 	strictCors := cors.New(strictOptions).Handler(r)
 
