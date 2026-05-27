@@ -9,7 +9,10 @@ import (
 	"github.com/netlify/gotrue/models"
 )
 
-const defaultPerPage = 50
+const (
+	defaultPerPage = 50
+	maxPerPage     = 500
+)
 
 func calculateTotalPages(perPage, total uint64) uint64 {
 	pages := total / perPage
@@ -59,6 +62,9 @@ func paginate(r *http.Request) (*models.Pagination, error) {
 		perPage, err = strconv.ParseUint(queryPerPage, 10, 64)
 		if err != nil {
 			return nil, err
+		}
+		if perPage > maxPerPage {
+			return nil, badRequestError("per_page must not exceed %d", maxPerPage)
 		}
 	}
 
