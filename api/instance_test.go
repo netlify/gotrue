@@ -133,6 +133,35 @@ func (ts *InstanceTestSuite) TestCreate_SecureByDefaultPreservesExplicitConfig()
 	assert.Equal(ts.T(), 12, i.BaseConfig.Security.MinPasswordLength)
 }
 
+func (ts *InstanceTestSuite) TestCreate_SecureByDefaultKeepsConfigLess() {
+	// The handler intentionally skips the strict flip for config-less
+	// instances — a config-less instance has no SiteURL to seed an allowlist
+	// from, so flipping Strict would lock CORS and OAuth redirects out
+	// immediately. Lock that anti-lockout behavior in.
+	prev := ts.API.config.NewInstancesSecureByDefault
+	ts.API.config.NewInstancesSecureByDefault = true
+	defer func() { ts.API.config.NewInstancesSecureByDefault = prev }()
+
+	freshUUID := uuid.Must(uuid.NewV4())
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"uuid": freshUUID,
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/instances", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusCreated, w.Code)
+
+	i, err := models.GetInstanceByUUID(ts.API.db, freshUUID)
+	require.NoError(ts.T(), err)
+	if i.BaseConfig != nil {
+		assert.False(ts.T(), i.BaseConfig.Security.Strict, "config-less create must not auto-flip Security.Strict")
+	}
+}
+
 func (ts *InstanceTestSuite) TestCreate_LegacyLeavesSecurityDisabled() {
 	prev := ts.API.config.NewInstancesSecureByDefault
 	ts.API.config.NewInstancesSecureByDefault = false
