@@ -246,10 +246,15 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 	strictCors := cors.New(strictOptions).Handler(r)
 
 	api.handler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		cfg := api.configForCORS(ctx, req)
-		if cfg != nil && cfg.Security.Strict {
-			strictCors.ServeHTTP(w, req.WithContext(withCORSConfig(req.Context(), cfg)))
-			return
+		// rs/cors is a no-op when Origin is absent, so non-CORS requests can
+		// skip the per-instance resolve entirely. In multi-instance mode this
+		// is the difference between a JWS parse + DB lookup on every
+		// server-to-server request and no extra work at all.
+		if req.Header.Get("Origin") != "" {
+			if cfg := api.configForCORS(ctx, req); cfg != nil && cfg.Security.Strict {
+				strictCors.ServeHTTP(w, req.WithContext(withCORSConfig(req.Context(), cfg)))
+				return
+			}
 		}
 		permissiveCors.ServeHTTP(w, req)
 	})
