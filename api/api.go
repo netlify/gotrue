@@ -89,6 +89,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 	r := newRouter()
 	r.UseBypass(middleware.RealIP)
+	r.UseBypass(limitBodySize(defaultMaxBodySize))
 	// Inject base context values into each request (replaces chi.ServerBaseContext from chi v4)
 	r.UseBypass(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
