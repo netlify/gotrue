@@ -15,7 +15,6 @@ import (
 	"github.com/didip/tollbooth/v5/limiter"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gofrs/uuid"
-	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/imdario/mergo"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
@@ -272,14 +271,8 @@ func (a *API) configForCORS(baseCtx context.Context, r *http.Request) *conf.Conf
 	if sig == "" {
 		return nil
 	}
-	claims := NetlifyMicroserviceClaims{}
-	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
-	if _, err := p.ParseWithClaims(sig, &claims, func(*jwt.Token) (interface{}, error) {
-		return []byte(a.config.OperatorToken), nil
-	}); err != nil {
-		return nil
-	}
-	if claims.InstanceID == "" {
+	claims, err := a.parseOperatorJWS(sig)
+	if err != nil || claims.InstanceID == "" {
 		return nil
 	}
 	instanceID, err := uuid.FromString(claims.InstanceID)

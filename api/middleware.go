@@ -100,6 +100,19 @@ func (a *API) loadJWSSignatureHeader(w http.ResponseWriter, r *http.Request) (co
 	return withSignature(ctx, signature), nil
 }
 
+// parseOperatorJWS validates the operator JWS signature and returns the claims
+// it carries. Shared by loadInstanceConfig (per-request middleware) and the
+// CORS wrapper (which runs before middleware) so signing-method and operator
+// token handling stay in one place.
+func (a *API) parseOperatorJWS(signature string) (NetlifyMicroserviceClaims, error) {
+	claims := NetlifyMicroserviceClaims{}
+	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	_, err := p.ParseWithClaims(signature, &claims, func(*jwt.Token) (interface{}, error) {
+		return []byte(a.config.OperatorToken), nil
+	})
+	return claims, err
+}
+
 func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	ctx := r.Context()
 
@@ -108,11 +121,7 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 		return nil, badRequestError("Operator signature missing")
 	}
 
-	claims := NetlifyMicroserviceClaims{}
-	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
-	_, err := p.ParseWithClaims(signature, &claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(a.config.OperatorToken), nil
-	})
+	claims, err := a.parseOperatorJWS(signature)
 	if err != nil {
 		return nil, badRequestError("Operator microservice signature is invalid: %v", err)
 	}
