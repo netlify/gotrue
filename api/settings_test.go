@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -68,9 +69,8 @@ func TestSettings_SecurityStrictExposed(t *testing.T) {
 	api.handler.ServeHTTP(w, req)
 	require.Equal(t, w.Code, http.StatusOK)
 
-	resp := Settings{}
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
-	require.False(t, resp.SecurityStrict, "default config should report security_strict=false")
+	strict := decodeSecurityStrict(t, w.Body)
+	require.False(t, strict, "default config should report security_strict=false")
 }
 
 func TestSettings_SecurityStrictReflectsConfig(t *testing.T) {
@@ -89,9 +89,21 @@ func TestSettings_SecurityStrictReflectsConfig(t *testing.T) {
 	api.handler.ServeHTTP(w, req)
 	require.Equal(t, w.Code, http.StatusOK)
 
-	resp := Settings{}
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
-	require.True(t, resp.SecurityStrict)
+	require.True(t, decodeSecurityStrict(t, w.Body))
+}
+
+// decodeSecurityStrict reads the /settings response body as a raw map so the
+// test fails loudly if the security_strict key disappears from the JSON
+// contract — a Settings{} decode would silently treat a missing bool as false.
+func decodeSecurityStrict(t *testing.T, body io.Reader) bool {
+	t.Helper()
+	raw := map[string]json.RawMessage{}
+	require.NoError(t, json.NewDecoder(body).Decode(&raw))
+	rawStrict, ok := raw["security_strict"]
+	require.True(t, ok, "settings response must include security_strict")
+	var strict bool
+	require.NoError(t, json.Unmarshal(rawStrict, &strict))
+	return strict
 }
 
 func TestSettings_ExternalName(t *testing.T) {
