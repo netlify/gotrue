@@ -128,8 +128,11 @@ type SecurityConfiguration struct {
 	// Falls back to 8 via ApplyDefaults when zero.
 	MinPasswordLength int `json:"min_password_length" split_words:"true"`
 
-	// AllowedRedirectURIs is the exact-match allowlist for OAuth redirect URIs
-	// when Strict. Empty list means only the SiteURL host is accepted.
+	// AllowedRedirectURIs is the allowlist for OAuth redirect URIs when Strict.
+	// Entries match by exact scheme and case-insensitive host; the path is
+	// matched as a segment prefix, so "https://app.example.com/auth" allows
+	// "/auth" and "/auth/cb" but not "/authorize". Subdomains are not implied.
+	// Empty list means only the SiteURL host is accepted.
 	AllowedRedirectURIs []string `json:"allowed_redirect_uris" envconfig:"ALLOWED_REDIRECT_URIS"`
 
 	// AllowedCORSOrigins is the allowlist for CORS Origin when Strict.
