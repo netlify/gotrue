@@ -33,6 +33,11 @@ func TestValidatePassword(t *testing.T) {
 		{"strict at min", strict, "12345678", false},
 		{"strict above min", strict, "longer-password", false},
 		{"strict 73 bytes rejected (max takes precedence)", strict, strings.Repeat("a", 73), true},
+		// Rune-count semantics: 3 emoji = 12 bytes but only 3 characters,
+		// so it must fail an 8-char policy. 8 emoji = 32 bytes / 8 chars,
+		// so it must pass.
+		{"strict 3 emoji rejected as 3 chars", strict, strings.Repeat("😀", 3), true},
+		{"strict 8 emoji accepted as 8 chars", strict, strings.Repeat("😀", 8), false},
 	}
 
 	for _, tc := range cases {
