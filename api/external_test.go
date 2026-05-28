@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -42,6 +43,28 @@ func TestIsAllowedRedirectURI(t *testing.T) {
 			assert.Equal(t, tc.want, isAllowedRedirectURI(tc.candidate, tc.allowed))
 		})
 	}
+}
+
+// TestGetExternalRedirectURL_StrictFallbackUsesAllowlist guards against the
+// subtle hole where strict mode would still leak a redirect to SiteURL if the
+// operator configured AllowedRedirectURIs without including it. With nothing
+// matching the allowlist, the result must be an allowlisted entry, not the
+// raw SiteURL.
+func TestGetExternalRedirectURL_StrictFallbackUsesAllowlist(t *testing.T) {
+	api := &API{config: &conf.GlobalConfiguration{}}
+	config := &conf.Configuration{
+		SiteURL: "https://app.example.com",
+		Security: conf.SecurityConfiguration{
+			Strict:              true,
+			AllowedRedirectURIs: []string{"https://allowed.example.com"},
+		},
+	}
+	config.ApplyDefaults()
+	ctx, err := WithInstanceConfig(context.Background(), config, uuid.Nil)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/callback", nil).WithContext(ctx)
+	assert.Equal(t, "https://allowed.example.com", api.getExternalRedirectURL(req))
 }
 
 type ExternalTestSuite struct {

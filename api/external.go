@@ -387,7 +387,11 @@ func (a *API) getExternalRedirectURL(r *http.Request) string {
 			return candidate
 		}
 	}
-	return config.SiteURL
+	// Nothing matched the allowlist. Returning config.SiteURL here would
+	// leak OAuth tokens to a non-allowlisted destination when the operator
+	// configured AllowedRedirectURIs without including SiteURL. Prefer the
+	// operator's primary allowlisted entry instead.
+	return allowed[0]
 }
 
 // isAllowedRedirectURI matches candidate against allowed by exact scheme,
