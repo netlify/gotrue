@@ -70,6 +70,11 @@ type GlobalConfiguration struct {
 	Tracing           TracingConfig
 	SMTP              SMTPConfiguration
 	RateLimitHeader   string `split_words:"true"`
+	// NewInstancesSecureByDefault flips Security.Strict to true for instances
+	// created via POST /instances when the caller did not set it explicitly.
+	// Defaults to false until callers (e.g. the Netlify control plane) are
+	// ready to pre-populate the per-instance Security configuration.
+	NewInstancesSecureByDefault bool `split_words:"true"`
 }
 
 // EmailContentConfiguration holds the configuration for emails, both subjects and template URLs.
@@ -111,6 +116,16 @@ type MailerConfiguration struct {
 	InviteMaxAge       time.Duration             `json:"invite_max_age" split_words:"true"`
 }
 
+// SecurityConfiguration groups stricter security behaviors behind one switch.
+// When Strict is false (default for existing instances), gotrue retains legacy
+// behavior for backwards compatibility. New instances flip Strict to true via
+// the POST /instances handler when the global NewInstancesSecureByDefault flag
+// is set. The individual strict behaviors and their settings are added by
+// follow-up changes.
+type SecurityConfiguration struct {
+	Strict bool `json:"strict"`
+}
+
 // Configuration holds all the per-instance configuration.
 type Configuration struct {
 	SiteURL       string                `json:"site_url" split_words:"true" required:"true"`
@@ -124,6 +139,7 @@ type Configuration struct {
 		Key      string `json:"key"`
 		Duration int    `json:"duration"`
 	} `json:"cookies"`
+	Security SecurityConfiguration `json:"security"`
 }
 
 func loadEnvironment(filename string) error {
