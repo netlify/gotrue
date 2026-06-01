@@ -79,6 +79,15 @@ func TestSecurityConfigurationDefaults(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, c.Security.Strict)
 	})
+
+	t.Run("loads allowed CORS origins from env", func(t *testing.T) {
+		baseEnv()
+		os.Setenv("GOTRUE_SECURITY_STRICT", "true")
+		os.Setenv("GOTRUE_SECURITY_ALLOWED_CORS_ORIGINS", "https://app.example.com,https://preview.example.com")
+		c, err := LoadConfig("")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"https://app.example.com", "https://preview.example.com"}, c.Security.AllowedCORSOrigins)
+	})
 }
 
 func TestNewInstancesSecureByDefault(t *testing.T) {

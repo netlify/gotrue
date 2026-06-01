@@ -125,6 +125,10 @@ type MailerConfiguration struct {
 // follow-up changes.
 type SecurityConfiguration struct {
 	Strict bool `json:"strict"`
+
+	// AllowedCORSOrigins is the allowlist for CORS Origin when Strict.
+	// Empty list means only the SiteURL origin is accepted.
+	AllowedCORSOrigins []string `json:"allowed_cors_origins" envconfig:"ALLOWED_CORS_ORIGINS"`
 }
 
 // Configuration holds all the per-instance configuration.

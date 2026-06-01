@@ -29,7 +29,22 @@ const (
 	externalReferrerKey     = contextKey("external_referrer")
 	functionHooksKey        = contextKey("function_hooks")
 	adminUserKey            = contextKey("admin_user")
+	corsConfigKey           = contextKey("cors_config")
 )
+
+// withCORSConfig stashes the instance config resolved by the CORS wrapper so
+// the strict-origin check can reuse it without a second lookup.
+func withCORSConfig(ctx context.Context, config *conf.Configuration) context.Context {
+	return context.WithValue(ctx, corsConfigKey, config)
+}
+
+func getCORSConfig(ctx context.Context) *conf.Configuration {
+	obj := ctx.Value(corsConfigKey)
+	if obj == nil {
+		return nil
+	}
+	return obj.(*conf.Configuration)
+}
 
 // withToken adds the JWT token to the context.
 func withToken(ctx context.Context, token *jwt.Token) context.Context {

@@ -3,9 +3,11 @@ package api
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"regexp"
+	"strings"
 	"syscall"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/netlify/gotrue/conf"
 	"github.com/netlify/gotrue/mailer"
+	"github.com/netlify/gotrue/models"
 	"github.com/netlify/gotrue/storage"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
@@ -219,14 +222,95 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 		})
 	}
 
-	corsHandler := cors.New(cors.Options{
+	corsOptions := cors.Options{
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", audHeaderName, useCookieHeader},
 		AllowCredentials: true,
-	})
+	}
 
-	api.handler = corsHandler.Handler(r)
+	// permissiveCors preserves the historical default: Access-Control-Allow-Origin: *.
+	// Used for instances that have not opted in to strict security.
+	permissiveCors := cors.New(corsOptions).Handler(r)
+
+	// strictCors reflects only allowlisted origins. Used per-instance when
+	// Security.Strict is set. The wrapper below stashes the resolved config on
+	// the request context so this func does not look it up again.
+	strictOptions := corsOptions
+	strictOptions.AllowOriginVaryRequestFunc = func(req *http.Request, origin string) (bool, []string) {
+		cfg := getCORSConfig(req.Context())
+		if cfg == nil {
+			return false, nil
+		}
+		return originAllowed(cfg, origin), nil
+	}
+	strictCors := cors.New(strictOptions).Handler(r)
+
+	api.handler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		// rs/cors is a no-op when Origin is absent, so non-CORS requests can
+		// skip the per-instance resolve entirely. In multi-instance mode this
+		// is the difference between a JWS parse + DB lookup on every
+		// server-to-server request and no extra work at all.
+		if req.Header.Get("Origin") != "" {
+			if cfg := api.configForCORS(ctx, req); cfg != nil && cfg.Security.Strict {
+				strictCors.ServeHTTP(w, req.WithContext(withCORSConfig(req.Context(), cfg)))
+				return
+			}
+		}
+		permissiveCors.ServeHTTP(w, req)
+	})
 	return api
+}
+
+// configForCORS resolves the per-instance config for a CORS request. The CORS
+// wrapper runs before any per-request middleware including loadInstanceConfig,
+// so in multi-instance mode we resolve the instance config ourselves from the
+// JWS signature header.
+func (a *API) configForCORS(baseCtx context.Context, r *http.Request) *conf.Configuration {
+	if !a.config.MultiInstanceMode {
+		if cfg, ok := baseCtx.Value(configKey).(*conf.Configuration); ok {
+			return cfg
+		}
+		return nil
+	}
+	sig := r.Header.Get(jwsSignatureHeaderName)
+	if sig == "" {
+		return nil
+	}
+	claims, err := a.parseOperatorJWS(sig)
+	if err != nil || claims.InstanceID == "" {
+		return nil
+	}
+	instanceID, err := uuid.FromString(claims.InstanceID)
+	if err != nil {
+		return nil
+	}
+	instance, err := models.GetInstance(a.db, instanceID)
+	if err != nil {
+		return nil
+	}
+	cfg, err := instance.Config()
+	if err != nil {
+		return nil
+	}
+	if claims.SiteURL != "" {
+		cfg.SiteURL = claims.SiteURL
+	}
+	return cfg
+}
+
+func originAllowed(config *conf.Configuration, origin string) bool {
+	allowed := config.Security.AllowedCORSOrigins
+	if len(allowed) == 0 {
+		if su, err := url.Parse(config.SiteURL); err == nil && su.Scheme != "" && su.Host != "" {
+			allowed = []string{su.Scheme + "://" + su.Host}
+		}
+	}
+	for _, entry := range allowed {
+		if strings.EqualFold(entry, origin) {
+			return true
+		}
+	}
+	return false
 }
 
 // NewAPIFromConfigFile creates a new REST API using the provided configuration file.
