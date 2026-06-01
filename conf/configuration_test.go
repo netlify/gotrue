@@ -79,6 +79,15 @@ func TestSecurityConfigurationDefaults(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, c.Security.Strict)
 	})
+
+	t.Run("loads allowed redirect URIs from env", func(t *testing.T) {
+		baseEnv()
+		os.Setenv("GOTRUE_SECURITY_STRICT", "true")
+		os.Setenv("GOTRUE_SECURITY_ALLOWED_REDIRECT_URIS", "https://app.example.com,https://app.example.com/cb")
+		c, err := LoadConfig("")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"https://app.example.com", "https://app.example.com/cb"}, c.Security.AllowedRedirectURIs)
+	})
 }
 
 func TestNewInstancesSecureByDefault(t *testing.T) {

@@ -363,11 +363,66 @@ func getErrorQueryString(err error, errorID string, log logrus.FieldLogger) *url
 func (a *API) getExternalRedirectURL(r *http.Request) string {
 	ctx := r.Context()
 	config := a.getConfig(ctx)
+
+	candidates := []string{}
 	if config.External.RedirectURL != "" {
-		return config.External.RedirectURL
+		candidates = append(candidates, config.External.RedirectURL)
 	}
 	if er := getExternalReferrer(ctx); er != "" {
-		return er
+		candidates = append(candidates, er)
 	}
-	return config.SiteURL
+	candidates = append(candidates, config.SiteURL)
+
+	if !config.Security.Strict {
+		return candidates[0]
+	}
+
+	allowed := config.Security.AllowedRedirectURIs
+	if len(allowed) == 0 {
+		allowed = []string{config.SiteURL}
+	}
+
+	for _, candidate := range candidates {
+		if isAllowedRedirectURI(candidate, allowed) {
+			return candidate
+		}
+	}
+	// Nothing matched the allowlist. Returning config.SiteURL here would
+	// leak OAuth tokens to a non-allowlisted destination when the operator
+	// configured AllowedRedirectURIs without including SiteURL. Prefer the
+	// operator's primary allowlisted entry instead.
+	return allowed[0]
+}
+
+// isAllowedRedirectURI matches candidate against allowed by exact scheme,
+// case-insensitive host, and path-segment prefix. An allowlist entry with an
+// empty path or path "/" matches any path on that host. A path-scoped entry
+// matches the exact path or a sub-path, but not a path that merely shares a
+// string prefix (entry "/auth" matches "/auth" and "/auth/cb" but not
+// "/authorize"). Subdomains do NOT match.
+func isAllowedRedirectURI(candidate string, allowed []string) bool {
+	cu, err := url.Parse(candidate)
+	if err != nil || cu.Scheme == "" || cu.Host == "" {
+		return false
+	}
+	for _, entry := range allowed {
+		au, err := url.Parse(entry)
+		if err != nil || au.Scheme == "" || au.Host == "" {
+			continue
+		}
+		if cu.Scheme != au.Scheme {
+			continue
+		}
+		if !strings.EqualFold(cu.Host, au.Host) {
+			continue
+		}
+		allowedPath := strings.TrimSuffix(au.Path, "/")
+		if allowedPath == "" {
+			return true
+		}
+		if cu.Path == allowedPath || strings.HasPrefix(cu.Path, allowedPath+"/") {
+			return true
+		}
+	}
+	return false
 }

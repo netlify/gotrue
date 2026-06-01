@@ -125,6 +125,13 @@ type MailerConfiguration struct {
 // follow-up changes.
 type SecurityConfiguration struct {
 	Strict bool `json:"strict"`
+
+	// AllowedRedirectURIs is the allowlist for OAuth redirect URIs when Strict.
+	// Entries match by exact scheme and case-insensitive host; the path is
+	// matched as a segment prefix, so "https://app.example.com/auth" allows
+	// "/auth" and "/auth/cb" but not "/authorize". Subdomains are not implied.
+	// Empty list means only the SiteURL host is accepted.
+	AllowedRedirectURIs []string `json:"allowed_redirect_uris" envconfig:"ALLOWED_REDIRECT_URIS"`
 }
 
 // Configuration holds all the per-instance configuration.
