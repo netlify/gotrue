@@ -125,6 +125,10 @@ type MailerConfiguration struct {
 // follow-up changes.
 type SecurityConfiguration struct {
 	Strict bool `json:"strict"`
+
+	// MinPasswordLength is the minimum password length enforced when Strict.
+	// Falls back to 8 via ApplyDefaults when zero.
+	MinPasswordLength int `json:"min_password_length" split_words:"true"`
 }
 
 // Configuration holds all the per-instance configuration.
@@ -260,6 +264,10 @@ func (config *Configuration) ApplyDefaults() {
 
 	if config.Cookie.Duration == 0 {
 		config.Cookie.Duration = 86400
+	}
+
+	if config.Security.Strict && config.Security.MinPasswordLength <= 0 {
+		config.Security.MinPasswordLength = 8
 	}
 }
 

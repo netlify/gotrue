@@ -104,7 +104,8 @@ func (ts *InstanceTestSuite) TestCreate_SecureByDefaultFlipsEnabled() {
 
 func (ts *InstanceTestSuite) TestCreate_SecureByDefaultPreservesExplicitConfig() {
 	// The secure-by-default flip only fires when Security.Strict is false, so a
-	// caller that explicitly enables it keeps that value untouched.
+	// caller that explicitly enables it (and sets other Security fields) keeps
+	// those values untouched.
 	prev := ts.API.config.NewInstancesSecureByDefault
 	ts.API.config.NewInstancesSecureByDefault = true
 	defer func() { ts.API.config.NewInstancesSecureByDefault = prev }()
@@ -115,7 +116,7 @@ func (ts *InstanceTestSuite) TestCreate_SecureByDefaultPreservesExplicitConfig()
 		"uuid": freshUUID,
 		"config": map[string]interface{}{
 			"jwt":      map[string]interface{}{"secret": "testsecret"},
-			"security": map[string]interface{}{"strict": true},
+			"security": map[string]interface{}{"strict": true, "min_password_length": 12},
 		},
 	}))
 
@@ -129,6 +130,7 @@ func (ts *InstanceTestSuite) TestCreate_SecureByDefaultPreservesExplicitConfig()
 	i, err := models.GetInstanceByUUID(ts.API.db, freshUUID)
 	require.NoError(ts.T(), err)
 	assert.True(ts.T(), i.BaseConfig.Security.Strict)
+	assert.Equal(ts.T(), 12, i.BaseConfig.Security.MinPasswordLength)
 }
 
 func (ts *InstanceTestSuite) TestCreate_SecureByDefaultOverridesExplicitFalse() {

@@ -79,6 +79,24 @@ func TestSecurityConfigurationDefaults(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, c.Security.Strict)
 	})
+
+	t.Run("min password length defaults to 8 when enabled", func(t *testing.T) {
+		baseEnv()
+		os.Setenv("GOTRUE_SECURITY_STRICT", "true")
+		c, err := LoadConfig("")
+		require.NoError(t, err)
+		assert.True(t, c.Security.Strict)
+		assert.Equal(t, 8, c.Security.MinPasswordLength)
+	})
+
+	t.Run("respects explicit min password length", func(t *testing.T) {
+		baseEnv()
+		os.Setenv("GOTRUE_SECURITY_STRICT", "true")
+		os.Setenv("GOTRUE_SECURITY_MIN_PASSWORD_LENGTH", "12")
+		c, err := LoadConfig("")
+		require.NoError(t, err)
+		assert.Equal(t, 12, c.Security.MinPasswordLength)
+	})
 }
 
 func TestNewInstancesSecureByDefault(t *testing.T) {

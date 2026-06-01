@@ -43,6 +43,7 @@ func TestSignup(t *testing.T) {
 func (ts *SignupTestSuite) SetupTest() {
 	require.NoError(ts.T(), models.TruncateAll(ts.API.db))
 	ts.Config.Webhook = conf.WebhookConfig{}
+	ts.Config.Security = conf.SecurityConfiguration{}
 }
 
 // TestSignup tests API /signup route
@@ -258,4 +259,23 @@ func (ts *SignupTestSuite) TestVerifySignup() {
 	ts.API.handler.ServeHTTP(w, req)
 
 	assert.Equal(ts.T(), http.StatusOK, w.Code, w.Body.String())
+}
+
+// TestSignup_StrictRejectsShortPassword exercises the validatePassword call
+// at the signup entry point under the strict policy.
+func (ts *SignupTestSuite) TestSignup_StrictRejectsShortPassword() {
+	ts.Config.Security.Strict = true
+	ts.Config.Security.MinPasswordLength = 8
+
+	var buf bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buf).Encode(map[string]interface{}{
+		"email":    "shortpw@example.com",
+		"password": "short",
+	}))
+	req := httptest.NewRequest(http.MethodPost, "/signup", &buf)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+
+	require.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code, w.Body.String())
 }
