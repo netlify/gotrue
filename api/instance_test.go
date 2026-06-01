@@ -131,6 +131,37 @@ func (ts *InstanceTestSuite) TestCreate_SecureByDefaultPreservesExplicitConfig()
 	assert.True(ts.T(), i.BaseConfig.Security.Strict)
 }
 
+func (ts *InstanceTestSuite) TestCreate_SecureByDefaultOverridesExplicitFalse() {
+	// Secure-by-default is a security posture: when the platform enables it, an
+	// explicit "strict": false from the caller does not opt the new instance
+	// out. Lock that precedence in.
+	prev := ts.API.config.NewInstancesSecureByDefault
+	ts.API.config.NewInstancesSecureByDefault = true
+	defer func() { ts.API.config.NewInstancesSecureByDefault = prev }()
+
+	freshUUID := uuid.Must(uuid.NewV4())
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"uuid": freshUUID,
+		"config": map[string]interface{}{
+			"jwt":      map[string]interface{}{"secret": "testsecret"},
+			"security": map[string]interface{}{"strict": false},
+		},
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/instances", &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusCreated, w.Code)
+
+	i, err := models.GetInstanceByUUID(ts.API.db, freshUUID)
+	require.NoError(ts.T(), err)
+	require.NotNil(ts.T(), i.BaseConfig)
+	assert.True(ts.T(), i.BaseConfig.Security.Strict, "secure-by-default must override explicit strict=false")
+}
+
 func (ts *InstanceTestSuite) TestCreate_SecureByDefaultKeepsConfigLess() {
 	// The handler intentionally skips the strict flip for config-less
 	// instances — a config-less instance has no SiteURL to seed the strict

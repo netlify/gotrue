@@ -71,9 +71,10 @@ type GlobalConfiguration struct {
 	SMTP              SMTPConfiguration
 	RateLimitHeader   string `split_words:"true"`
 	// NewInstancesSecureByDefault flips Security.Strict to true for instances
-	// created via POST /instances when the caller did not set it explicitly.
-	// Defaults to false until callers (e.g. the Netlify control plane) are
-	// ready to pre-populate the per-instance Security configuration.
+	// created via POST /instances. Secure-by-default takes precedence, so it
+	// overrides both an omitted and an explicit Security.Strict=false from the
+	// caller. Defaults to false until callers (e.g. the Netlify control plane)
+	// are ready to pre-populate the per-instance Security configuration.
 	NewInstancesSecureByDefault bool `split_words:"true"`
 }
 
