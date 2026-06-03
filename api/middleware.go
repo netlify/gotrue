@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 
 	"github.com/didip/tollbooth/v5"
@@ -17,7 +18,26 @@ import (
 
 const (
 	jwsSignatureHeaderName = "x-nf-sign"
+
+	// defaultMaxBodySize caps the number of bytes the server will read from a
+	// request body. It is enforced by limitBodySize and exists to prevent a
+	// client from holding memory open with a multi-gigabyte upload.
+	defaultMaxBodySize int64 = 1 << 20 // 1 MiB
 )
+
+// limitBodySize wraps each request body in http.MaxBytesReader so that any
+// reader (json.NewDecoder, io.ReadAll, etc.) returns an error once the limit is
+// reached instead of buffering the entire body in memory.
+func limitBodySize(maxSize int64) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Body != nil && r.Body != http.NoBody {
+				r.Body = http.MaxBytesReader(w, r.Body, maxSize)
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
 
 type FunctionHooks map[string][]string
 
@@ -142,15 +162,30 @@ func (a *API) loadInstanceConfig(w http.ResponseWriter, r *http.Request) (contex
 func (a *API) limitHandler(lmt *limiter.Limiter) middlewareHandler {
 	return func(w http.ResponseWriter, req *http.Request) (context.Context, error) {
 		c := req.Context()
-		if limitHeader := a.config.RateLimitHeader; limitHeader != "" {
-			key := req.Header.Get(a.config.RateLimitHeader)
-			err := tollbooth.LimitByKeys(lmt, []string{key})
-			if err != nil {
-				return c, httpError(http.StatusTooManyRequests, "Rate limit exceeded")
-			}
+		key := a.rateLimitKey(req)
+		if err := tollbooth.LimitByKeys(lmt, []string{key}); err != nil {
+			return c, tooManyRequestsError("Rate limit exceeded")
 		}
 		return c, nil
 	}
+}
+
+// rateLimitKey returns the value to bucket rate limits by. It prefers the
+// configured header (typically set by an upstream proxy) and falls back to the
+// client IP so requests are always rate limited even when the header is
+// missing or unset. chi/middleware.RealIP rewrites RemoteAddr from
+// X-Forwarded-For, so this remains correct behind a proxy.
+func (a *API) rateLimitKey(req *http.Request) string {
+	if h := a.config.RateLimitHeader; h != "" {
+		if v := req.Header.Get(h); v != "" {
+			return v
+		}
+	}
+	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		return req.RemoteAddr
+	}
+	return host
 }
 
 func (a *API) verifyOperatorRequest(w http.ResponseWriter, req *http.Request) (context.Context, error) {

@@ -39,6 +39,12 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		return unprocessableEntityError("Verify requires a token")
 	}
 
+	if params.Password != "" {
+		if err := validatePassword(params.Password); err != nil {
+			return err
+		}
+	}
+
 	var (
 		user  *models.User
 		err   error

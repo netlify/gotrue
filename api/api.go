@@ -40,8 +40,12 @@ type API struct {
 func (a *API) ListenAndServe(hostAndPort string) {
 	log := logrus.WithField("component", "api")
 	server := &http.Server{
-		Addr:    hostAndPort,
-		Handler: a.handler,
+		Addr:              hostAndPort,
+		Handler:           a.handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	done := make(chan struct{})
@@ -85,6 +89,7 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 	r := newRouter()
 	r.UseBypass(middleware.RealIP)
+	r.UseBypass(limitBodySize(defaultMaxBodySize))
 	// Inject base context values into each request (replaces chi.ServerBaseContext from chi v4)
 	r.UseBypass(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -129,15 +134,30 @@ func NewAPIWithVersion(ctx context.Context, globalConfig *conf.GlobalConfigurati
 
 		r.With(api.requireAdminCredentials).Post("/invite", api.Invite)
 
-		r.With(api.requireEmailProvider).Post("/signup", api.Signup)
-		r.With(api.requireEmailProvider).Post("/recover", api.Recover)
 		r.With(api.requireEmailProvider).With(api.limitHandler(
-			// Allow requests at a rate of 30 per 5 minutes.
+			// Allow up to 10 signup requests per minute per client.
+			tollbooth.NewLimiter(10.0/60, &limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Hour,
+			}).SetBurst(10),
+		)).Post("/signup", api.Signup)
+		r.With(api.requireEmailProvider).With(api.limitHandler(
+			// Allow up to 5 password recovery requests per minute per client.
+			tollbooth.NewLimiter(5.0/60, &limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Hour,
+			}).SetBurst(5),
+		)).Post("/recover", api.Recover)
+		r.With(api.requireEmailProvider).With(api.limitHandler(
+			// Allow up to 30 token requests per 5 minutes per client.
 			tollbooth.NewLimiter(30.0/(60*5), &limiter.ExpirableOptions{
 				DefaultExpirationTTL: time.Hour,
 			}).SetBurst(30),
 		)).Post("/token", api.Token)
-		r.Post("/verify", api.Verify)
+		r.With(api.limitHandler(
+			// Allow up to 30 verification attempts per minute per client.
+			tollbooth.NewLimiter(30.0/60, &limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Hour,
+			}).SetBurst(30),
+		)).Post("/verify", api.Verify)
 
 		r.With(api.requireAuthentication).Post("/logout", api.Logout)
 

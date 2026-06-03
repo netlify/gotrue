@@ -137,6 +137,12 @@ func (a *API) adminUserUpdate(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	if params.Password != "" {
+		if err := validatePassword(params.Password); err != nil {
+			return err
+		}
+	}
+
 	err = a.db.Transaction(func(tx *storage.Connection) error {
 		if params.Role != "" {
 			if terr := user.SetRole(tx, params.Role); terr != nil {
@@ -206,6 +212,10 @@ func (a *API) adminUserCreate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if err := a.validateEmail(ctx, params.Email); err != nil {
+		return err
+	}
+
+	if err := validatePassword(params.Password); err != nil {
 		return err
 	}
 
