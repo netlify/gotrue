@@ -74,6 +74,9 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		if err := params.BaseConfig.SMTP.Validate(a.config.SMTP.ReservedDomains); err != nil {
 			return badRequestError("Invalid SMTP configuration: %v", err)
 		}
+		if err := a.validateInstanceSMTPHost(params.BaseConfig.SMTP.Host); err != nil {
+			return badRequestError("Invalid SMTP configuration: %v", err)
+		}
 	}
 
 	i := models.Instance{
@@ -98,6 +101,16 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 	return sendJSON(w, http.StatusCreated, resp)
 }
 
+// validateInstanceSMTPHost vets an instance-supplied SMTP host. The
+// deployment-wide host is operator configuration and may legitimately be
+// internal, so it is left alone.
+func (a *API) validateInstanceSMTPHost(host string) error {
+	if host == a.config.SMTP.Host {
+		return nil
+	}
+	return validateSMTPHost(host)
+}
+
 func (a *API) GetInstance(w http.ResponseWriter, r *http.Request) error {
 	i := getInstance(r.Context())
 	if i.BaseConfig != nil {
@@ -116,6 +129,9 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 
 	if params.BaseConfig != nil {
 		if err := params.BaseConfig.SMTP.Validate(a.config.SMTP.ReservedDomains); err != nil {
+			return badRequestError("Invalid SMTP configuration: %v", err)
+		}
+		if err := a.validateInstanceSMTPHost(params.BaseConfig.SMTP.Host); err != nil {
 			return badRequestError("Invalid SMTP configuration: %v", err)
 		}
 	}

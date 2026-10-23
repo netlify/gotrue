@@ -136,6 +136,35 @@ func (ts *InstanceTestSuite) TestUpdate() {
 	require.Equal(ts.T(), i.BaseConfig.SiteURL, "https://test.mysite.com")
 }
 
+func (ts *InstanceTestSuite) TestUpdate_RejectsInternalSMTPHost() {
+	instanceID := uuid.Must(uuid.NewV4())
+	require.NoError(ts.T(), ts.API.db.Create(&models.Instance{
+		ID:         instanceID,
+		UUID:       testUUID,
+		BaseConfig: &conf.Configuration{JWT: conf.JWTConfiguration{Secret: "testsecret"}},
+	}))
+
+	var buffer bytes.Buffer
+	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+		"config": map[string]interface{}{
+			"jwt":  map[string]interface{}{"secret": "testsecret"},
+			"smtp": map[string]interface{}{"host": "169.254.169.254", "port": 25},
+		},
+	}))
+
+	req := httptest.NewRequest(http.MethodPut, "/instances/"+instanceID.String(), &buffer)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	require.Equal(ts.T(), http.StatusBadRequest, w.Code)
+
+	i, err := models.GetInstanceByUUID(ts.API.db, testUUID)
+	require.NoError(ts.T(), err)
+	require.Equal(ts.T(), "", i.BaseConfig.SMTP.Host)
+}
+
 func (ts *InstanceTestSuite) TestUpdate_DisableEmail() {
 	instanceID := uuid.Must(uuid.NewV4())
 	err := ts.API.db.Create(&models.Instance{

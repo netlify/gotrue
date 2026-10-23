@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
+	"strings"
 
 	"github.com/gofrs/uuid"
 	"github.com/netlify/gotrue/conf"
@@ -129,6 +130,34 @@ func init() {
 		_, block, _ := net.ParseCIDR(cidr)
 		privateIPBlocks = append(privateIPBlocks, block)
 	}
+}
+
+// validateSMTPHost rejects SMTP hosts that are, or resolve to, an internal
+// address. The mailer dials the host itself, outside SafeHTTPClient, so an
+// instance-supplied host must be vetted before it is used.
+func validateSMTPHost(host string) error {
+	if host == "" {
+		return nil
+	}
+	if strings.ContainsAny(host, "/@?# \t\r\n") {
+		return errors.New("smtp host must be a bare host name or IP address")
+	}
+
+	ips := []net.IP{}
+	if ip := net.ParseIP(strings.Trim(host, "[]")); ip != nil {
+		ips = append(ips, ip)
+	} else {
+		var err error
+		if ips, err = net.LookupIP(host); err != nil || len(ips) == 0 {
+			return errors.New("smtp host could not be resolved")
+		}
+	}
+	for _, ip := range ips {
+		if isPrivateIP(ip) {
+			return errors.New("smtp host resolves to a private or reserved address")
+		}
+	}
+	return nil
 }
 
 func isPrivateIP(ip net.IP) bool {

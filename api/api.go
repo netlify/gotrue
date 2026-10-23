@@ -270,6 +270,12 @@ func WithInstanceConfig(ctx context.Context, config *conf.Configuration, instanc
 
 func (a *API) Mailer(ctx context.Context) mailer.Mailer {
 	config := a.getConfig(ctx)
+	// Instance config written before the host was validated at write time, or
+	// DNS that changed since, must not make the service dial internal hosts.
+	if err := a.validateInstanceSMTPHost(config.SMTP.Host); err != nil {
+		logrus.WithError(err).WithField("smtp_host", config.SMTP.Host).Error("refusing to use SMTP host")
+		return mailer.NewMailer(&conf.Configuration{SiteURL: config.SiteURL})
+	}
 	return mailer.NewMailer(config)
 }
 
