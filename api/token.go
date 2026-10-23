@@ -125,7 +125,7 @@ func (a *API) RefreshTokenGrant(ctx context.Context, w http.ResponseWriter, r *h
 		return oauthError("invalid_request", "refresh_token required")
 	}
 
-	user, token, err := models.FindUserWithRefreshToken(a.db, tokenStr)
+	user, token, err := models.FindUserWithRefreshToken(a.db, instanceID, tokenStr)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return oauthError("invalid_grant", "Invalid Refresh Token")

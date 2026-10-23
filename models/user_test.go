@@ -161,10 +161,20 @@ func (ts *UserTestSuite) TestFindUserWithRefreshToken() {
 	r, err := GrantAuthenticatedUser(ts.db, u)
 	require.NoError(ts.T(), err)
 
-	n, nr, err := FindUserWithRefreshToken(ts.db, r.Token)
+	n, nr, err := FindUserWithRefreshToken(ts.db, u.InstanceID, r.Token)
 	require.NoError(ts.T(), err)
 	require.Equal(ts.T(), r.ID, nr.ID)
 	require.Equal(ts.T(), u.ID, n.ID)
+}
+
+func (ts *UserTestSuite) TestFindUserWithRefreshTokenOtherInstance() {
+	u := ts.createUser()
+	r, err := GrantAuthenticatedUser(ts.db, u)
+	require.NoError(ts.T(), err)
+
+	_, _, err = FindUserWithRefreshToken(ts.db, uuid.Must(uuid.NewV4()), r.Token)
+	require.Error(ts.T(), err)
+	require.True(ts.T(), IsNotFoundError(err), "expected NotFoundError")
 }
 
 func (ts *UserTestSuite) TestIsDuplicatedEmail() {

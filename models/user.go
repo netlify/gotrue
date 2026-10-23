@@ -337,16 +337,18 @@ func FindUserByRecoveryToken(tx *storage.Connection, token string) (*User, error
 }
 
 // FindUserWithRefreshToken finds a user from the provided refresh token.
-func FindUserWithRefreshToken(tx *storage.Connection, token string) (*User, *RefreshToken, error) {
+// The lookup is scoped to instanceID so a token issued by one tenant is never
+// honoured by another.
+func FindUserWithRefreshToken(tx *storage.Connection, instanceID uuid.UUID, token string) (*User, *RefreshToken, error) {
 	refreshToken := &RefreshToken{}
-	if err := tx.Where("token = ?", token).First(refreshToken); err != nil {
+	if err := tx.Where("instance_id = ? and token = ?", instanceID, token).First(refreshToken); err != nil {
 		if errors.Cause(err) == sql.ErrNoRows {
 			return nil, nil, RefreshTokenNotFoundError{}
 		}
 		return nil, nil, errors.Wrap(err, "error finding refresh token")
 	}
 
-	user, err := findUser(tx, "id = ?", refreshToken.UserID)
+	user, err := findUser(tx, "instance_id = ? and id = ?", instanceID, refreshToken.UserID)
 	if err != nil {
 		return nil, nil, err
 	}

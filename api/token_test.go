@@ -133,6 +133,31 @@ func (ts *TokenTestSuite) TestRefreshTokenGrantExpired() {
 	assert.Equal(ts.T(), "Refresh token expired", response["error_description"])
 }
 
+func (ts *TokenTestSuite) TestRefreshTokenGrantOtherInstance() {
+	otherInstanceID := uuid.Must(uuid.NewV4())
+	u, err := models.NewUser(otherInstanceID, "test@example.com", "password", ts.Config.JWT.Aud, nil)
+	require.NoError(ts.T(), err)
+	now := time.Now()
+	u.ConfirmedAt = &now
+	require.NoError(ts.T(), ts.API.db.Create(u))
+
+	r, err := models.GrantAuthenticatedUser(ts.API.db, u)
+	require.NoError(ts.T(), err)
+
+	// Redeeming another tenant's refresh token must not mint a session here
+	body := strings.NewReader(url.Values{"refresh_token": {r.Token}}.Encode())
+	req := httptest.NewRequest(http.MethodPost, "http://localhost/token?grant_type=refresh_token", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	w := httptest.NewRecorder()
+	ts.API.handler.ServeHTTP(w, req)
+	assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
+
+	var response map[string]interface{}
+	require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&response))
+	assert.Equal(ts.T(), "invalid_grant", response["error"])
+}
+
 func (ts *TokenTestSuite) TestRateLimitToken() {
 	var buffer bytes.Buffer
 	req := httptest.NewRequest(http.MethodPost, "http://localhost/token", &buffer)
