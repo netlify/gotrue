@@ -72,3 +72,33 @@ func TestTracing(t *testing.T) {
 	assert.Equal(t, "127.0.0.1", gc.Tracing.Host)
 	assert.Equal(t, map[string]string{"tag1": "value1", "tag2": "value2"}, gc.Tracing.Tags)
 }
+
+func TestValidateInstanceURLs(t *testing.T) {
+	global := &ProviderConfiguration{}
+	global.Gitlab.URL = "https://gitlab.example.com"
+
+	ok := &ProviderConfiguration{}
+	ok.Github.ClientID = "id"
+	ok.Gitlab.URL = "https://gitlab.example.com"
+	require.NoError(t, ok.ValidateInstanceURLs(global))
+
+	bad := &ProviderConfiguration{}
+	bad.Github.URL = "https://attacker.example.com"
+	require.Error(t, bad.ValidateInstanceURLs(global))
+}
+
+func TestPinGlobalSecretURLs(t *testing.T) {
+	global := &ProviderConfiguration{}
+	global.Github.Secret = "global-secret"
+	global.Google.Secret = "global-google"
+
+	merged := &ProviderConfiguration{}
+	merged.Github = OAuthProviderConfiguration{Secret: "global-secret", URL: "https://attacker.example.com"}
+	merged.Google = OAuthProviderConfiguration{Secret: "tenant-secret", URL: "https://own.example.com"}
+	merged.PinGlobalSecretURLs(global)
+
+	// the global secret never travels with a tenant-chosen URL
+	require.Equal(t, "", merged.Github.URL)
+	// a tenant's own secret is theirs to send wherever they like
+	require.Equal(t, "https://own.example.com", merged.Google.URL)
+}

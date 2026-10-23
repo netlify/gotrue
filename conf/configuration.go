@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/mail"
 	"os"
 	"strings"
@@ -269,6 +270,43 @@ func (config *Configuration) Scan(src interface{}) error {
 		source = []byte("{}")
 	}
 	return json.Unmarshal(source, &config)
+}
+
+// oauthProviders returns the OAuth providers by name, as pointers into p.
+func (p *ProviderConfiguration) oauthProviders() map[string]*OAuthProviderConfiguration {
+	return map[string]*OAuthProviderConfiguration{
+		"bitbucket": &p.Bitbucket,
+		"github":    &p.Github,
+		"gitlab":    &p.Gitlab,
+		"google":    &p.Google,
+		"facebook":  &p.Facebook,
+	}
+}
+
+// ValidateInstanceURLs rejects per-instance OAuth provider URLs that differ
+// from the deployment-wide ones. The provider URL decides where the
+// authorization code is exchanged, together with the client secret, so an
+// instance must not be able to point it at a host it controls.
+func (p *ProviderConfiguration) ValidateInstanceURLs(global *ProviderConfiguration) error {
+	globals := global.oauthProviders()
+	for name, o := range p.oauthProviders() {
+		if o.URL != "" && o.URL != globals[name].URL {
+			return fmt.Errorf("external.%s.url cannot be set per instance", name)
+		}
+	}
+	return nil
+}
+
+// PinGlobalSecretURLs resets the URL of every provider whose client secret
+// comes from the global configuration back to the global URL, so the global
+// secret is never sent to a host chosen by an instance.
+func (p *ProviderConfiguration) PinGlobalSecretURLs(global *ProviderConfiguration) {
+	globals := global.oauthProviders()
+	for name, o := range p.oauthProviders() {
+		if g := globals[name]; o.Secret == g.Secret {
+			o.URL = g.URL
+		}
+	}
 }
 
 func (o *OAuthProviderConfiguration) Validate() error {

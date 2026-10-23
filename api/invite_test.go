@@ -207,6 +207,7 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab() {
 		}
 	}))
 	defer server.Close()
+	ts.Config.External.Gitlab.Secret = "instance-secret"
 	ts.Config.External.Gitlab.URL = server.URL
 
 	// invite user
@@ -298,6 +299,7 @@ func (ts *InviteTestSuite) TestInviteExternalGitlab_MismatchedEmails() {
 		}
 	}))
 	defer server.Close()
+	ts.Config.External.Gitlab.Secret = "instance-secret"
 	ts.Config.External.Gitlab.URL = server.URL
 
 	// invite user

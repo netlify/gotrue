@@ -285,6 +285,7 @@ func (a *API) getConfig(ctx context.Context) *conf.Configuration {
 	if err := mergo.MergeWithOverwrite(&extConfig, config.External); err != nil {
 		return nil
 	}
+	extConfig.PinGlobalSecretURLs(&a.config.External)
 	config.External = extConfig
 
 	smtpConfig := (*a.config).SMTP

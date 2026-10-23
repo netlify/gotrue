@@ -74,6 +74,9 @@ func (a *API) CreateInstance(w http.ResponseWriter, r *http.Request) error {
 		if err := params.BaseConfig.SMTP.Validate(a.config.SMTP.ReservedDomains); err != nil {
 			return badRequestError("Invalid SMTP configuration: %v", err)
 		}
+		if err := params.BaseConfig.External.ValidateInstanceURLs(&a.config.External); err != nil {
+			return badRequestError("Invalid external provider configuration: %v", err)
+		}
 	}
 
 	i := models.Instance{
@@ -117,6 +120,9 @@ func (a *API) UpdateInstance(w http.ResponseWriter, r *http.Request) error {
 	if params.BaseConfig != nil {
 		if err := params.BaseConfig.SMTP.Validate(a.config.SMTP.ReservedDomains); err != nil {
 			return badRequestError("Invalid SMTP configuration: %v", err)
+		}
+		if err := params.BaseConfig.External.ValidateInstanceURLs(&a.config.External); err != nil {
+			return badRequestError("Invalid external provider configuration: %v", err)
 		}
 	}
 

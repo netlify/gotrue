@@ -38,6 +38,15 @@ func (ts *ExternalTestSuite) SetupTest() {
 	ts.Config.DisableSignup = false
 	ts.Config.Mailer.Autoconfirm = false
 
+	// Provider URLs are only honoured alongside an instance's own secret
+	// (see conf.ProviderConfiguration.PinGlobalSecretURLs), and the tests
+	// point them at mock servers.
+	ts.Config.External.Bitbucket.Secret = "instance-secret"
+	ts.Config.External.Facebook.Secret = "instance-secret"
+	ts.Config.External.Github.Secret = "instance-secret"
+	ts.Config.External.Gitlab.Secret = "instance-secret"
+	ts.Config.External.Google.Secret = "instance-secret"
+
 	require.NoError(ts.T(), models.TruncateAll(ts.API.db))
 }
 
