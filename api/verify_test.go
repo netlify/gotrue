@@ -74,23 +74,35 @@ func (ts *VerifyTestSuite) TestVerify_PasswordRecovery() {
 	assert.WithinDuration(ts.T(), time.Now(), *u.RecoverySentAt, 1*time.Second)
 	assert.False(ts.T(), u.IsConfirmed())
 
-	// Send Verify request
-	var vbuffer bytes.Buffer
-	require.NoError(ts.T(), json.NewEncoder(&vbuffer).Encode(map[string]interface{}{
-		"type":  "recovery",
-		"token": u.RecoveryToken,
-	}))
+	verify := func() *httptest.ResponseRecorder {
+		var vbuffer bytes.Buffer
+		require.NoError(ts.T(), json.NewEncoder(&vbuffer).Encode(map[string]interface{}{
+			"type":  "recovery",
+			"token": u.RecoveryToken,
+		}))
 
-	req = httptest.NewRequest(http.MethodPost, "http://localhost/verify", &vbuffer)
-	req.Header.Set("Content-Type", "application/json")
+		req = httptest.NewRequest(http.MethodPost, "http://localhost/verify", &vbuffer)
+		req.Header.Set("Content-Type", "application/json")
 
-	w = httptest.NewRecorder()
-	ts.API.handler.ServeHTTP(w, req)
-	assert.Equal(ts.T(), http.StatusOK, w.Code)
+		w = httptest.NewRecorder()
+		ts.API.handler.ServeHTTP(w, req)
+		return w
+	}
+
+	// Recovery must not confirm an unconfirmed account or issue a session
+	w = verify()
+	assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code)
+	assert.NotContains(ts.T(), w.Body.String(), "access_token")
 
 	u, err = models.FindUserByEmailAndAudience(ts.API.db, ts.instanceID, "test@example.com", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
-	assert.True(ts.T(), u.IsConfirmed())
+	assert.False(ts.T(), u.IsConfirmed())
+
+	// Once confirmed, recovery works as before
+	require.NoError(ts.T(), u.Confirm(ts.API.db))
+	w = verify()
+	assert.Equal(ts.T(), http.StatusOK, w.Code)
+	assert.Contains(ts.T(), w.Body.String(), "access_token")
 }
 
 func (ts *VerifyTestSuite) TestVerify_Confirmation_Expired() {

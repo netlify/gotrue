@@ -141,7 +141,6 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 }
 
 func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {
-	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 	user, err := models.FindUserByRecoveryToken(conn, params.Token)
 	if err != nil {
@@ -158,24 +157,15 @@ func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, param
 		}
 	}
 
-	err = conn.Transaction(func(tx *storage.Connection) error {
-		var terr error
-		if terr = user.Recover(tx); terr != nil {
-			return terr
-		}
-		if !user.IsConfirmed() {
-			if terr = models.NewAuditLogEntry(tx, instanceID, user, models.UserSignedUpAction, nil); terr != nil {
-				return terr
-			}
+	// Password recovery proves control of the mailbox only as far as the
+	// recovery link goes. It must not stand in for email confirmation, or it
+	// would defeat the verification gate sites rely on when autoconfirm is off.
+	if !user.IsConfirmed() {
+		return nil, unprocessableEntityError("Email address is not confirmed")
+	}
 
-			if terr = triggerEventHooks(ctx, tx, SignupEvent, user, instanceID, config); terr != nil {
-				return terr
-			}
-			if terr = user.Confirm(tx); terr != nil {
-				return terr
-			}
-		}
-		return nil
+	err = conn.Transaction(func(tx *storage.Connection) error {
+		return user.Recover(tx)
 	})
 
 	if err != nil {
