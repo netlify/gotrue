@@ -42,7 +42,7 @@ func (a *API) ExternalProviderRedirect(w http.ResponseWriter, r *http.Request) e
 
 	inviteToken := strings.TrimSpace(r.URL.Query().Get("invite_token"))
 	if inviteToken != "" {
-		_, userErr := models.FindUserByConfirmationToken(a.db, inviteToken)
+		_, userErr := models.FindUserByConfirmationToken(a.db, getInstanceID(ctx), inviteToken)
 		if userErr != nil {
 			if models.IsNotFoundError(userErr) {
 				return notFoundError("%s", userErr.Error())
@@ -221,7 +221,7 @@ func (a *API) internalExternalProviderCallback(w http.ResponseWriter, r *http.Re
 
 func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userData *provider.UserProvidedData, instanceID uuid.UUID, inviteToken, providerType string) (*models.User, error) {
 	config := a.getConfig(ctx)
-	user, err := models.FindUserByConfirmationToken(tx, inviteToken)
+	user, err := models.FindUserByConfirmationToken(tx, instanceID, inviteToken)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError("%s", err.Error())

@@ -146,6 +146,48 @@ func (ts *VerifyTestSuite) TestVerify_WhitespaceToken_Recovery() {
 	assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code)
 }
 
+func (ts *VerifyTestSuite) TestVerify_ZeroWidthToken() {
+	for _, typ := range []string{"signup", "recovery"} {
+		for _, token := range []string{"\u200b", "\u200c", "\u200d", "\u2060", "\ufeff", "\u180e", " \u200b "} {
+			var buffer bytes.Buffer
+			require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+				"type":  typ,
+				"token": token,
+			}))
+
+			req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
+			req.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			ts.API.handler.ServeHTTP(w, req)
+			assert.Equal(ts.T(), http.StatusUnprocessableEntity, w.Code, "type=%s token=%q", typ, token)
+		}
+	}
+}
+
+func (ts *VerifyTestSuite) TestVerify_TokenFromOtherInstance() {
+	other, err := models.NewUser(uuid.Must(uuid.NewV4()), "other@example.com", "password", ts.Config.JWT.Aud, nil)
+	require.NoError(ts.T(), err)
+	other.ConfirmationToken = "other-confirmation-token"
+	other.RecoveryToken = "other-recovery-token"
+	require.NoError(ts.T(), ts.API.db.Create(other))
+
+	for typ, token := range map[string]string{"signup": other.ConfirmationToken, "recovery": other.RecoveryToken} {
+		var buffer bytes.Buffer
+		require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{
+			"type":  typ,
+			"token": token,
+		}))
+
+		req := httptest.NewRequest(http.MethodPost, "http://localhost/verify", &buffer)
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		ts.API.handler.ServeHTTP(w, req)
+		assert.Equal(ts.T(), http.StatusNotFound, w.Code, "type=%s", typ)
+	}
+}
+
 func (ts *VerifyTestSuite) TestVerify_TabToken() {
 	var buffer bytes.Buffer
 	require.NoError(ts.T(), json.NewEncoder(&buffer).Encode(map[string]interface{}{

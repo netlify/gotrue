@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/netlify/gotrue/models"
@@ -35,7 +34,7 @@ func (a *API) Verify(w http.ResponseWriter, r *http.Request) error {
 		return badRequestError("Could not read verification params: %v", err)
 	}
 
-	if strings.TrimSpace(params.Token) == "" {
+	if models.IsBlankToken(params.Token) {
 		return unprocessableEntityError("Verify requires a token")
 	}
 
@@ -89,7 +88,7 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
 
-	user, err := models.FindUserByConfirmationToken(conn, params.Token)
+	user, err := models.FindUserByConfirmationToken(conn, instanceID, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError("%s", err.Error())
@@ -143,7 +142,7 @@ func (a *API) signupVerify(ctx context.Context, conn *storage.Connection, params
 func (a *API) recoverVerify(ctx context.Context, conn *storage.Connection, params *VerifyParams) (*models.User, error) {
 	instanceID := getInstanceID(ctx)
 	config := a.getConfig(ctx)
-	user, err := models.FindUserByRecoveryToken(conn, params.Token)
+	user, err := models.FindUserByRecoveryToken(conn, instanceID, params.Token)
 	if err != nil {
 		if models.IsNotFoundError(err) {
 			return nil, notFoundError("%s", err.Error())

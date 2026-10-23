@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gobuffalo/pop/v5"
 	"github.com/gofrs/uuid"
@@ -293,6 +294,16 @@ func CountOtherUsers(tx *storage.Connection, instanceID, id uuid.UUID) (int, err
 	return userCount, errors.Wrap(err, "error finding registered users")
 }
 
+// IsBlankToken reports whether a token carries no usable characters. Besides
+// whitespace it rejects control and Unicode format characters (zero-width
+// space, BOM, word joiner, ...), which Go sees as non-empty but MySQL's
+// utf8mb4_unicode_ci collation ignores, making them compare equal to "".
+func IsBlankToken(token string) bool {
+	return strings.TrimFunc(token, func(r rune) bool {
+		return unicode.IsSpace(r) || unicode.IsControl(r) || unicode.Is(unicode.Cf, r)
+	}) == ""
+}
+
 func findUser(tx *storage.Connection, query string, args ...interface{}) (*User, error) {
 	obj := &User{}
 	if err := tx.Q().Where(query, args...).First(obj); err != nil {
@@ -306,11 +317,11 @@ func findUser(tx *storage.Connection, query string, args ...interface{}) (*User,
 }
 
 // FindUserByConfirmationToken finds users with the matching confirmation token.
-func FindUserByConfirmationToken(tx *storage.Connection, token string) (*User, error) {
-	if strings.TrimSpace(token) == "" {
+func FindUserByConfirmationToken(tx *storage.Connection, instanceID uuid.UUID, token string) (*User, error) {
+	if IsBlankToken(token) {
 		return nil, UserNotFoundError{}
 	}
-	return findUser(tx, "confirmation_token = ?", token)
+	return findUser(tx, "instance_id = ? and confirmation_token = ?", instanceID, token)
 }
 
 // FindUserByEmailAndAudience finds a user with the matching email and audience.
@@ -329,11 +340,11 @@ func FindUserByInstanceIDAndID(tx *storage.Connection, instanceID, id uuid.UUID)
 }
 
 // FindUserByRecoveryToken finds a user with the matching recovery token.
-func FindUserByRecoveryToken(tx *storage.Connection, token string) (*User, error) {
-	if strings.TrimSpace(token) == "" {
+func FindUserByRecoveryToken(tx *storage.Connection, instanceID uuid.UUID, token string) (*User, error) {
+	if IsBlankToken(token) {
 		return nil, UserNotFoundError{}
 	}
-	return findUser(tx, "recovery_token = ?", token)
+	return findUser(tx, "instance_id = ? and recovery_token = ?", instanceID, token)
 }
 
 // FindUserWithRefreshToken finds a user from the provided refresh token.

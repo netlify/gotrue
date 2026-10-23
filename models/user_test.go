@@ -82,11 +82,19 @@ func (ts *UserTestSuite) TestFindUserByConfirmationToken() {
 	u.ConfirmationToken = "test-confirmation-token"
 	require.NoError(ts.T(), ts.db.Update(u))
 
-	n, err := FindUserByConfirmationToken(ts.db, u.ConfirmationToken)
+	n, err := FindUserByConfirmationToken(ts.db, u.InstanceID, u.ConfirmationToken)
 	require.NoError(ts.T(), err)
 	require.Equal(ts.T(), u.ID, n.ID)
 
-	_, err = FindUserByConfirmationToken(ts.db, " ")
+	_, err = FindUserByConfirmationToken(ts.db, u.InstanceID, " ")
+	require.EqualError(ts.T(), err, UserNotFoundError{}.Error())
+
+	// zero-width and format characters are blank too
+	_, err = FindUserByConfirmationToken(ts.db, u.InstanceID, "\u200b")
+	require.EqualError(ts.T(), err, UserNotFoundError{}.Error())
+
+	// tokens are scoped to their instance
+	_, err = FindUserByConfirmationToken(ts.db, uuid.Must(uuid.NewV4()), u.ConfirmationToken)
 	require.EqualError(ts.T(), err, UserNotFoundError{}.Error())
 }
 
@@ -150,10 +158,16 @@ func (ts *UserTestSuite) TestFindUserByRecoveryToken() {
 	err := ts.db.Update(u)
 	require.NoError(ts.T(), err)
 
-	n, err := FindUserByRecoveryToken(ts.db, u.RecoveryToken)
+	n, err := FindUserByRecoveryToken(ts.db, u.InstanceID, u.RecoveryToken)
 	require.NoError(ts.T(), err)
 
 	require.Equal(ts.T(), u.ID, n.ID)
+
+	_, err = FindUserByRecoveryToken(ts.db, uuid.Must(uuid.NewV4()), u.RecoveryToken)
+	require.EqualError(ts.T(), err, UserNotFoundError{}.Error())
+
+	_, err = FindUserByRecoveryToken(ts.db, u.InstanceID, "\ufeff")
+	require.EqualError(ts.T(), err, UserNotFoundError{}.Error())
 }
 
 func (ts *UserTestSuite) TestFindUserWithRefreshToken() {
