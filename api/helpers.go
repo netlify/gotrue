@@ -115,6 +115,7 @@ var privateIPBlocks []*net.IPNet
 
 func init() {
 	for _, cidr := range []string{
+		"0.0.0.0/8",      // IPv4 "this network", 0.0.0.0 reaches loopback on Linux
 		"127.0.0.0/8",    // IPv4 loopback
 		"10.0.0.0/8",     // RFC1918
 		"100.64.0.0/10",  // RFC6598
@@ -122,6 +123,7 @@ func init() {
 		"192.0.0.0/24",   // RFC6890
 		"192.168.0.0/16", // RFC1918
 		"169.254.0.0/16", // RFC3927
+		"::/128",         // IPv6 unspecified address, reaches loopback on Linux
 		"::1/128",        // IPv6 loopback
 		"fe80::/10",      // IPv6 link-local
 		"fc00::/7",       // IPv6 unique local addr
@@ -143,13 +145,12 @@ func isPrivateIP(ip net.IP) bool {
 func removeLocalhostFromPrivateIPBlock() *net.IPNet {
 	_, localhost, _ := net.ParseCIDR("127.0.0.0/8")
 
-	var localhostIndex int
 	for i := 0; i < len(privateIPBlocks); i++ {
-		if privateIPBlocks[i] == localhost {
-			localhostIndex = i
+		if privateIPBlocks[i].String() == localhost.String() {
+			privateIPBlocks = append(privateIPBlocks[:i], privateIPBlocks[i+1:]...)
+			break
 		}
 	}
-	privateIPBlocks = append(privateIPBlocks[:localhostIndex], privateIPBlocks[localhostIndex+1:]...)
 
 	return localhost
 }
