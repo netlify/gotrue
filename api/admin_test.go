@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -89,6 +90,135 @@ func (ts *AdminTestSuite) TestAdminUsersUnauthorized() {
 
 	ts.API.handler.ServeHTTP(w, req)
 	assert.Equal(ts.T(), http.StatusUnauthorized, w.Code)
+}
+
+func (ts *AdminTestSuite) TestAdminUserLookup() {
+	user, err := models.NewUser(ts.instanceID, "lookup@example.com", "test-password", ts.Config.JWT.Aud, nil)
+	require.NoError(ts.T(), err)
+	user.ConfirmationToken = "test-confirmation-token"
+	user.RecoveryToken = "test-recovery-token"
+	require.NoError(ts.T(), ts.API.db.Create(user))
+
+	for _, scope := range []struct {
+		instanceID uuid.UUID
+		audience   string
+	}{
+		{uuid.Must(uuid.NewV4()), ts.Config.JWT.Aud},
+		{ts.instanceID, "other-audience"},
+	} {
+		other, err := models.NewUser(scope.instanceID, "outside@example.com", "test-password", scope.audience, nil)
+		require.NoError(ts.T(), err)
+		require.NoError(ts.T(), ts.API.db.Create(other))
+	}
+	userToken, err := generateAccessToken(user, time.Hour, ts.Config.JWT.Secret)
+	require.NoError(ts.T(), err)
+
+	for _, tc := range []struct {
+		name   string
+		body   string
+		query  string
+		token  string
+		status int
+	}{
+		{"exact email", `{"email":"lookup@example.com"}`, "", ts.token, http.StatusOK},
+		{"missing user", `{"email":"missing@example.com"}`, "", ts.token, http.StatusNotFound},
+		{"different instance or audience", `{"email":"outside@example.com"}`, "", ts.token, http.StatusNotFound},
+		{"partial email", `{"email":"lookup"}`, "", ts.token, http.StatusNotFound},
+		{"substring email", `{"email":"ookup@example.com"}`, "", ts.token, http.StatusNotFound},
+		{"wildcard is not a pattern", `{"email":"%@example.com"}`, "", ts.token, http.StatusNotFound},
+		{"missing email", `{}`, "", ts.token, http.StatusBadRequest},
+		{"empty email", `{"email":""}`, "", ts.token, http.StatusBadRequest},
+		{"display name", `{"email":"Test User <lookup@example.com>"}`, "", ts.token, http.StatusNotFound},
+		{"filter", `{"email":"lookup@example.com","filter":"lookup"}`, "", ts.token, http.StatusBadRequest},
+		{"pagination", `{"email":"lookup@example.com","page":1}`, "", ts.token, http.StatusBadRequest},
+		{"query parameters", `{"email":"lookup@example.com"}`, "?page=1", ts.token, http.StatusBadRequest},
+		{"body audience", `{"email":"lookup@example.com","aud":"other-audience"}`, "", ts.token, http.StatusBadRequest},
+		{"multiple objects", `{"email":"lookup@example.com"} {}`, "", ts.token, http.StatusBadRequest},
+		{"unauthenticated", `{"email":"lookup@example.com"}`, "", "", http.StatusUnauthorized},
+		{"non-admin", `{"email":"lookup@example.com"}`, "", userToken, http.StatusUnauthorized},
+	} {
+		ts.Run(tc.name, func() {
+			req := httptest.NewRequest(http.MethodPost, "/admin/users/lookup"+tc.query, strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			if tc.token != "" {
+				req.Header.Set("Authorization", "Bearer "+tc.token)
+			}
+			w := httptest.NewRecorder()
+			ts.API.handler.ServeHTTP(w, req)
+			require.Equal(ts.T(), tc.status, w.Code, w.Body.String())
+			assert.Empty(ts.T(), w.Header().Get("Link"))
+			assert.Empty(ts.T(), w.Header().Get("X-Total-Count"))
+			if tc.status == http.StatusOK {
+				var body map[string]interface{}
+				require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&body))
+				assert.Equal(ts.T(), user.ID.String(), body["id"])
+				assert.Equal(ts.T(), user.Email, body["email"])
+				for _, field := range []string{"users", "encrypted_password", "confirmation_token", "recovery_token", "email_change_token"} {
+					assert.NotContains(ts.T(), body, field)
+				}
+			}
+		})
+	}
+}
+
+func TestAdminUserLookupMalformedBody(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/admin/users/lookup", strings.NewReader(`{`))
+	err := (&API{}).adminUserLookup(httptest.NewRecorder(), req)
+	require.EqualError(t, err, "400: Expected a JSON object containing only email")
+}
+
+func (ts *AdminTestSuite) TestAdminUserLookupAudienceHeader() {
+	for _, audience := range []string{ts.Config.JWT.Aud, "other-audience"} {
+		user, err := models.NewUser(ts.instanceID, "shared@example.com", "test-password", audience, nil)
+		require.NoError(ts.T(), err)
+		require.NoError(ts.T(), ts.API.db.Create(user))
+	}
+	for _, audience := range []string{ts.Config.JWT.Aud, "other-audience", "missing-audience"} {
+		ts.Run(audience, func() {
+			req := httptest.NewRequest(http.MethodPost, "/admin/users/lookup", strings.NewReader(`{"email":"shared@example.com"}`))
+			req.Header.Set("Authorization", "Bearer "+ts.token)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-JWT-AUD", audience)
+			w := httptest.NewRecorder()
+			ts.API.handler.ServeHTTP(w, req)
+			if audience == "missing-audience" {
+				require.Equal(ts.T(), http.StatusNotFound, w.Code, w.Body.String())
+				return
+			}
+			require.Equal(ts.T(), http.StatusOK, w.Code, w.Body.String())
+			var user models.User
+			require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&user))
+			assert.Equal(ts.T(), audience, user.Aud)
+			assert.Equal(ts.T(), "shared@example.com", user.Email)
+		})
+	}
+}
+
+func (ts *AdminTestSuite) TestAdminUserLookupStoredEmailFormats() {
+	for _, email := range []string{
+		" leading@example.com",
+		`"test user"@example.com`,
+		"Test User <display@example.com>",
+		"provider-email-without-at-sign",
+	} {
+		ts.Run(email, func() {
+			user, err := models.NewUser(ts.instanceID, email, "test-password", ts.Config.JWT.Aud, nil)
+			require.NoError(ts.T(), err)
+			require.NoError(ts.T(), ts.API.db.Create(user))
+			body, err := json.Marshal(map[string]string{"email": email})
+			require.NoError(ts.T(), err)
+			req := httptest.NewRequest(http.MethodPost, "/admin/users/lookup", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+ts.token)
+			w := httptest.NewRecorder()
+			ts.API.handler.ServeHTTP(w, req)
+			require.Equal(ts.T(), http.StatusOK, w.Code, w.Body.String())
+			var result models.User
+			require.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&result))
+			assert.Equal(ts.T(), user.ID, result.ID)
+			assert.Equal(ts.T(), email, result.Email)
+		})
+	}
 }
 
 // TestAdminUsers tests API /admin/users route

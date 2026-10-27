@@ -542,6 +542,25 @@ GoTrue exposes the following endpoints:
   This will revoke all refresh tokens for the user. Remember that the JWT tokens
   will still be valid for stateless auth until they expire.
 
+* **POST /admin/users/lookup**
+
+  Requires admin authentication. Looks up one user by their stored email string
+  within the authenticated Identity instance and audience. Email must be non-empty
+  and is used as supplied, without parsing or trimming.
+
+  Set `X-JWT-AUD` to select an audience. Without that header, the audience comes
+  from the JWT, falling back to the configured default when the JWT has no
+  audience. An `aud` field in the request body is not accepted.
+
+  ```json
+  {"email": "user@example.com"}
+  ```
+
+  Returns the same user representation as the user-ID admin endpoint, or `404`
+  when no user matches. Partial matching, query parameters, additional body
+  fields, and pagination are not supported. No directory counts or pagination
+  links are returned.
+
 ## TODO
 
 * Schema for custom user data in config file

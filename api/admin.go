@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -123,6 +124,36 @@ func (a *API) adminExportUsers(exportSecret string) func(w http.ResponseWriter, 
 func (a *API) adminUserGet(w http.ResponseWriter, r *http.Request) error {
 	user := getUser(r.Context())
 
+	return sendJSON(w, http.StatusOK, user)
+}
+
+func (a *API) adminUserLookup(w http.ResponseWriter, r *http.Request) error {
+	if r.URL.RawQuery != "" {
+		return badRequestError("Query parameters are not supported")
+	}
+	var params struct {
+		Email string `json:"email"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&params); err != nil {
+		return badRequestError("Expected a JSON object containing only email")
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return badRequestError("Expected a single JSON object")
+	}
+	if params.Email == "" {
+		return badRequestError("Email is required")
+	}
+
+	ctx := r.Context()
+	user, err := models.FindUserByEmailAndAudience(a.db, getInstanceID(ctx), params.Email, a.requestAud(ctx, r))
+	if err != nil {
+		if models.IsNotFoundError(err) {
+			return notFoundError("User not found")
+		}
+		return internalServerError("Database error loading user").WithInternalError(err)
+	}
 	return sendJSON(w, http.StatusOK, user)
 }
 
