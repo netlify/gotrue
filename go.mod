@@ -126,4 +126,4 @@ require (
 
 replace github.com/gobuffalo/github_flavored_markdown => github.com/gobuffalo/github_flavored_markdown v1.1.1
 
-go 1.25.0
+go 1.27.3
