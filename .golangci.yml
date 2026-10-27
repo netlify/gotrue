@@ -1,10 +1,26 @@
-run:
-  timeout: 5m
-
+version: "2"
 linters:
+  settings:
+    staticcheck:
+      # keep parity with the v1 config: skip the style (ST) and quickfix (QF) groups v2 enables by default
+      checks: ["all", "-ST*", "-QF*"]
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
   enable:
     - gofmt
-    - govet
-    - errcheck
-    - staticcheck
-    - unused
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

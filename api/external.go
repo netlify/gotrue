@@ -275,7 +275,7 @@ func (a *API) processInvite(ctx context.Context, tx *storage.Connection, userDat
 
 func (a *API) loadExternalState(ctx context.Context, state string) (context.Context, error) {
 	claims := ExternalProviderClaims{}
-	p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
+	p := jwt.NewParser(jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
 	_, err := p.ParseWithClaims(state, &claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(a.config.OperatorToken), nil
 	})

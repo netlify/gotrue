@@ -11,7 +11,7 @@ build: ## Build the binary.
 
 deps: ## Install dependencies.
 	@go install github.com/gobuffalo/pop/v5/soda
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 	@go mod download
 
 image: ## Build the Docker image.
