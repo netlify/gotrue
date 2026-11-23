@@ -80,6 +80,9 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 	client.Transport = SafeRoundtripper(client.Transport, hooklog)
 
 	for i := 0; i < w.Retries; i++ {
+		if i > 0 {
+			time.Sleep(backoffDelay(i))
+		}
 		hooklog = hooklog.WithField("attempt", i+1)
 		hooklog.Info("Starting to perform signup hook request")
 
@@ -134,9 +137,17 @@ func (w *Webhook) trigger() (io.ReadCloser, error) {
 				body = rsp.Body
 			}
 			return body, nil
-		default:
-			rspLog.Infof("Bad response for webhook %d in %s", rsp.StatusCode, dur)
 		}
+
+		if rsp.StatusCode == http.StatusTooManyRequests || rsp.StatusCode >= 500 {
+			rspLog.Infof("Retriable response from webhook %d in %s", rsp.StatusCode, dur)
+			closeBody(rsp)
+			continue
+		}
+
+		rspLog.Infof("Non-retriable response from webhook %d in %s", rsp.StatusCode, dur)
+		closeBody(rsp)
+		return nil, httpError(rsp.StatusCode, "Webhook returned status %d", rsp.StatusCode)
 	}
 
 	hooklog.Infof("Failed to process webhook for %s after %d attempts", w.URL, w.Retries)
@@ -313,4 +324,14 @@ type connectionWatcher struct {
 
 func (c *connectionWatcher) GotConn(_ httptrace.GotConnInfo) {
 	c.gotConn = true
+}
+
+func backoffDelay(attempt int) time.Duration {
+	const base = 100 * time.Millisecond
+	const max = 2 * time.Second
+	delay := base * time.Duration(1<<(attempt-1))
+	if delay > max {
+		delay = max
+	}
+	return delay
 }

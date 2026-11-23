@@ -114,14 +114,75 @@ func TestHookRetry(t *testing.T) {
 	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
 		assert.EqualValues(t, 0, r.ContentLength)
+		// 503 is retriable; eventual 200 succeeds on the third attempt.
 		if callCount == 3 {
 			w.WriteHeader(http.StatusOK)
 		} else {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusServiceUnavailable)
 		}
 	}))
 	defer svr.Close()
 	// Allowing connection to localhost for the tests only
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
+
+	config := &conf.WebhookConfig{
+		URL:     svr.URL,
+		Retries: 3,
+	}
+	w := Webhook{
+		WebhookConfig: config,
+	}
+	b, err := w.trigger()
+	defer func() {
+		if b != nil {
+			b.Close()
+		}
+	}()
+	require.NoError(t, err)
+
+	assert.Equal(t, 3, callCount)
+}
+
+func TestHookNonRetriable4xxDoesNotRetry(t *testing.T) {
+	var callCount int
+	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	defer svr.Close()
+	localhost := removeLocalhostFromPrivateIPBlock()
+	defer unshiftPrivateIPBlock(localhost)
+
+	config := &conf.WebhookConfig{
+		URL:     svr.URL,
+		Retries: 3,
+	}
+	w := Webhook{
+		WebhookConfig: config,
+	}
+	_, err := w.trigger()
+	require.Error(t, err)
+
+	herr, ok := err.(*HTTPError)
+	require.True(t, ok, "expected an *HTTPError, got %T", err)
+	assert.Equal(t, http.StatusBadRequest, herr.Code)
+
+	// 4xx (other than 401, which is the deny path) must not retry.
+	assert.Equal(t, 1, callCount)
+}
+
+func TestHookRetries429(t *testing.T) {
+	var callCount int
+	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		if callCount == 3 {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusTooManyRequests)
+		}
+	}))
+	defer svr.Close()
 	localhost := removeLocalhostFromPrivateIPBlock()
 	defer unshiftPrivateIPBlock(localhost)
 
