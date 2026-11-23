@@ -4,7 +4,7 @@ require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.27.0
 	github.com/beevik/etree v1.6.0
 	github.com/didip/tollbooth/v5 v5.1.1
-	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gobuffalo/pop/v5 v5.3.4
 	github.com/gofrs/uuid v4.4.0+incompatible
